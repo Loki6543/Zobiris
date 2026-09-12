@@ -11,6 +11,9 @@ RUN unzip -q /tmp/zobiris.zip -d /tmp/zobiris \
   && cp -a /tmp/zobiris/Zobiris_v0.6.3_Railway_Staging/. /app/ \
   && rm -rf /tmp/zobiris /tmp/zobiris.zip
 
+COPY railway_hosted_gate.mjs /app/scripts/railway_hosted_gate.mjs
+COPY railway_persistence_wrapper.mjs /app/scripts/railway_persistence_wrapper.mjs
+
 RUN npm ci --no-audit --no-fund
 RUN npm run build:ui \
   && mkdir -p /data \
