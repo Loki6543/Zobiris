@@ -1,8 +1,13 @@
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const PORT = Number(process.env.PORT || 3000);
 const INTERVAL_MS = 30 * 60 * 1000;
 const TIMEOUT_MS = 20_000;
+const DATA_DIR = process.env.ZOBIRIS_CERT_DATA_DIR || '/data';
+const SNAPSHOT_PATH = path.join(DATA_DIR, 'icp-cert-latest.json');
+const AUTHORITY = 'SHADOW_ONLY_NO_TRADING_AUTHORITY';
 
 const endpoints = {
   messageExecutionRate: 'https://metrics-api.internetcomputer.org/api/v1/message-execution-rate',
@@ -13,12 +18,45 @@ const endpoints = {
   snses: 'https://sns-api.internetcomputer.org/api/v2/snses/count',
 };
 
+let persistedAtBoot = null;
+let persistence = { enabled: false, path: SNAPSHOT_PATH, lastWriteOk: false, error: null };
 let latest = {
   status: 'STARTING',
   checkedAt: null,
-  authority: 'SHADOW_ONLY_NO_TRADING_AUTHORITY',
+  authority: AUTHORITY,
   results: {},
 };
+
+function loadPersistedSnapshot() {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    persistence.enabled = true;
+    if (!fs.existsSync(SNAPSHOT_PATH)) return;
+    const parsed = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8'));
+    if (parsed && typeof parsed === 'object') {
+      persistedAtBoot = parsed;
+      latest = parsed;
+      console.log(`ICP_CERT_PERSISTENCE_RESTORED ${JSON.stringify({ checkedAt: parsed.checkedAt, path: SNAPSHOT_PATH })}`);
+    }
+  } catch (error) {
+    persistence = { enabled: false, path: SNAPSHOT_PATH, lastWriteOk: false, error: String(error) };
+    console.error(`ICP_CERT_PERSISTENCE_LOAD_ERROR ${String(error)}`);
+  }
+}
+
+function persistSnapshot(snapshot) {
+  if (!persistence.enabled) return;
+  try {
+    const tempPath = `${SNAPSHOT_PATH}.tmp`;
+    fs.writeFileSync(tempPath, `${JSON.stringify(snapshot)}\n`, 'utf8');
+    fs.renameSync(tempPath, SNAPSHOT_PATH);
+    persistence = { enabled: true, path: SNAPSHOT_PATH, lastWriteOk: true, error: null };
+    console.log(`ICP_CERT_PERSISTED ${JSON.stringify({ checkedAt: snapshot.checkedAt, path: SNAPSHOT_PATH })}`);
+  } catch (error) {
+    persistence = { enabled: true, path: SNAPSHOT_PATH, lastWriteOk: false, error: String(error) };
+    console.error(`ICP_CERT_PERSISTENCE_WRITE_ERROR ${String(error)}`);
+  }
+}
 
 function summarize(name, json) {
   if (!json || typeof json !== 'object') return { shape: typeof json };
@@ -67,7 +105,7 @@ async function probe(name, url) {
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const response = await fetch(url, {
-      headers: { accept: 'application/json', 'user-agent': 'Zobiris-v0.7.5-ICP-Cert/1.0' },
+      headers: { accept: 'application/json', 'user-agent': 'Zobiris-v0.7.5-ICP-Cert/1.1' },
       signal: controller.signal,
     });
     const text = await response.text();
@@ -95,22 +133,30 @@ async function runCertification() {
   latest = {
     status: Object.values(results).every((r) => r.ok) ? 'PASS' : 'FAIL',
     checkedAt: new Date().toISOString(),
-    authority: 'SHADOW_ONLY_NO_TRADING_AUTHORITY',
+    authority: AUTHORITY,
     results,
   };
+  if (latest.status === 'PASS') persistSnapshot(latest);
   console.log(`ICP_CERT_REPORT ${JSON.stringify(latest)}`);
 }
+
+loadPersistedSnapshot();
 
 const server = http.createServer((req, res) => {
   res.setHeader('content-type', 'application/json; charset=utf-8');
   if (req.url === '/health') {
     res.statusCode = latest.status === 'FAIL' ? 503 : 200;
-    res.end(JSON.stringify({ ok: latest.status !== 'FAIL', status: latest.status, checkedAt: latest.checkedAt }));
+    res.end(JSON.stringify({ ok: latest.status !== 'FAIL', status: latest.status, checkedAt: latest.checkedAt, persistence }));
     return;
   }
   if (req.url === '/report') {
     res.statusCode = 200;
     res.end(JSON.stringify(latest));
+    return;
+  }
+  if (req.url === '/snapshot') {
+    res.statusCode = persistedAtBoot || persistence.lastWriteOk ? 200 : 404;
+    res.end(JSON.stringify({ restoredAtBoot: persistedAtBoot?.checkedAt ?? null, persistence, latestPersisted: persistence.lastWriteOk ? latest : persistedAtBoot }));
     return;
   }
   res.statusCode = 404;
