@@ -110,6 +110,42 @@ function numericErrorCode(value: unknown): unknown {
 }
 
 export function normalizeCmcV3Shape(raw: unknown): any {
+  const normalizeEntry = (value: unknown): UnknownRecord | undefined => {
+    const entry = record(value);
+    if (!entry) return undefined;
+    const quoteValue = entry.quote;
+    if (!Array.isArray(quoteValue)) return entry;
+    const usd = quoteValue
+      .map(record)
+      .find((quote) => quote?.symbol === "USD" || quote?.id === 2781 || quote?.id === "2781");
+    return {
+      ...entry,
+      quote: usd ? { USD: usd } : {},
+    };
+  };
+
+  // Current CMC v3 quotes/latest returns a top-level array of CryptoQuoteV3DTO.
+  // Convert that into the internal legacy-compatible {status,data} envelope so
+  // the existing schema/normalizer can process all requested assets.
+  if (Array.isArray(raw)) {
+    const normalizedData: Record<string, unknown> = {};
+    for (const value of raw) {
+      const entry = normalizeEntry(value);
+      if (!entry) continue;
+      const id = entry.id;
+      const key = typeof id === "number" || typeof id === "string"
+        ? String(id)
+        : typeof entry.symbol === "string"
+          ? entry.symbol
+          : undefined;
+      if (key) normalizedData[key] = entry;
+    }
+    return {
+      status: { error_code: 0, error_message: null },
+      data: normalizedData,
+    };
+  }
+
   const root = record(raw);
   if (!root) return raw;
 
@@ -123,26 +159,7 @@ export function normalizeCmcV3Shape(raw: unknown): any {
 
   const normalizedData: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
-    const entry = record(value);
-    if (!entry) {
-      normalizedData[key] = value;
-      continue;
-    }
-
-    const quoteValue = entry.quote;
-    if (!Array.isArray(quoteValue)) {
-      normalizedData[key] = entry;
-      continue;
-    }
-
-    const usd = quoteValue
-      .map(record)
-      .find((quote) => quote?.symbol === "USD" || quote?.id === 2781 || quote?.id === "2781");
-
-    normalizedData[key] = {
-      ...entry,
-      quote: usd ? { USD: usd } : {},
-    };
+    normalizedData[key] = normalizeEntry(value) ?? value;
   }
 
   return { ...root, status: normalizedStatus, data: normalizedData };
@@ -322,20 +339,24 @@ await writeFile(
 import assert from 'node:assert/strict';
 import { normalizeCmcV3Shape } from '../src/providers/cmcQuoteShape.ts';
 
-test('normalizes current keyless v3 quote arrays and string success codes', () => {
-  const normalized = normalizeCmcV3Shape({
-    status: { error_code: '0', error_message: null },
-    data: {
-      '1': {
-        id: 1,
-        name: 'Bitcoin',
-        symbol: 'BTC',
-        quote: [{ id: 2781, symbol: 'USD', price: 85000, market_cap: 1700000000000, volume_24h: 20000000000, percent_change_24h: 1.2, last_updated: '2026-09-24T19:00:00.000Z' }],
-      },
+test('normalizes current keyless v3 top-level arrays and quote arrays', () => {
+  const normalized = normalizeCmcV3Shape([
+    {
+      id: 1,
+      name: 'Bitcoin',
+      symbol: 'BTC',
+      quote: [{ id: 2781, symbol: 'USD', price: 85000, market_cap: 1700000000000, volume_24h: 20000000000, percent_change_24h: 1.2, last_updated: '2026-09-24T19:00:00.000Z' }],
     },
-  });
+    {
+      id: 1027,
+      name: 'Ethereum',
+      symbol: 'ETH',
+      quote: [{ id: 2781, symbol: 'USD', price: 2700, market_cap: 320000000000, volume_24h: 12000000000, percent_change_24h: 0.8, last_updated: '2026-09-24T19:00:00.000Z' }],
+    },
+  ]);
   assert.equal(normalized.status.error_code, 0);
   assert.equal(normalized.data['1'].quote.USD.price, 85000);
+  assert.equal(normalized.data['1027'].quote.USD.price, 2700);
 });
 
 test('preserves legacy keyed quote objects', () => {
