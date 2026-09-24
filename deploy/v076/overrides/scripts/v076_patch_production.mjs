@@ -208,8 +208,8 @@ await replaceOnce(
 
 await replaceOnce(
   "src/providers/cmc.ts",
-  `      const url = \`${this.config.baseUrl}/v3/cryptocurrency/quotes/latest?${idParam}&convert=USD\`;`,
-  `      const url = \`${this.config.baseUrl}/v3/cryptocurrency/quotes/latest?${idParam}&convert=USD&skip_invalid=true\`;`,
+  `      const url = \`\${this.config.baseUrl}/v3/cryptocurrency/quotes/latest?\${idParam}&convert=USD\`;`,
+  `      const url = \`\${this.config.baseUrl}/v3/cryptocurrency/quotes/latest?\${idParam}&convert=USD&skip_invalid=true\`;`,
 );
 
 await replaceOnce(
