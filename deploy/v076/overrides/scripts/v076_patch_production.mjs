@@ -55,6 +55,20 @@ await replaceOnce(
   "",
 );
 
+await replaceOnce(
+  "src/strategy21/attentionLedger/live/cmcKeyless.ts",
+  `    const row = object(raw);
+    const quote = object(object(row?.quote)?.USD);
+    const id = finiteNumber(row?.id);`,
+  `    const row = object(raw);
+    const quoteValue = row?.quote;
+    const quoteObject = object(quoteValue);
+    const quote = object(quoteObject?.USD) ?? (Array.isArray(quoteValue)
+      ? quoteValue.map(object).find((candidate) => candidate?.symbol === "USD" || finiteNumber(candidate?.id) === 2781)
+      : undefined);
+    const id = finiteNumber(row?.id);`,
+);
+
 await writeFile(
   "tsconfig.production.json",
   JSON.stringify(
