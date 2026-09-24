@@ -405,3 +405,62 @@ test('preserves legacy keyed quote objects', () => {
 `,
   "utf8",
 );
+
+
+await writeFile(
+  "src/tests/kraken-watchlist-live-expansion.test.ts",
+  `import { afterEach, describe, expect, it } from "vitest";
+import { KrakenAdapter } from "../providers/kraken.js";
+
+describe("v0.7.6 Kraken canonical-watchlist live expansion", () => {
+  const originalFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = originalFetch; });
+
+  it("requests and normalizes canonical Kraken pairs beyond BTC/SOL", async () => {
+    let seenUrl = "";
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      seenUrl = String(input);
+      return new Response(JSON.stringify({
+        error: [],
+        result: {
+          XXBTZUSD: { c: ["85000", "1"], o: "84000" },
+          SOLUSD: { c: ["115", "1"], o: "112" },
+          XETHZUSD: { c: ["2700", "1"], o: "2650" },
+          COMPUSD: { c: ["48", "1"], o: "46" },
+        },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+
+    const adapter = new KrakenAdapter();
+    adapter.configure({
+      baseUrl: "https://api.kraken.com",
+      pairMap: { BTC: "XBTUSD", SOL: "SOLUSD" },
+      resultKeyToSymbol: { XBTUSD: "BTC", XXBTZUSD: "BTC", SOLUSD: "SOL", XETHZUSD: "ETH" },
+      forceFixtures: false,
+      timeoutMs: 10_000,
+    });
+
+    const now = new Date().toISOString();
+    const assets = new Map<string, any>([
+      ["btc", { id: "btc", symbol: "BTC", name: "Bitcoin", providerIds: { krakenPair: "XBTUSD" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: now }],
+      ["sol", { id: "sol", symbol: "SOL", name: "Solana", providerIds: { krakenPair: "SOLUSD" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: now }],
+      ["eth", { id: "eth", symbol: "ETH", name: "Ethereum", providerIds: { krakenPair: "ETHUSD" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: now }],
+      ["comp", { id: "comp", symbol: "COMP", name: "Compound", providerIds: { krakenPair: "COMPUSD" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: now }],
+    ]);
+
+    const rows = await adapter.fetch({ canonicalAssets: assets });
+    expect(seenUrl).toContain("ETHUSD");
+    expect(seenUrl).toContain("COMPUSD");
+
+    const observations = adapter.normalize(rows[0]!.raw, {
+      canonicalAssets: assets,
+      endpoint: "0/public/Ticker",
+      receivedAt: rows[0]!.receivedAt,
+      rawSchemaVersion: "1.0.0",
+    });
+    expect(observations.map((row) => row.payload.symbol)).toEqual(expect.arrayContaining(["BTC", "SOL", "ETH", "COMP"]));
+  });
+});
+`,
+  "utf8",
+);
