@@ -511,7 +511,7 @@ await replaceOnce(
         const discoveryTimer = setTimeout(() => discoveryController.abort(), this.config.timeoutMs ?? 10_000);
         let discoveryResponse: Response;
         try {
-          discoveryResponse = await fetch(`${this.config.baseUrl}/0/public/AssetPairs`, {
+          discoveryResponse = await fetch(this.config.baseUrl + "/0/public/AssetPairs", {
             method: "GET",
             signal: discoveryController.signal,
           });
