@@ -132,15 +132,18 @@ async function verifyCandidate() {
     const before = await jsonCheck(localOrigin, '/api/snapshot/latest', {}, [200, 404], 'candidate snapshot before browser refresh');
     const beforeIdentity = before.response.status === 200 ? snapshotIdentity(before.payload) : { id: null, asOf: null };
 
+    // Candidate runs on localhost during predeploy, so production-origin browser
+    // authorization is not meaningful here. Same-origin behavior is covered by
+    // the build's dedicated security regression; use bearer auth here to probe
+    // the candidate's real live-provider refresh path before promotion.
     const browserRefresh = await jsonCheck(localOrigin, '/api/refresh', {
       method: 'POST',
       headers: {
-        Origin: localOrigin.origin,
-        'Sec-Fetch-Site': 'same-origin',
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: '{}',
-    }, [200], 'candidate same-origin browser refresh', 90000);
+    }, [200], 'candidate authenticated live refresh', 90000);
 
     const refresh = browserRefresh.payload ?? {};
     const diagnosticProviders = await jsonCheck(localOrigin, '/api/providers', {}, [200], 'candidate providers after browser refresh');
