@@ -71,6 +71,18 @@ const browserRefresh = await jsonCheck('/api/refresh', {
 }, [200], 'same-origin browser refresh', 90000);
 
 const refresh = browserRefresh.payload ?? {};
+const diagnosticProviders = await jsonCheck('/api/providers', {}, [200], 'providers after browser refresh');
+const redact = (key, value) => /token|secret|key|authorization/i.test(key) ? '[REDACTED]' : value;
+console.log('DIAGNOSTIC refresh summary:', JSON.stringify({
+  keys: Object.keys(refresh),
+  live: refresh.live ?? null,
+  observationCount: refresh.observationCount ?? null,
+  evidenceClaimCount: refresh.evidenceClaimCount ?? null,
+  attentionCollection: refresh.attentionCollection ?? null,
+  providerHealth: refresh.providerHealth ?? null,
+  errors: refresh.errors ?? null,
+}, redact));
+console.log('DIAGNOSTIC providers:', JSON.stringify(diagnosticProviders.payload, redact));
 if (refresh.live !== true) throw new Error('browser refresh did not run live provider policy');
 if (!(Number(refresh.observationCount) > 2)) throw new Error('browser refresh did not expand beyond the BTC/SOL-only observation floor');
 if (!(Number(refresh.evidenceClaimCount) > 2)) throw new Error('browser refresh did not expand beyond the BTC/SOL-only evidence floor');
