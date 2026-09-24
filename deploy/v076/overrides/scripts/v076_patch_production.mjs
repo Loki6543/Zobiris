@@ -208,6 +208,12 @@ await replaceOnce(
 
 await replaceOnce(
   "src/providers/cmc.ts",
+  `      const url = \`${this.config.baseUrl}/v3/cryptocurrency/quotes/latest?${idParam}&convert=USD\`;`,
+  `      const url = \`${this.config.baseUrl}/v3/cryptocurrency/quotes/latest?${idParam}&convert=USD&skip_invalid=true\`;`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
   `    const apiKey = this.config.liveConfig?.apiKey;
     if (this.config.forceFixtures === false && apiKey) {`,
   `    const liveConfig = this.config.liveConfig;
@@ -323,6 +329,7 @@ await replaceOnce(
       const assets = new Map([["BTC", { id: "btc", symbol: "BTC", name: "Bitcoin", providerIds: { cmcNumericId: "1" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: new Date().toISOString() } as any]]);
       const result = await cmc.fetch({ canonicalAssets: assets });
       expect(seenUrl).toContain("https://pro-api.coinmarketcap.com/public-api/v3/cryptocurrency/quotes/latest");
+      expect(seenUrl).toContain("skip_invalid=true");
       expect(JSON.stringify(seenHeaders ?? {})).not.toContain("X-CMC_PRO_API_KEY");
       expect(result[0]?.dataMode).toBe("live");
       const observations = cmc.normalize(result[0]?.raw, { canonicalAssets: assets, endpoint: "quotes/latest", receivedAt: result[0]!.receivedAt, rawSchemaVersion: "1.0.0" });
