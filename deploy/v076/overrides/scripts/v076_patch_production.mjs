@@ -407,6 +407,95 @@ test('preserves legacy keyed quote objects', () => {
 );
 
 
+
+await replaceOnce(
+  "src/providers/kraken.ts",
+  \`const KRAKEN_RAW_SCHEMA_VERSION = "1.0.0";
+const KRAKEN_NORMALIZER_VERSION = "0.1.0";\`,
+  \`const KRAKEN_RAW_SCHEMA_VERSION = "1.0.0";
+const KRAKEN_NORMALIZER_VERSION = "0.1.0";
+
+function normalizeKrakenPairKey(pair: string): string {
+  const upper = pair.toUpperCase();
+  if (upper.endsWith("ZUSD")) {
+    let base = upper.slice(0, -4);
+    if (base.startsWith("X")) base = base.slice(1);
+    return \\\`\\\${base}USD\\\`;
+  }
+  return upper;
+}\`,
+);
+
+await replaceOnce(
+  "src/providers/kraken.ts",
+  \`    const pairToSymbol = new Map<string, string>();
+    for (const [symbol, pair] of Object.entries(this.config.pairMap)) {
+      pairToSymbol.set(pair, symbol);
+    }
+    if (this.config.resultKeyToSymbol) {
+      for (const [key, sym] of Object.entries(this.config.resultKeyToSymbol)) {
+        pairToSymbol.set(key, sym);
+      }
+    }\`,
+  \`    const pairToSymbol = new Map<string, string>();
+    for (const [symbol, pair] of Object.entries(this.config.pairMap)) {
+      pairToSymbol.set(pair, symbol);
+      pairToSymbol.set(normalizeKrakenPairKey(pair), symbol);
+    }
+    for (const asset of ctx.canonicalAssets.values()) {
+      const pair = asset.providerIds?.krakenPair;
+      if (
+        asset.mappingStatus === "verified" &&
+        asset.mappingConfidence >= 0.8 &&
+        typeof pair === "string" &&
+        pair.length > 0
+      ) {
+        pairToSymbol.set(pair, asset.symbol);
+        pairToSymbol.set(normalizeKrakenPairKey(pair), asset.symbol);
+      }
+    }
+    if (this.config.resultKeyToSymbol) {
+      for (const [key, sym] of Object.entries(this.config.resultKeyToSymbol)) {
+        pairToSymbol.set(key, sym);
+        pairToSymbol.set(normalizeKrakenPairKey(key), sym);
+      }
+    }\`,
+);
+
+await replaceOnce(
+  "src/providers/kraken.ts",
+  \`      const symbol = pairToSymbol.get(pair);\`,
+  \`      const symbol = pairToSymbol.get(pair) ?? pairToSymbol.get(normalizeKrakenPairKey(pair));\`,
+);
+
+await replaceOnce(
+  "src/providers/kraken.ts",
+  \`  async fetch(_ctx: { canonicalAssets: Map<string, CanonicalAsset> }): Promise<FetchResult<unknown>[]> {
+    const out: FetchResult<unknown>[] = [];
+    const symbols = Object.keys(this.config.pairMap);\`,
+  \`  async fetch(ctx: { canonicalAssets: Map<string, CanonicalAsset> }): Promise<FetchResult<unknown>[]> {
+    const out: FetchResult<unknown>[] = [];
+    const pairMap: Record<string, string> = { ...this.config.pairMap };
+    for (const asset of ctx.canonicalAssets.values()) {
+      const pair = asset.providerIds?.krakenPair;
+      if (
+        asset.mappingStatus === "verified" &&
+        asset.mappingConfidence >= 0.8 &&
+        typeof pair === "string" &&
+        pair.length > 0
+      ) {
+        pairMap[asset.symbol] = pair;
+      }
+    }
+    const symbols = Object.keys(pairMap);\`,
+);
+
+await replaceOnce(
+  "src/providers/kraken.ts",
+  \`        .map((s) => this.config.pairMap[s as keyof typeof this.config.pairMap])\`,
+  \`        .map((s) => pairMap[s])\`,
+);
+
 await writeFile(
   "src/tests/kraken-watchlist-live-expansion.test.ts",
   `import { afterEach, describe, expect, it } from "vitest";
