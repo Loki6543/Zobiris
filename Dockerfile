@@ -1,21 +1,27 @@
 FROM node:24-bookworm-slim
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends unzip python3 make g++ \
+  && apt-get install -y --no-install-recommends python3 make g++ xz-utils \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY Zobiris_v0.6.3_Railway_Staging_Package.zip /tmp/zobiris.zip
-RUN unzip -q /tmp/zobiris.zip -d /tmp/zobiris \
-  && cp -a /tmp/zobiris/Zobiris_v0.6.3_Railway_Staging/. /app/ \
-  && rm -rf /tmp/zobiris /tmp/zobiris.zip
+COPY deploy/v076/ /tmp/zobiris-b64/
+RUN cat /tmp/zobiris-b64/*.b64 | base64 -d > /tmp/zobiris.txz \
+  && tar -xJf /tmp/zobiris.txz -C /tmp \
+  && cp -a /tmp/Zobiris_v0.7.6_Railway_Staging/. /app/ \
+  && rm -rf /tmp/zobiris-b64 /tmp/zobiris.txz /tmp/Zobiris_v0.7.6_Railway_Staging
 
 COPY railway_hosted_gate.mjs /app/scripts/railway_hosted_gate.mjs
 COPY railway_persistence_wrapper.mjs /app/scripts/railway_persistence_wrapper.mjs
 
 RUN npm ci --no-audit --no-fund
-RUN npm run build:ui \
+RUN npm run test:decision-boundary \
+  && npm run test:same-origin-refresh \
+  && npm run test:strategy21 \
+  && npm test \
+  && npm run typecheck \
+  && npm run build:ui \
   && mkdir -p /data \
   && chown -R node:node /data
 
