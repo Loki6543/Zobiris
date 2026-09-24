@@ -496,6 +496,49 @@ await replaceOnce(
   `        .map((s) => pairMap[s])`,
 );
 
+await replaceOnce(
+  "src/providers/kraken.ts",
+  `      const pairParam = symbols
+        .map((s) => pairMap[s])
+        .filter((p): p is string => Boolean(p))
+        .join(",");`,
+  `      const requestedPairs = symbols
+        .map((s) => pairMap[s])
+        .filter((p): p is string => Boolean(p));
+      let resolvedPairs = requestedPairs;
+      try {
+        const discoveryController = new AbortController();
+        const discoveryTimer = setTimeout(() => discoveryController.abort(), this.config.timeoutMs ?? 10_000);
+        let discoveryResponse: Response;
+        try {
+          discoveryResponse = await fetch(`${this.config.baseUrl}/0/public/AssetPairs`, {
+            method: "GET",
+            signal: discoveryController.signal,
+          });
+        } finally {
+          clearTimeout(discoveryTimer);
+        }
+        if (discoveryResponse.ok) {
+          const discoveryRaw = await discoveryResponse.json() as { result?: Record<string, { altname?: string; wsname?: string }> };
+          const available = new Map<string, string>();
+          for (const [resultKey, meta] of Object.entries(discoveryRaw.result ?? {})) {
+            const candidates = [resultKey, meta?.altname, meta?.wsname?.replace("/", "")].filter((value): value is string => Boolean(value));
+            const requestName = meta?.altname ?? resultKey;
+            for (const candidate of candidates) {
+              available.set(normalizeKrakenPairKey(candidate), requestName);
+            }
+          }
+          const discovered = requestedPairs
+            .map((pair) => available.get(normalizeKrakenPairKey(pair)))
+            .filter((pair): pair is string => Boolean(pair));
+          if (discovered.length > 0) resolvedPairs = [...new Set(discovered)];
+        }
+      } catch {
+        // Pair discovery is an optional compatibility layer. If it is unavailable,
+        // retain the canonical requested pairs and let the ticker request determine coverage.
+      }
+      const pairParam = resolvedPairs.join(",");`,
+);
 await writeFile(
   "src/tests/kraken-watchlist-live-expansion.test.ts",
   `import { afterEach, describe, expect, it } from "vitest";
@@ -505,10 +548,22 @@ describe("v0.7.6 Kraken canonical-watchlist live expansion", () => {
   const originalFetch = globalThis.fetch;
   afterEach(() => { globalThis.fetch = originalFetch; });
 
-  it("requests and normalizes canonical Kraken pairs beyond BTC/SOL", async () => {
-    let seenUrl = "";
+  it("discovers live Kraken REST symbols and expands beyond BTC/SOL", async () => {
+    const seenUrls: string[] = [];
     globalThis.fetch = (async (input: RequestInfo | URL) => {
-      seenUrl = String(input);
+      const url = String(input);
+      seenUrls.push(url);
+      if (url.includes("/0/public/AssetPairs")) {
+        return new Response(JSON.stringify({
+          error: [],
+          result: {
+            XXBTZUSD: { altname: "XBTUSD", wsname: "XBT/USD" },
+            XETHZUSD: { altname: "ETHUSD", wsname: "ETH/USD" },
+            SOLUSD: { altname: "SOLUSD", wsname: "SOL/USD" },
+            COMPUSD: { altname: "COMPUSD", wsname: "COMP/USD" },
+          },
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
       return new Response(JSON.stringify({
         error: [],
         result: {
@@ -535,11 +590,15 @@ describe("v0.7.6 Kraken canonical-watchlist live expansion", () => {
       ["sol", { id: "sol", symbol: "SOL", name: "Solana", providerIds: { krakenPair: "SOLUSD" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: now }],
       ["eth", { id: "eth", symbol: "ETH", name: "Ethereum", providerIds: { krakenPair: "ETHUSD" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: now }],
       ["comp", { id: "comp", symbol: "COMP", name: "Compound", providerIds: { krakenPair: "COMPUSD" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: now }],
+      ["hype", { id: "hype", symbol: "HYPE", name: "Hyperliquid", providerIds: { krakenPair: "HYPEUSD" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: now }],
     ]);
 
     const rows = await adapter.fetch({ canonicalAssets: assets });
-    expect(seenUrl).toContain("ETHUSD");
-    expect(seenUrl).toContain("COMPUSD");
+    expect(seenUrls[0]).toContain("/0/public/AssetPairs");
+    const tickerUrl = seenUrls.find((url) => url.includes("/0/public/Ticker")) ?? "";
+    expect(tickerUrl).toContain("ETHUSD");
+    expect(tickerUrl).toContain("COMPUSD");
+    expect(tickerUrl).not.toContain("HYPEUSD");
 
     const observations = adapter.normalize(rows[0]!.raw, {
       canonicalAssets: assets,
