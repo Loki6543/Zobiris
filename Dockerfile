@@ -10,6 +10,8 @@ COPY deploy/v076/ /tmp/zobiris-b64/
 RUN cat /tmp/zobiris-b64/*.b64 | base64 -d > /tmp/zobiris.txz \
   && tar -xJf /tmp/zobiris.txz -C /tmp \
   && cp -a /tmp/Zobiris_v0.7.6_Railway_Staging/. /app/ \
+  && mkdir -p /app/docs \
+  && cp /tmp/zobiris-b64/ATTENTION_SNAPSHOT_LEDGER_V073.md /app/docs/ATTENTION_SNAPSHOT_LEDGER_V073.md \
   && rm -rf /tmp/zobiris-b64 /tmp/zobiris.txz /tmp/Zobiris_v0.7.6_Railway_Staging
 
 COPY railway_hosted_gate.mjs /app/scripts/railway_hosted_gate.mjs
