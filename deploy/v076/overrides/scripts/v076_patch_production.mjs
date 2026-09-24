@@ -150,11 +150,29 @@ export function normalizeCmcV3Shape(raw: unknown): any {
   if (!root) return raw;
 
   const status = record(root.status);
-  const data = record(root.data);
   const normalizedStatus = status
     ? { ...status, error_code: numericErrorCode(status.error_code) }
     : root.status;
 
+  // Some current keyless v3 responses use the standard API envelope but
+  // return data as an array. Normalize that array to the legacy id-keyed map.
+  if (Array.isArray(root.data)) {
+    const normalizedData: Record<string, unknown> = {};
+    for (const value of root.data) {
+      const entry = normalizeEntry(value);
+      if (!entry) continue;
+      const id = entry.id;
+      const key = typeof id === "number" || typeof id === "string"
+        ? String(id)
+        : typeof entry.symbol === "string"
+          ? entry.symbol
+          : undefined;
+      if (key) normalizedData[key] = entry;
+    }
+    return { ...root, status: normalizedStatus, data: normalizedData };
+  }
+
+  const data = record(root.data);
   if (!data) return { ...root, status: normalizedStatus };
 
   const normalizedData: Record<string, unknown> = {};
@@ -361,6 +379,19 @@ test('normalizes current keyless v3 top-level arrays and quote arrays', () => {
       quote: [{ id: 2781, symbol: 'USD', price: 2700, market_cap: 320000000000, volume_24h: 12000000000, percent_change_24h: 0.8, last_updated: '2026-09-24T19:00:00.000Z' }],
     },
   ]);
+  assert.equal(normalized.status.error_code, 0);
+  assert.equal(normalized.data['1'].quote.USD.price, 85000);
+  assert.equal(normalized.data['1027'].quote.USD.price, 2700);
+});
+
+test('normalizes keyless v3 envelope data arrays', () => {
+  const normalized = normalizeCmcV3Shape({
+    status: { error_code: '0', error_message: '' },
+    data: [
+      { id: 1, name: 'Bitcoin', symbol: 'BTC', quote: [{ id: 2781, symbol: 'USD', price: 85000, market_cap: 1700000000000, volume_24h: 20000000000, percent_change_24h: 1.2, last_updated: '2026-09-24T19:00:00.000Z' }] },
+      { id: 1027, name: 'Ethereum', symbol: 'ETH', quote: [{ id: 2781, symbol: 'USD', price: 2700, market_cap: 320000000000, volume_24h: 12000000000, percent_change_24h: 0.8, last_updated: '2026-09-24T19:00:00.000Z' }] },
+    ],
+  });
   assert.equal(normalized.status.error_code, 0);
   assert.equal(normalized.data['1'].quote.USD.price, 85000);
   assert.equal(normalized.data['1027'].quote.USD.price, 2700);
