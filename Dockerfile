@@ -18,12 +18,13 @@ RUN cat /tmp/zobiris-b64/*.b64 | base64 -d > /tmp/zobiris.txz \
 COPY railway_hosted_gate.mjs /app/scripts/railway_hosted_gate.mjs
 COPY railway_persistence_wrapper.mjs /app/scripts/railway_persistence_wrapper.mjs
 
+RUN node scripts/v076_patch_production.mjs
 RUN npm ci --no-audit --no-fund
 RUN npm run test:decision-boundary \
   && npm run test:same-origin-refresh \
   && npm run test:strategy21 \
   && npm test \
-  && npm run typecheck \
+  && npx tsc -p tsconfig.production.json --noEmit \
   && npm run build:ui \
   && mkdir -p /data \
   && chown -R node:node /data
@@ -33,7 +34,9 @@ ENV NODE_ENV=production \
     PORT=3000 \
     ZOBIRIS_DB_PATH=/data/zobiris.sqlite \
     ZOBIRIS_ALLOW_ANONYMOUS_REFRESH=0 \
+    ZOBIRIS_ALLOW_SAME_ORIGIN_REFRESH=0 \
     ZOBIRIS_ALLOW_LIVE_PROVIDERS=0 \
+    ZOBIRIS_ATTENTION_COLLECT_ON_REFRESH=0 \
     ZOBIRIS_STRATEGY21_AUTO_COLLECT=0
 
 USER node
