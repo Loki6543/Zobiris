@@ -72,11 +72,13 @@ const browserRefresh = await jsonCheck('/api/refresh', {
 
 const refresh = browserRefresh.payload ?? {};
 if (refresh.live !== true) throw new Error('browser refresh did not run live provider policy');
-if (!(Number(refresh.observationCount) > 0)) throw new Error('browser refresh produced no observations');
-if (!(Number(refresh.evidenceClaimCount) > 0)) throw new Error('browser refresh produced no evidence claims');
+if (!(Number(refresh.observationCount) > 2)) throw new Error('browser refresh did not expand beyond the BTC/SOL-only observation floor');
+if (!(Number(refresh.evidenceClaimCount) > 2)) throw new Error('browser refresh did not expand beyond the BTC/SOL-only evidence floor');
 const attentionStatus = refresh.attentionCollection?.status ?? null;
-if (attentionStatus === 'DISABLED' || attentionStatus == null) throw new Error('attention collection did not run');
-console.log(`PASS browser refresh persisted evidence; attention status ${attentionStatus}`);
+if (attentionStatus === 'FAILED' || attentionStatus === 'DISABLED' || attentionStatus == null) {
+  throw new Error(`attention collection is not usable: ${attentionStatus ?? 'missing'}`);
+}
+console.log(`PASS browser refresh expanded live evidence coverage; attention status ${attentionStatus}`);
 
 const after = await jsonCheck('/api/snapshot/latest', {}, [200], 'snapshot after browser refresh');
 const afterIdentity = snapshotIdentity(after.payload);
