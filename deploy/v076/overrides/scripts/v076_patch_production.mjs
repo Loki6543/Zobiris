@@ -92,3 +92,257 @@ await writeFile(
   ) + "\n",
   "utf8",
 );
+
+
+await writeFile(
+  "src/providers/cmcQuoteShape.ts",
+  `type UnknownRecord = Record<string, unknown>;
+
+function record(value: unknown): UnknownRecord | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as UnknownRecord
+    : undefined;
+}
+
+function numericErrorCode(value: unknown): unknown {
+  if (typeof value === "string" && /^-?\\d+$/.test(value.trim())) return Number(value);
+  return value;
+}
+
+export function normalizeCmcV3Shape(raw: unknown): any {
+  const root = record(raw);
+  if (!root) return raw;
+
+  const status = record(root.status);
+  const data = record(root.data);
+  const normalizedStatus = status
+    ? { ...status, error_code: numericErrorCode(status.error_code) }
+    : root.status;
+
+  if (!data) return { ...root, status: normalizedStatus };
+
+  const normalizedData: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    const entry = record(value);
+    if (!entry) {
+      normalizedData[key] = value;
+      continue;
+    }
+
+    const quoteValue = entry.quote;
+    if (!Array.isArray(quoteValue)) {
+      normalizedData[key] = entry;
+      continue;
+    }
+
+    const usd = quoteValue
+      .map(record)
+      .find((quote) => quote?.symbol === "USD" || quote?.id === 2781 || quote?.id === "2781");
+
+    normalizedData[key] = {
+      ...entry,
+      quote: usd ? { USD: usd } : {},
+    };
+  }
+
+  return { ...root, status: normalizedStatus, data: normalizedData };
+}
+`,
+  "utf8",
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `import { randomUUID } from "node:crypto";`,
+  `import { randomUUID } from "node:crypto";
+import { normalizeCmcV3Shape } from "./cmcQuoteShape.js";`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `    requiresApiKey: true,
+    supported: "fixture-only" as const,
+    dataClasses: ["market" as const, "identity" as const, "social" as const],
+    notes: "Slice 1: fixture-driven. Use community/trending data only (do NOT invent a \`mindshare\` endpoint).",`,
+  `    requiresApiKey: false,
+    supported: "live" as const,
+    dataClasses: ["market" as const, "identity" as const, "social" as const],
+    notes: "Live quotes support paid-key and documented keyless-v3 access. Use community/trending data only (do NOT invent a \`mindshare\` endpoint).",`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `  liveConfig?: {
+    apiKey: string;
+    timeoutMs?: number;
+  };`,
+  `  liveConfig?: {
+    apiKey?: string;
+    keyless?: boolean;
+    timeoutMs?: number;
+  };`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `    const parsed = cmcQuoteSchema.safeParse(raw);`,
+  `    const parsed = cmcQuoteSchema.safeParse(normalizeCmcV3Shape(raw));`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `    const apiKey = this.config.liveConfig?.apiKey;
+    if (this.config.forceFixtures === false && apiKey) {`,
+  `    const liveConfig = this.config.liveConfig;
+    const apiKey = liveConfig?.apiKey;
+    if (this.config.forceFixtures === false && liveConfig) {`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `      const timeoutMs = this.config.liveConfig?.timeoutMs ?? CMC_LIVE_TIMEOUT_MS;`,
+  `      const timeoutMs = liveConfig.timeoutMs ?? CMC_LIVE_TIMEOUT_MS;`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `        response = await fetch(url, {
+          method: "GET",
+          headers: { "X-CMC_PRO_API_KEY": apiKey },
+          signal: controller.signal,
+        });`,
+  `        response = await fetch(url, {
+          method: "GET",
+          headers: apiKey ? { "X-CMC_PRO_API_KEY": apiKey } : { Accept: "application/json" },
+          signal: controller.signal,
+        });`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `    } else if (this.config.forceFixtures === false && this.config.liveConfig?.apiKey) {
+      status = "connected";`,
+  `    } else if (this.config.forceFixtures === false && this.config.liveConfig) {
+      status = "connected";`,
+);
+
+await replaceOnce(
+  "src/scripts/_adapters.ts",
+  `  } else if (opts.live) {
+    // Live mode requested, no key configured: explicit credentials-needed.
+    // Do NOT silently use the fixture. The runtime will record this
+    // honestly in the audit trail.
+    cmc.configure({
+      baseUrl: "https://pro-api.coinmarketcap.com",
+      fixturePath: "",  // no fixture in live mode
+    });
+    // eslint-disable-next-line no-console
+    console.warn("CMC_API_KEY not set; CMC adapter will report credentials-needed (no fixture fallback in live mode).");
+  } else {`,
+  `  } else if (opts.live) {
+    // Current CMC v3 provides a documented keyless public-api surface for
+    // quotes/listings. Use it in live mode when a paid key is absent rather
+    // than dropping CMC coverage entirely. No fixture fallback is configured.
+    cmc.configure({
+      baseUrl: "https://pro-api.coinmarketcap.com/public-api",
+      fixturePath: "",
+      forceFixtures: false,
+      liveConfig: { keyless: true, timeoutMs: 10_000 },
+    });
+  } else {`,
+);
+
+await replaceOnce(
+  "src/tests/cmc-no-key-state-truthful.test.ts",
+  `  it("with --live and no CMC_API_KEY: health() reports credentials-needed (not connected)", () => {
+    delete process.env.CMC_API_KEY;
+    const adapters = buildAdapters({ live: true, staleSeconds: 60 });
+    const cmc = (adapters as any).cmc as CMCAdapter;
+    const h = cmc.health();
+    expect(h.status).toBe("credentials-needed");
+  });`,
+  `  it("with --live and no CMC_API_KEY: health() reports connected keyless live mode", () => {
+    delete process.env.CMC_API_KEY;
+    const adapters = buildAdapters({ live: true, staleSeconds: 60 });
+    const cmc = (adapters as any).cmc as CMCAdapter;
+    expect(cmc.health().status).toBe("connected");
+  });`,
+);
+
+await replaceOnce(
+  "src/tests/cmc-no-key-state-truthful.test.ts",
+  `  it("with --live and no CMC_API_KEY: fetch() returns no rows (no fake data)", async () => {
+    delete process.env.CMC_API_KEY;
+    const adapters = buildAdapters({ live: true, staleSeconds: 60 });
+    const cmc = (adapters as any).cmc as CMCAdapter;
+    const result = await cmc.fetch({ canonicalAssets: new Map() });
+    // No fixture, no live key: should return an empty/null result.
+    expect(result).toBeDefined();
+    expect(result.length).toBeLessThanOrEqual(1);
+    // The single result (if any) has data=null, which the
+    // normalizer handles as a no-op.
+    if (result[0]) {
+      expect(result[0].data).toBeNull();
+    }
+  });`,
+  `  it("with --live and no CMC_API_KEY: fetch() uses keyless v3 quotes with no auth header", async () => {
+    delete process.env.CMC_API_KEY;
+    const originalFetch = globalThis.fetch;
+    let seenUrl = "";
+    let seenHeaders: HeadersInit | undefined;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      seenUrl = String(input);
+      seenHeaders = init?.headers;
+      return new Response(JSON.stringify({
+        status: { error_code: "0" },
+        data: {
+          "1": { id: 1, name: "Bitcoin", symbol: "BTC", quote: [{ id: 2781, symbol: "USD", price: 85000, market_cap: 1700000000000, volume_24h: 20000000000, percent_change_24h: 1.2, last_updated: "2026-09-24T19:00:00.000Z" }] },
+        },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }) as typeof fetch;
+    try {
+      const adapters = buildAdapters({ live: true, staleSeconds: 60 });
+      const cmc = (adapters as any).cmc as CMCAdapter;
+      const assets = new Map([["BTC", { id: "btc", symbol: "BTC", name: "Bitcoin", providerIds: { cmcNumericId: "1" }, mappingStatus: "verified", mappingConfidence: 1, updatedAt: new Date().toISOString() } as any]]);
+      const result = await cmc.fetch({ canonicalAssets: assets });
+      expect(seenUrl).toContain("https://pro-api.coinmarketcap.com/public-api/v3/cryptocurrency/quotes/latest");
+      expect(JSON.stringify(seenHeaders ?? {})).not.toContain("X-CMC_PRO_API_KEY");
+      expect(result[0]?.dataMode).toBe("live");
+      const observations = cmc.normalize(result[0]?.raw, { canonicalAssets: assets, endpoint: "quotes/latest", receivedAt: result[0]!.receivedAt, rawSchemaVersion: "1.0.0" });
+      expect(observations[0]?.payload.priceUsd).toBe(85000);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });`,
+);
+
+await writeFile(
+  "verification/cmcQuoteShape.node.test.mjs",
+  `import test from 'node:test';
+import assert from 'node:assert/strict';
+import { normalizeCmcV3Shape } from '../src/providers/cmcQuoteShape.ts';
+
+test('normalizes current keyless v3 quote arrays and string success codes', () => {
+  const normalized = normalizeCmcV3Shape({
+    status: { error_code: '0', error_message: null },
+    data: {
+      '1': {
+        id: 1,
+        name: 'Bitcoin',
+        symbol: 'BTC',
+        quote: [{ id: 2781, symbol: 'USD', price: 85000, market_cap: 1700000000000, volume_24h: 20000000000, percent_change_24h: 1.2, last_updated: '2026-09-24T19:00:00.000Z' }],
+      },
+    },
+  });
+  assert.equal(normalized.status.error_code, 0);
+  assert.equal(normalized.data['1'].quote.USD.price, 85000);
+});
+
+test('preserves legacy keyed quote objects', () => {
+  const raw = { status: { error_code: 0 }, data: { '1': { id: 1, name: 'Bitcoin', symbol: 'BTC', quote: { USD: { price: 80000 } } } } };
+  const normalized = normalizeCmcV3Shape(raw);
+  assert.equal(normalized.data['1'].quote.USD.price, 80000);
+});
+`,
+  "utf8",
+);
