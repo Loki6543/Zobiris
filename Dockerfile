@@ -23,6 +23,7 @@ RUN npm ci --no-audit --no-fund
 RUN npm run test:decision-boundary \
   && npm run test:same-origin-refresh \
   && node --experimental-strip-types --test verification/cmcKeylessCurrentShape.node.test.mjs \
+  && node --experimental-strip-types --test verification/cmcQuoteShape.node.test.mjs \
   && npm run test:strategy21 \
   && npm test \
   && npx tsc -p tsconfig.production.json --noEmit \
