@@ -210,24 +210,33 @@ const STRATEGY21_MIN_ORDER_CONFIDENCE_PCT = 65;
 const STRATEGY21_LATER_LINE_CONFIDENCE_PCT = 75;
 
 function krakenLimitPurchaseGate(detail: any) {
-  const strategy = detail?.strategy21 ?? {};
+  const strategy =
+    detail?.strategy21 ??
+    detail?.assetAnalysis?.strategy21 ??
+    detail?.caseFile?.strategy21 ??
+    {};
   const eligibility = strategy?.eligibility ?? detail?.eligibility ?? {};
   const authority = strategy?.positionAuthority ?? detail?.positionAuthority ?? {};
   const status = String(eligibility?.status ?? "").toUpperCase();
   const failureReasons = Array.isArray(eligibility?.failureReasons)
     ? eligibility.failureReasons.map((reason: unknown) => String(reason))
     : [];
-  const maxNextOrderUsd = Number(authority?.maxNextOrderUsd ?? 0);
+
+  const authorityMax = Number(authority?.maxNextOrderUsd ?? 0);
+  const eligibilityMax = Number(eligibility?.maximumOrderUsd ?? authorityMax);
+  const finiteCaps = [authorityMax, eligibilityMax].filter((value) => Number.isFinite(value) && value >= 0);
+  const maxNextOrderUsd = finiteCaps.length ? Math.min(...finiteCaps) : 0;
+
   const krakenFailure = failureReasons.some((reason: string) =>
     /(kraken|liquidity|volume|turnover|active[- ]minute|trade[- ]count|depth|spread|slippage)/i.test(reason)
   );
   const blockedStatus = /(WATCH_ONLY|BLOCK|INELIGIBLE|REJECT)/.test(status);
 
   return {
-    pass: Number.isFinite(maxNextOrderUsd) && maxNextOrderUsd > 0 && !krakenFailure && !blockedStatus,
+    pass: maxNextOrderUsd > 0 && !krakenFailure && !blockedStatus,
     status: status || "UNKNOWN",
     failureReasons,
-    maxNextOrderUsd: Number.isFinite(maxNextOrderUsd) ? maxNextOrderUsd : 0,
+    maxNextOrderUsd,
   };
 }
 
@@ -759,7 +768,7 @@ function OrderPlanPanel({
   const sellOrders = OPEN_ORDERS.filter((order) => order.side === "SELL" && order.symbol === row.symbol);
   const plannedSellUsd = sellOrders.reduce((sum, order) => sum + order.amountUsd, 0);
   const plannedPct = row.value > 0 ? (plannedSellUsd / row.value) * 100 : 0;
-  const strategy = detail?.strategy21 ?? row.asset?.strategy21 ?? null;
+  const strategy = detail?.strategy21 ?? detail?.assetAnalysis?.strategy21 ?? detail?.caseFile?.strategy21 ?? row.asset?.strategy21 ?? null;
   const caseFile = detail?.caseFile ?? null;
   const eligibility = strategy?.eligibility?.status ?? "UNKNOWN";
   const nearestFlip = caseFile?.decisionBoundary?.nearestFlip ?? row.asset?.decisionBoundary?.nearestFlip ?? null;
