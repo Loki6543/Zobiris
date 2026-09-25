@@ -195,6 +195,13 @@ async function verifyCandidate() {
     if (Math.abs(account.portfolioDependency.grossPostFillExposureUsd - account.portfolioDependency.grossCurrentExposureUsd - 102) > 0.02) throw new Error('buy commitments missing from exposure');
     if (strategy.payload.assets.some(a => a.strategy21?.eligibility?.status === 'WATCH_ONLY' && a.strategy21?.positionAuthority?.maxNextOrderUsd > 0)) throw new Error('WATCH_ONLY asset authorized an order');
     console.log('PASS candidate holdings, funded cash, commitments, liquidity gates and snapshot consistency');
+    for (const symbol of ['BTC', 'AAVE', 'HBAR', 'XRP']) {
+      const asset = strategy.payload.assets.find(a => a.symbol === symbol);
+      const quotes = asset?.strategy21?.explanation?.observations ?? [];
+      if (!quotes.some(o => { try { return JSON.parse(o.claim).priceUsd > 0; } catch { return false; } })) throw new Error(`${symbol} has no parseable current quote`);
+    }
+    console.log('PASS candidate account symbols expose complete structured quotes');
+
 
 
     const eth = await jsonCheck(localOrigin, '/api/asset/ETH', {}, [200], 'candidate ETH case file after refresh');

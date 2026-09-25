@@ -985,7 +985,8 @@ function buildEvidenceClaims(observations: NormalizedObservation[], canonicalMap
       observationId: o.id,
       symbol,
       factorFamily,
-      claim: JSON.stringify(o.payload).slice(0, 200),
+      // Consumers parse structured quote evidence; truncation corrupts JSON.
+      claim: JSON.stringify(o.payload),
       source: o.providerEndpoint ? `${o.provider} ${o.providerEndpoint}` : o.provider,
       observedAt: o.sourceTimestamp ?? o.occurredAt,
       receivedAt: o.receivedAt,

@@ -108,6 +108,13 @@ describe("v0.4.13 watchlist-only HTTP boundary", () => {
     expect(asset.caseFile.recentHistory).toHaveLength(1);
     expect(asset.caseFile.changeSincePrevious).not.toBeNull();
     expect(asset.caseFile.evidence.length).toBeGreaterThan(0);
+    // Structured market evidence must survive persistence as complete JSON.
+    const marketClaims = asset.evidence.filter((claim: JsonRecord) => claim.factorFamily === "marketTechnical");
+    expect(marketClaims.length).toBeGreaterThan(0);
+    for (const claim of marketClaims) {
+      expect(() => JSON.parse(claim.claim)).not.toThrow();
+      expect(JSON.parse(claim.claim).priceUsd).toBeGreaterThan(0);
+    }
     expect(
       asset.caseFile.evidence.every(
         (item: JsonRecord) => typeof item.dataMode === "string",
