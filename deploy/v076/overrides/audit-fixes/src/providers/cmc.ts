@@ -201,7 +201,7 @@ export class CMCAdapter implements ProviderAdapter<CMCAdapterConfig> {
     }
     if (this.config.forceFixtures === false && this.config.liveConfig && !this.lastNetworkError) {
       const times = out.filter(o => Number((o.payload as any).priceUsd) > 0)
-        .map(o => Date.parse(o.sourceTimestamp ?? o.occurredAt)).filter(Number.isFinite);
+        .map(o => Date.parse(o.sourceTimestamp ?? "")).filter(Number.isFinite);
       this.lastQuoteAt = times.length ? Math.max(...times) : undefined;
     }
     return out;

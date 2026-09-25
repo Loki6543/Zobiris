@@ -135,6 +135,9 @@ describe("CMCAdapter live mode", () => {
     expect(adapter.health().freshness).toBe("live");
     vi.spyOn(Date, "now").mockReturnValue(now + 7 * 60 * 60 * 1000);
     expect(adapter.freshness()).toBe("stale");
+    for (const item of Object.values(raw.data)) (item.quote.USD as any).last_updated = null;
+    adapter.normalize(raw, { canonicalAssets: mkAssetMap(), endpoint: "quotes/latest", receivedAt: new Date(now).toISOString(), rawSchemaVersion: "1" });
+    expect(adapter.freshness()).toBe("unavailable");
   });
 
   it("attempts HTTP when apiKey is set and forceFixtures is false", async () => {
