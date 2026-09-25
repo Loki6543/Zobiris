@@ -69,6 +69,21 @@ async function verifyNoSecret(origin, readPaths) {
   }
 }
 
+async function verifySimpleUi(origin) {
+  const root = await fetch(new URL("/", origin), { signal: AbortSignal.timeout(15000) });
+  const html = await root.text();
+  const srcs = [...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map((match) => match[1]);
+  let bundle = "";
+  for (const src of srcs) {
+    const response = await fetch(new URL(src, origin), { signal: AbortSignal.timeout(15000) });
+    bundle += await response.text();
+  }
+  for (const required of ["ZOBIRIS CORE", "Market Today", "History / Learning", "Current positions"]) {
+    if (!bundle.includes(required)) throw new Error("candidate simplified UI is missing " + required);
+  }
+  console.log("PASS candidate simplified three-screen UI bundle");
+}
+
 async function verifyPublicBaseline() {
   await jsonCheck(publicOrigin, '/api/health', {}, [200], 'public health JSON');
   const integrity = await jsonCheck(publicOrigin, '/api/integrity', {}, [200], 'public integrity endpoint');
@@ -200,6 +215,7 @@ async function verifyCandidate() {
     await jsonCheck(localOrigin, '/api/definitely-not-a-route', {}, [404], 'candidate unknown API route returns JSON 404');
     await verifyNoSecret(localOrigin, ['/', '/api/health', '/api/integrity', '/api/db-info', '/api/watchlist', '/api/providers', '/api/snapshots?limit=5']);
     console.log('PASS candidate secret absent from checked UI/API responses');
+    await verifySimpleUi(localOrigin);
 
     console.log(JSON.stringify({
       checkedAt: new Date().toISOString(),
