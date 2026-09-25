@@ -92,7 +92,24 @@ function buildOrderPlan(row: any, regime: string, recentReentry: boolean) {
   const reductionPct = regimeBreak ? 0.055 : 0.075;
   const reduceTrigger = current * (1 - reductionPct);
   const reduceLimit = reduceTrigger * 0.994;
+
+  // Position sizing deliberately reflects the strongest lessons in the user's
+  // trade memory: partial harvesting worked, rapid re-entry hurt, and clustered
+  // market adds should be smaller and staged.
   const trimPct = row.upl >= 30 ? 20 : row.upl >= 15 ? 15 : 10;
+  const secondTrimPct = row.upl >= 30 ? 15 : 10;
+
+  let firstAddPct = regimeBreak ? 8 : 12;
+  if (score >= 55 && confidence >= 55) firstAddPct += 4;
+  if (score < 45) firstAddPct -= 3;
+  if (row.upl >= 15) firstAddPct -= 3;
+  if (recentReentry) firstAddPct -= 4;
+  firstAddPct = Math.round(clamp(firstAddPct, 5, 18));
+
+  const secondAddPct = Math.round(clamp(firstAddPct * 0.75, 5, 12));
+  const defensiveReducePct = regimeBreak
+    ? (score < 45 ? 25 : 20)
+    : (score < 45 ? 20 : 15);
 
   return {
     score,
@@ -106,6 +123,10 @@ function buildOrderPlan(row: any, regime: string, recentReentry: boolean) {
     reduceTrigger,
     reduceLimit,
     trimPct,
+    secondTrimPct,
+    firstAddPct,
+    secondAddPct,
+    defensiveReducePct,
     recentReentry,
     regimeBreak,
   };
@@ -630,6 +651,38 @@ function OrderPlanPanel({
   const watchOnly = String(eligibility).includes("WATCH") || Number(strategy?.positionAuthority?.maxNextOrderUsd ?? 0) <= 0;
   const staleOrderWarning = sellOrders.some((order) => order.targetPriceUsd <= row.livePrice);
 
+  const trimUsd = row.value * (plan.trimPct / 100);
+  const trimQty = row.quantity * (plan.trimPct / 100);
+  const secondTrimUsd = row.value * (plan.secondTrimPct / 100);
+  const firstAddUsd = row.value * (plan.firstAddPct / 100);
+  const firstAddQty = plan.buyNear > 0 ? firstAddUsd / plan.buyNear : 0;
+  const secondAddUsd = row.value * (plan.secondAddPct / 100);
+  const secondAddQty = plan.buyDeep > 0 ? secondAddUsd / plan.buyDeep : 0;
+  const defensiveReduceUsd = row.value * (plan.defensiveReducePct / 100);
+  const defensiveReduceQty = row.quantity * (plan.defensiveReducePct / 100);
+
+  let firstActionTitle = "HOLD — WAIT FOR A BETTER ENTRY";
+  let firstActionDetail = `Do not add at ${money(row.livePrice)}. First add ${plan.firstAddPct}% near ${money(plan.buyNear)}.`;
+  let learnedReason = "Your trade history favors staged limit entries over chasing strength.";
+
+  if (staleOrderWarning) {
+    firstActionTitle = "VERIFY EXISTING KRAKEN ORDER FIRST";
+    firstActionDetail = `Do not duplicate the snapshot order. If it is no longer open, the next planned trim is ${plan.trimPct}% near ${money(plan.harvestNear)}.`;
+    learnedReason = "Zobiris learned to avoid stacking duplicate exits when an older order may already have filled.";
+  } else if (row.upl >= 15) {
+    firstActionTitle = `TRIM ${plan.trimPct}% AT ${money(plan.harvestNear)}`;
+    firstActionDetail = `About ${num(trimQty, 8)} ${row.symbol} / ${money(trimUsd)}. Keep the remaining position as the runner.`;
+    learnedReason = "Partial harvesting has been one of your better behaviors; fast re-entry after harvesting has been weaker.";
+  } else if (!watchOnly && plan.score >= 55 && plan.confidence >= 55 && row.upl < 8) {
+    firstActionTitle = `ADD ${plan.firstAddPct}% AT ${money(plan.buyNear)}`;
+    firstActionDetail = `About ${num(firstAddQty, 8)} ${row.symbol} / ${money(firstAddUsd)}. Use a limit, not a market chase.`;
+    learnedReason = "Your cleaner historical trades came from planned limit entries, while clustered market buys added risk.";
+  } else if (row.upl >= 8) {
+    firstActionTitle = "HOLD — PREPARE A PARTIAL HARVEST";
+    firstActionDetail = `Do not add here. First planned reduction is ${plan.trimPct}% at ${money(plan.harvestNear)}.`;
+    learnedReason = "Zobiris is preserving the winner while avoiding the all-or-nothing exits your history does not support.";
+  }
+
   return (
     <div style={styles.analysisPanel}>
       <div style={styles.analysisHeader}>
@@ -641,6 +694,13 @@ function OrderPlanPanel({
           </div>
         </div>
         <span style={actionStyle(row.action)}>{row.action}</span>
+      </div>
+
+      <div style={styles.firstAction}>
+        <div style={styles.firstActionLabel}>BEST FIRST COURSE OF ACTION</div>
+        <div style={styles.firstActionTitle}>{firstActionTitle}</div>
+        <div style={styles.firstActionDetail}>{firstActionDetail}</div>
+        <div style={styles.learnedWhy}><strong>Why Zobiris learned this:</strong> {learnedReason}</div>
       </div>
 
       {sellOrders.length ? (
@@ -660,18 +720,27 @@ function OrderPlanPanel({
         <div style={styles.planCard}>
           <div style={styles.limitLabel}>SELL / HARVEST LADDER</div>
           <strong>{money(plan.harvestNear)} → {money(plan.harvestHigh)}</strong>
-          <div style={styles.tiny}>First trim about {plan.trimPct}% of the position; second trim another 10–15% if price keeps extending. Keep the rest as the runner.</div>
+          <div style={styles.tiny}>
+            Action 1: reduce {plan.trimPct}% ({num(trimQty, 8)} {row.symbol}, about {money(trimUsd)}) near {money(plan.harvestNear)}.
+            {" "}Action 2: reduce another {plan.secondTrimPct}% (about {money(secondTrimUsd)}) near {money(plan.harvestHigh)}.
+            {" "}Keep the rest as the runner.
+          </div>
         </div>
         <div style={styles.planCard}>
           <div style={styles.limitLabel}>DEFENSIVE REDUCTION</div>
           <strong>Trigger {money(plan.reduceTrigger)}</strong>
-          <div style={styles.tiny}>Stop-limit reference: trigger near {money(plan.reduceTrigger)}, limit near {money(plan.reduceLimit)}. Use this as a review/reduction line, not an automatic full exit.</div>
+          <div style={styles.tiny}>
+            If structure breaks, reduce {plan.defensiveReducePct}% ({num(defensiveReduceQty, 8)} {row.symbol}, about {money(defensiveReduceUsd)}).
+            {" "}Trigger near {money(plan.reduceTrigger)}, limit reference near {money(plan.reduceLimit)}. Do not turn this into an automatic full exit.
+          </div>
         </div>
         <div style={styles.planCard}>
           <div style={styles.limitLabel}>BUY / RE-ENTRY RANGE</div>
           <strong>{money(Math.min(plan.buyDeep, plan.buyNear))} → {money(Math.max(plan.buyDeep, plan.buyNear))}</strong>
           <div style={styles.tiny}>
-            Stage the lower price first. {plan.recentReentry ? "Recent re-entry history pushes this range deeper. " : ""}
+            First add: {plan.firstAddPct}% of the current position (about {money(firstAddUsd)} / {num(firstAddQty, 8)} {row.symbol}) near {money(plan.buyNear)}.
+            {" "}Second add: {plan.secondAddPct}% (about {money(secondAddUsd)} / {num(secondAddQty, 8)} {row.symbol}) near {money(plan.buyDeep)}.
+            {" "}{plan.recentReentry ? "Your quick re-entry history pushes both sizes and prices lower. " : ""}
             {plan.open24h ? "24h open reference " + money(plan.open24h) + ". " : ""}
             Never chase above the range.
           </div>
@@ -736,6 +805,11 @@ const styles: Record<string, CSSProperties> = {
   analysisPanel: { background: "#0d1015", border: "1px solid #2c3440", borderRadius: 12, padding: 16, marginTop: 6 },
   analysisHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 },
   analysisTitle: { fontSize: 20, fontWeight: 900, marginTop: 4 },
+  firstAction: { background: "#121922", border: "1px solid #4c6178", borderRadius: 12, padding: 15, marginBottom: 12 },
+  firstActionLabel: { color: "#8fbfff", fontSize: 10, fontWeight: 900, letterSpacing: 1.2, marginBottom: 5 },
+  firstActionTitle: { fontSize: 21, fontWeight: 950, lineHeight: 1.2 },
+  firstActionDetail: { color: "#eef3f9", fontSize: 14, lineHeight: 1.5, marginTop: 6 },
+  learnedWhy: { color: "#9facbd", fontSize: 12, lineHeight: 1.5, marginTop: 7 },
   existingPlan: { background: "#171a20", border: "1px solid #343c48", borderRadius: 10, padding: 12, marginBottom: 12 },
   warningText: { color: "#ffd67a", fontSize: 12, lineHeight: 1.45, marginTop: 7 },
   planGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 },
