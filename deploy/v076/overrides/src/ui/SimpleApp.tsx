@@ -74,7 +74,7 @@ function fifoRealized(trades: TradeMemory[]) {
     let cost = 0;
     let known = true;
     while (remaining > 0.0000000001 && symbolLots.length) {
-      const lot = symbolLots[0];
+      const lot = symbolLots[0]!;
       const take = Math.min(remaining, lot.qty);
       if (lot.unitCost == null) known = false;
       else cost += take * lot.unitCost;
