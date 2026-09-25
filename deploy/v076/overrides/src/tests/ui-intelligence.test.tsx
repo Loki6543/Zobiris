@@ -30,11 +30,22 @@ const rankedAssets = [
     symbol: "AVAX",
     mappingStatus: "verified",
     action: "HOLD",
-    confidence: { pct: 55 },
+    confidence: { pct: 82 },
     opportunity: { adjusted: 20 },
     strategy21: {
-      researchScore: 54,
+      researchScore: 64,
       explanation: { observations: [{ claim: JSON.stringify({ priceUsd: 10 }) }] }
+    }
+  },
+  {
+    symbol: "ATOM",
+    mappingStatus: "verified",
+    action: "HOLD",
+    confidence: { pct: 78 },
+    opportunity: { adjusted: 24 },
+    strategy21: {
+      researchScore: 62,
+      explanation: { observations: [{ claim: JSON.stringify({ priceUsd: 2.5 }) }] }
     }
   }
 ];
@@ -66,6 +77,22 @@ beforeEach(() => {
         }
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
+    if (url.includes("/api/asset/AVAX")) {
+      return new Response(JSON.stringify({
+        strategy21: {
+          eligibility: { status: "WATCH_ONLY", failureReasons: ["Kraken weak-day volume/turnover gate failed"] },
+          positionAuthority: { maxNextOrderUsd: 0 }
+        }
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.includes("/api/asset/ATOM")) {
+      return new Response(JSON.stringify({
+        strategy21: {
+          eligibility: { status: "ELIGIBLE", failureReasons: [] },
+          positionAuthority: { maxNextOrderUsd: 42.5 }
+        }
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
 });
@@ -75,6 +102,7 @@ describe("simplified Zobiris Core", () => {
     render(<App />);
     expect(await screen.findByText("Current positions")).toBeTruthy();
     expect(screen.getByText("Open orders")).toBeTruthy();
+    expect(screen.getByText("$713.74")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Open SOL order analysis" }));
     expect(await screen.findByText("BEST FIRST COURSE OF ACTION")).toBeTruthy();
@@ -88,6 +116,10 @@ describe("simplified Zobiris Core", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
+    expect(await screen.findByText("ATOM")).toBeTruthy();
+    expect(screen.getByText(/Kraken gate passed · max next order \$42\.50/)).toBeTruthy();
+    expect(screen.getByText("LIMIT CANDIDATE · $37.50")).toBeTruthy();
+    expect(screen.queryByText("AVAX")).toBeNull();
     expect(screen.getByText("Rules learned from you")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "History / Learning" }));
