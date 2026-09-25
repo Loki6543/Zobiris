@@ -26,7 +26,10 @@ export type TradeMemory = {
 };
 
 export const PORTFOLIO_CAPTURED_AT = "2026-09-24T19:29:00-07:00";
-export const CASH_USD = 513.74;
+export const CASH_BEFORE_INFLOW_USD = 513.74;
+export const CASH_INFLOW_USD = 200;
+export const CASH_UPDATED_AT = "2026-09-25";
+export const CASH_USD = CASH_BEFORE_INFLOW_USD + CASH_INFLOW_USD;
 
 export const HOLDINGS: HoldingSeed[] = [
   { symbol: "KAS", name: "Kaspa", quantity: 424.939, avgPriceUsd: 0.03, fallbackPriceUsd: 0.03975 },
