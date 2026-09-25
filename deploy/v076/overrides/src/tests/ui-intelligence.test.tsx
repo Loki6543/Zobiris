@@ -118,7 +118,7 @@ describe("simplified Zobiris Core", () => {
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
     expect(await screen.findByText("ATOM")).toBeTruthy();
     expect(screen.getByText(/Kraken gate passed · max next order \$42\.50/)).toBeTruthy();
-    expect(screen.getByText("LIMIT CANDIDATE · $46.25")).toBeTruthy();
+    expect(screen.getByText("LIMIT CANDIDATE · $42.50")).toBeTruthy();
     expect(screen.queryByText("AVAX")).toBeNull();
     expect(screen.getByText("Rules learned from you")).toBeTruthy();
 
