@@ -679,6 +679,103 @@ describe("v0.7.6 Kraken canonical-watchlist live expansion", () => {
   "utf8",
 );
 
+
+await replaceOnce(
+  "src/strategy21/engine/capital.ts",
+  `    maneuverNavUsd: 1500,
+    maneuverCashUsd: 1500,`,
+  `    maneuverNavUsd: 1850,
+    maneuverCashUsd: 1850,`,
+);
+
+await replaceOnce(
+  "src/strategy21/engine/portfolioDependency.ts",
+  `  capitalBaseUsd: 1500,`,
+  `  capitalBaseUsd: 1850,`,
+);
+
+await replaceOnce(
+  "src/strategy21/integration.ts",
+  `  maneuverCapitalUsd: 1500;`,
+  `  maneuverCapitalUsd: 1850;`,
+);
+
+await replaceOnce(
+  "src/strategy21/integration.ts",
+  `      maneuverCapitalUsd: 1500,`,
+  `      maneuverCapitalUsd: 1850,`,
+);
+
+await replaceOnce(
+  "src/server/server.ts",
+  `          maneuverCapitalUsd: 1500,`,
+  `          maneuverCapitalUsd: 1850,`,
+);
+
+await replaceOnce(
+  "src/strategy21/tests/capitalExecution.test.ts",
+  `  assert.equal(ledger.maneuverCashUsd, 1500);`,
+  `  assert.equal(ledger.maneuverCashUsd, 1850);`,
+);
+
+await replaceOnce(
+  "src/strategy21/tests/capitalExecution.test.ts",
+  `  assert.equal(deploymentAuthorityUsd("BROAD_EXPANSION", ledger, "TACTICAL"), 1275);
+  assert.equal(deploymentAuthorityUsd("UNCERTAIN", ledger, "TACTICAL"), 225);`,
+  `  assert.equal(deploymentAuthorityUsd("BROAD_EXPANSION", ledger, "TACTICAL"), 1572.5);
+  assert.equal(deploymentAuthorityUsd("UNCERTAIN", ledger, "TACTICAL"), 277.5);`,
+);
+
+await replaceOnce(
+  "src/strategy21/tests/capitalExecution.test.ts",
+  `  assert.equal(core.maxPositionUsd, 180);
+  assert.equal(meme.maxPositionUsd, 45);`,
+  `  assert.equal(core.maxPositionUsd, 200);
+  assert.equal(meme.maxPositionUsd, 55.5);`,
+);
+
+await replaceOnce(
+  "src/strategy21/tests/capitalExecution.test.ts",
+  `  assert.equal(core.maxPositionUsd, 20);
+  assert.equal(meme.maxPositionUsd, 10);`,
+  `  assert.equal(core.maxPositionUsd, 107.5);
+  assert.equal(meme.maxPositionUsd, 27.5);`,
+);
+
+await replaceOnce(
+  "src/strategy21/tests/capitalExecution.test.ts",
+  `  assert.equal(probe.maxNextOrderUsd, 37.5);`,
+  `  assert.equal(probe.maxNextOrderUsd, 46.25);`,
+);
+
+await replaceOnce(
+  "src/strategy21/tests/integration.test.ts",
+  `  assert.equal(result.strategy21.maneuverCapitalUsd, 1500);
+  assert.equal(result.strategy21.deploymentAuthorityUsd, 1275);`,
+  `  assert.equal(result.strategy21.maneuverCapitalUsd, 1850);
+  assert.equal(result.strategy21.deploymentAuthorityUsd, 1572.5);`,
+);
+
+await replaceOnce(
+  "src/strategy21/tests/zobiris.test.ts",
+  `  assert.equal(decision.authority.maxNextOrderUsd, 37.5);`,
+  `  assert.equal(decision.authority.maxNextOrderUsd, 46.25);`,
+);
+
+await replaceOnce(
+  "src/strategy21/tests/zobiris.test.ts",
+  `  assert.equal(decision.authority.maxPositionUsd, 45);
+  assert.equal(decision.authority.maxNextOrderUsd, 37.5);`,
+  `  assert.equal(decision.authority.maxPositionUsd, 55.5);
+  assert.equal(decision.authority.maxNextOrderUsd, 46.25);`,
+);
+
+await replaceOnce(
+  "scripts/verify_strategy21_integration.mjs",
+  `expect('$1,500 maneuver capital is encoded', capital.includes('maneuverNavUsd: 1500'));`,
+  `expect('$1,850 maneuver capital is encoded', capital.includes('maneuverNavUsd: 1850'));`,
+);
+
 await writeFile(
   "src/ui/App.tsx",
   'export { App } from "./SimpleApp";\nexport { App as default } from "./SimpleApp";\n',
