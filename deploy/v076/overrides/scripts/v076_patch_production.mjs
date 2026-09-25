@@ -218,6 +218,34 @@ await replaceOnce(
   };`,
 );
 
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  \`    quote: z.record(z.string(), z.object({
+      price: z.number().optional(),
+      percent_change_24h: z.number().optional(),
+      market_cap: z.number().optional(),
+      volume_24h: z.number().optional(),
+      last_updated: z.string().optional(),
+    })).optional(),\`,
+  \`    quote: z.record(z.string(), z.object({
+      price: z.number().nullable().optional(),
+      percent_change_24h: z.number().nullable().optional(),
+      market_cap: z.number().nullable().optional(),
+      volume_24h: z.number().nullable().optional(),
+      last_updated: z.string().nullable().optional(),
+    })).optional(),\`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  \`  status: z.object({ error_code: z.number().optional(), error_message: z.string().optional() }).optional(),\`,
+  \`  status: z.object({
+    error_code: z.number().optional(),
+    error_message: z.string().nullable().optional(),
+  }).optional(),\`,
+);
+
 await replaceOnce(
   "src/providers/cmc.ts",
   `    const parsed = cmcQuoteSchema.safeParse(raw);`,
@@ -395,6 +423,31 @@ test('normalizes keyless v3 envelope data arrays', () => {
   assert.equal(normalized.status.error_code, 0);
   assert.equal(normalized.data['1'].quote.USD.price, 85000);
   assert.equal(normalized.data['1027'].quote.USD.price, 2700);
+});
+
+test('accepts current v3 assets with explicit null optional market fields', () => {
+  const normalized = normalizeCmcV3Shape({
+    status: { error_code: '0', error_message: '' },
+    data: [
+      {
+        id: 999999,
+        name: 'Thin Asset',
+        symbol: 'THIN',
+        quote: [{
+          id: 2781,
+          symbol: 'USD',
+          price: 0.01,
+          market_cap: null,
+          volume_24h: null,
+          percent_change_24h: null,
+          last_updated: null,
+        }],
+      },
+    ],
+  });
+  assert.equal(normalized.status.error_code, 0);
+  assert.equal(normalized.data['999999'].quote.USD.price, 0.01);
+  assert.equal(normalized.data['999999'].quote.USD.market_cap, null);
 });
 
 test('preserves legacy keyed quote objects', () => {
