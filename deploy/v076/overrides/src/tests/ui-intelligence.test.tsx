@@ -84,7 +84,7 @@ describe("simplified Zobiris Core", () => {
     expect(screen.getByText("WAIT — research range only")).toBeTruthy();
     expect(screen.getByText(/Why Zobiris learned this:/)).toBeTruthy();
     expect(screen.getByText(/First add:/)).toBeTruthy();
-    expect(screen.getByText(/reduce .*%/i)).toBeTruthy();
+    expect(screen.getAllByText(/reduce .*%/i).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
