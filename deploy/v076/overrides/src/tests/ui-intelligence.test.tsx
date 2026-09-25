@@ -77,10 +77,14 @@ describe("simplified Zobiris Core", () => {
     expect(screen.getByText("Open orders")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Open SOL order analysis" }));
-    expect(await screen.findByText("SELL / HARVEST LADDER")).toBeTruthy();
+    expect(await screen.findByText("BEST FIRST COURSE OF ACTION")).toBeTruthy();
+    expect(screen.getByText("SELL / HARVEST LADDER")).toBeTruthy();
     expect(screen.getByText("BUY / RE-ENTRY RANGE")).toBeTruthy();
     expect(screen.getByText("DEFENSIVE REDUCTION")).toBeTruthy();
     expect(screen.getByText("WAIT — research range only")).toBeTruthy();
+    expect(screen.getByText(/Why Zobiris learned this:/)).toBeTruthy();
+    expect(screen.getByText(/First add:/)).toBeTruthy();
+    expect(screen.getByText(/reduce .*%/i)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
