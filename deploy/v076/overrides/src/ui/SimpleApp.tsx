@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   CASH_USD,
   HOLDINGS,
@@ -48,6 +48,67 @@ function researchScore(asset: RankedAsset | undefined): number {
 function confidencePct(asset: RankedAsset | undefined): number {
   const value = Number(asset?.confidence?.pct ?? 0);
   return Number.isFinite(value) ? value : 0;
+}
+
+function extractMarketField(asset: RankedAsset | undefined, field: string): number | null {
+  if (!asset) return null;
+  const observations = asset?.strategy21?.explanation?.observations ?? [];
+  for (const observation of observations) {
+    const claim = safeJson(observation?.claim);
+    const value = Number(claim?.[field]);
+    if (Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+function buildOrderPlan(row: any, regime: string, recentReentry: boolean) {
+  const current = Number(row.livePrice);
+  const avg = Number(row.avgPriceUsd ?? 0);
+  const score = researchScore(row.asset);
+  const confidence = confidencePct(row.asset);
+  const change24h = extractMarketField(row.asset, "change24hPct") ?? 0;
+  const open24h = extractMarketField(row.asset, "open24hUsd");
+  const regimeBreak = regime.toLowerCase().includes("break");
+
+  let firstBuyDiscount = regimeBreak ? 0.06 : 0.04;
+  if (score < 45) firstBuyDiscount += 0.02;
+  if (score >= 55) firstBuyDiscount -= 0.01;
+  if (change24h > 4) firstBuyDiscount += 0.01;
+  if (recentReentry) firstBuyDiscount += 0.02;
+  firstBuyDiscount = clamp(firstBuyDiscount, 0.03, 0.12);
+
+  const secondBuyDiscount = clamp(firstBuyDiscount + 0.04, 0.07, 0.16);
+  let buyNear = current * (1 - firstBuyDiscount);
+  if (open24h && open24h < current) buyNear = Math.min(buyNear, open24h * 0.995);
+  const buyDeep = current * (1 - secondBuyDiscount);
+
+  const firstHarvestPremium = row.upl >= 30 ? 0.025 : row.upl >= 15 ? 0.035 : 0.055;
+  const secondHarvestPremium = firstHarvestPremium + 0.045;
+  const harvestNear = Math.max(current * (1 + firstHarvestPremium), avg > 0 ? avg * 1.18 : 0);
+  const harvestHigh = Math.max(current * (1 + secondHarvestPremium), avg > 0 ? avg * 1.25 : 0);
+
+  const reductionPct = regimeBreak ? 0.055 : 0.075;
+  const reduceTrigger = current * (1 - reductionPct);
+  const reduceLimit = reduceTrigger * 0.994;
+  const trimPct = row.upl >= 30 ? 20 : row.upl >= 15 ? 15 : 10;
+
+  return {
+    score,
+    confidence,
+    change24h,
+    open24h,
+    buyNear,
+    buyDeep,
+    harvestNear,
+    harvestHigh,
+    reduceTrigger,
+    reduceLimit,
+    trimPct,
+    recentReentry,
+    regimeBreak,
+  };
 }
 
 function fifoRealized(trades: TradeMemory[]) {
@@ -128,6 +189,9 @@ export function App() {
   const [showAllTrades, setShowAllTrades] = useState(false);
   const [customTrades, setCustomTrades] = useState<TradeMemory[]>(loadCustomTrades);
   const [recordOpen, setRecordOpen] = useState(false);
+  const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
+  const [assetDetails, setAssetDetails] = useState<Record<string, any>>({});
+  const [assetDetailLoading, setAssetDetailLoading] = useState<Record<string, boolean>>({});
   const [form, setForm] = useState({ symbol: "", side: "BUY", quantity: "", usd: "", orderType: "LIMIT" });
 
   async function loadData() {
@@ -228,6 +292,26 @@ export function App() {
 
   const strongestHoldingAction = [...portfolioRows].sort((a, b) => b.upl - a.upl)[0];
 
+  async function toggleAsset(symbol: string) {
+    if (expandedSymbol === symbol) {
+      setExpandedSymbol(null);
+      return;
+    }
+    setExpandedSymbol(symbol);
+    if (assetDetails[symbol] || assetDetailLoading[symbol]) return;
+
+    setAssetDetailLoading((current) => ({ ...current, [symbol]: true }));
+    try {
+      const response = await fetch("/api/asset/" + encodeURIComponent(symbol));
+      if (response.ok) {
+        const detail = await response.json();
+        setAssetDetails((current) => ({ ...current, [symbol]: detail }));
+      }
+    } finally {
+      setAssetDetailLoading((current) => ({ ...current, [symbol]: false }));
+    }
+  }
+
   function saveTrade() {
     const symbol = form.symbol.trim().toUpperCase();
     const quantity = Number(form.quantity);
@@ -299,14 +383,40 @@ export function App() {
                 </thead>
                 <tbody>
                   {portfolioRows.map((row) => (
-                    <tr key={row.symbol}>
-                      <td><strong>{row.symbol}</strong><div style={styles.tiny}>{row.name}</div></td>
-                      <td>{money(row.value)}</td>
-                      <td>{row.avgPriceUsd == null ? "—" : money(row.avgPriceUsd)}</td>
-                      <td>{money(row.livePrice)}</td>
-                      <td style={row.upl >= 0 ? styles.good : styles.bad}>{pct(row.upl)}</td>
-                      <td><span style={actionStyle(row.action)}>{row.action}</span></td>
-                    </tr>
+                    <Fragment key={row.symbol}>
+                      <tr>
+                        <td>
+                          <button
+                            type="button"
+                            style={styles.assetButton}
+                            onClick={() => void toggleAsset(row.symbol)}
+                            aria-expanded={expandedSymbol === row.symbol}
+                            aria-label={(expandedSymbol === row.symbol ? "Close " : "Open ") + row.symbol + " order analysis"}
+                          >
+                            <span><strong>{row.symbol}</strong><div style={styles.tiny}>{row.name}</div></span>
+                            <span style={styles.chevron}>{expandedSymbol === row.symbol ? "−" : "+"}</span>
+                          </button>
+                        </td>
+                        <td>{money(row.value)}</td>
+                        <td>{row.avgPriceUsd == null ? "—" : money(row.avgPriceUsd)}</td>
+                        <td>{money(row.livePrice)}</td>
+                        <td style={row.upl >= 0 ? styles.good : styles.bad}>{pct(row.upl)}</td>
+                        <td><span style={actionStyle(row.action)}>{row.action}</span></td>
+                      </tr>
+                      {expandedSymbol === row.symbol ? (
+                        <tr>
+                          <td colSpan={6} style={styles.analysisCell}>
+                            <OrderPlanPanel
+                              row={row}
+                              regime={regime}
+                              recentReentry={reentryRisk.has(row.symbol)}
+                              detail={assetDetails[row.symbol]}
+                              loading={Boolean(assetDetailLoading[row.symbol])}
+                            />
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -495,6 +605,100 @@ function DecisionLine({ title, value, detail }: { title: string; value: string; 
   return <div style={styles.rule}><div style={styles.tiny}>{title}</div><strong>{value}</strong><div style={styles.tiny}>{detail}</div></div>;
 }
 
+function OrderPlanPanel({
+  row,
+  regime,
+  recentReentry,
+  detail,
+  loading,
+}: {
+  row: any;
+  regime: string;
+  recentReentry: boolean;
+  detail: any;
+  loading: boolean;
+}) {
+  const plan = buildOrderPlan(row, regime, recentReentry);
+  const sellOrders = OPEN_ORDERS.filter((order) => order.side === "SELL" && order.symbol === row.symbol);
+  const plannedSellUsd = sellOrders.reduce((sum, order) => sum + order.amountUsd, 0);
+  const plannedPct = row.value > 0 ? (plannedSellUsd / row.value) * 100 : 0;
+  const strategy = detail?.strategy21 ?? row.asset?.strategy21 ?? null;
+  const caseFile = detail?.caseFile ?? null;
+  const eligibility = strategy?.eligibility?.status ?? "UNKNOWN";
+  const nearestFlip = caseFile?.decisionBoundary?.nearestFlip ?? row.asset?.decisionBoundary?.nearestFlip ?? null;
+  const failureReasons = Array.isArray(strategy?.eligibility?.failureReasons) ? strategy.eligibility.failureReasons : [];
+  const watchOnly = String(eligibility).includes("WATCH") || Number(strategy?.positionAuthority?.maxNextOrderUsd ?? 0) <= 0;
+  const staleOrderWarning = sellOrders.some((order) => order.targetPriceUsd <= row.livePrice);
+
+  return (
+    <div style={styles.analysisPanel}>
+      <div style={styles.analysisHeader}>
+        <div>
+          <div style={styles.eyebrow}>{row.symbol} ORDER PLAN</div>
+          <div style={styles.analysisTitle}>{money(row.livePrice)} live · {pct(row.upl)} vs average</div>
+          <div style={styles.subtle}>
+            Research {plan.score.toFixed(1)} · confidence {plan.confidence.toFixed(0)}% · 24h {pct(plan.change24h)}
+          </div>
+        </div>
+        <span style={actionStyle(row.action)}>{row.action}</span>
+      </div>
+
+      {sellOrders.length ? (
+        <div style={styles.existingPlan}>
+          <strong>Existing sell orders from the Sep 24 account snapshot</strong>
+          <div style={styles.tiny}>
+            {sellOrders.map((order) => money(order.amountUsd) + " @ " + money(order.targetPriceUsd)).join(" · ")}
+            {" "}({plannedPct.toFixed(0)}% of current position value)
+          </div>
+          {staleOrderWarning ? (
+            <div style={styles.warningText}>One snapshot sell target is now at or below the live price. Verify Kraken before adding another order because it may already have filled or been cancelled.</div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div style={styles.planGrid}>
+        <div style={styles.planCard}>
+          <div style={styles.limitLabel}>SELL / HARVEST LADDER</div>
+          <strong>{money(plan.harvestNear)} → {money(plan.harvestHigh)}</strong>
+          <div style={styles.tiny}>First trim about {plan.trimPct}% of the position; second trim another 10–15% if price keeps extending. Keep the rest as the runner.</div>
+        </div>
+        <div style={styles.planCard}>
+          <div style={styles.limitLabel}>DEFENSIVE REDUCTION</div>
+          <strong>Trigger {money(plan.reduceTrigger)}</strong>
+          <div style={styles.tiny}>Stop-limit reference: trigger near {money(plan.reduceTrigger)}, limit near {money(plan.reduceLimit)}. Use this as a review/reduction line, not an automatic full exit.</div>
+        </div>
+        <div style={styles.planCard}>
+          <div style={styles.limitLabel}>BUY / RE-ENTRY RANGE</div>
+          <strong>{money(Math.min(plan.buyDeep, plan.buyNear))} → {money(Math.max(plan.buyDeep, plan.buyNear))}</strong>
+          <div style={styles.tiny}>
+            Stage the lower price first. {plan.recentReentry ? "Recent re-entry history pushes this range deeper. " : ""}
+            {plan.open24h ? "24h open reference " + money(plan.open24h) + ". " : ""}
+            Never chase above the range.
+          </div>
+        </div>
+        <div style={styles.planCard}>
+          <div style={styles.limitLabel}>OPENING / ADD STATUS</div>
+          <strong>{watchOnly ? "WAIT — research range only" : "Eligible for staged limit"}</strong>
+          <div style={styles.tiny}>
+            Engine eligibility: {String(eligibility).replaceAll("_", " ")}.
+            {failureReasons.length ? " " + failureReasons[0] : ""}
+          </div>
+        </div>
+      </div>
+
+      <div style={styles.analysisText}>
+        <strong>Why these levels</strong>
+        <div style={styles.tiny}>
+          {plan.regimeBreak ? "Regime Break widens entry discounts and tightens the reduction line. " : "Normal regime uses a narrower entry ladder. "}
+          Profit targets are set above both the live price and your cost basis, while re-entry levels move lower when research confidence is weak, the coin is already extended, or your trade history shows quick re-entry after selling.
+        </div>
+        {nearestFlip ? <div style={styles.tiny}><strong>What would improve the signal:</strong> {nearestFlip}</div> : null}
+        {loading ? <div style={styles.tiny}>Loading deeper asset analysis…</div> : null}
+      </div>
+    </div>
+  );
+}
+
 function actionStyle(action: string): CSSProperties {
   if (action.includes("TRIM") || action.includes("HARVEST")) return { ...styles.pill, borderColor: "#e9b44c", color: "#ffd67a" };
   if (action.includes("NO ADD") || action.includes("REVIEW")) return { ...styles.pill, borderColor: "#d45d79", color: "#ff91aa" };
@@ -526,6 +730,17 @@ const styles: Record<string, CSSProperties> = {
   twoCol: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16 },
   tableWrap: { overflowX: "auto" },
   table: { width: "100%", borderCollapse: "collapse", minWidth: 680 },
+  assetButton: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "transparent", color: "inherit", border: 0, padding: 0, textAlign: "left", cursor: "pointer", font: "inherit" },
+  chevron: { width: 24, height: 24, borderRadius: 7, display: "grid", placeItems: "center", background: "#202631", color: "#c8d1df", fontWeight: 900, flex: "0 0 auto" },
+  analysisCell: { padding: "8px 0 16px" },
+  analysisPanel: { background: "#0d1015", border: "1px solid #2c3440", borderRadius: 12, padding: 16, marginTop: 6 },
+  analysisHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 },
+  analysisTitle: { fontSize: 20, fontWeight: 900, marginTop: 4 },
+  existingPlan: { background: "#171a20", border: "1px solid #343c48", borderRadius: 10, padding: 12, marginBottom: 12 },
+  warningText: { color: "#ffd67a", fontSize: 12, lineHeight: 1.45, marginTop: 7 },
+  planGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 },
+  planCard: { background: "#131820", border: "1px solid #29313d", borderRadius: 10, padding: 12, minHeight: 96 },
+  analysisText: { marginTop: 12, paddingTop: 12, borderTop: "1px solid #242c37", lineHeight: 1.45 },
   good: { color: "#4be2a0", fontWeight: 800 },
   bad: { color: "#ff708e", fontWeight: 800 },
   pill: { display: "inline-block", border: "1px solid", borderRadius: 999, padding: "5px 8px", fontSize: 11, fontWeight: 900, letterSpacing: 0.3 },
