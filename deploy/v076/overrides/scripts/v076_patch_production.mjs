@@ -221,29 +221,29 @@ await replaceOnce(
 
 await replaceOnce(
   "src/providers/cmc.ts",
-  \`    quote: z.record(z.string(), z.object({
+  `    quote: z.record(z.string(), z.object({
       price: z.number().optional(),
       percent_change_24h: z.number().optional(),
       market_cap: z.number().optional(),
       volume_24h: z.number().optional(),
       last_updated: z.string().optional(),
-    })).optional(),\`,
-  \`    quote: z.record(z.string(), z.object({
+    })).optional(),`,
+  `    quote: z.record(z.string(), z.object({
       price: z.number().nullable().optional(),
       percent_change_24h: z.number().nullable().optional(),
       market_cap: z.number().nullable().optional(),
       volume_24h: z.number().nullable().optional(),
       last_updated: z.string().nullable().optional(),
-    })).optional(),\`,
+    })).optional(),`,
 );
 
 await replaceOnce(
   "src/providers/cmc.ts",
-  \`  status: z.object({ error_code: z.number().optional(), error_message: z.string().optional() }).optional(),\`,
-  \`  status: z.object({
+  `  status: z.object({ error_code: z.number().optional(), error_message: z.string().optional() }).optional(),`,
+  `  status: z.object({
     error_code: z.number().optional(),
     error_message: z.string().nullable().optional(),
-  }).optional(),\`,
+  }).optional(),`,
 );
 
 await replaceOnce(
