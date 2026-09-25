@@ -18,7 +18,9 @@ RUN cat /tmp/zobiris-b64/*.b64 | base64 -d > /tmp/zobiris.txz \
 COPY railway_hosted_gate.mjs /app/scripts/railway_hosted_gate.mjs
 COPY railway_persistence_wrapper.mjs /app/scripts/railway_persistence_wrapper.mjs
 
-RUN node scripts/v076_patch_production.mjs
+RUN node scripts/v076_patch_production.mjs \
+  && cp -r audit-fixes/. /app/ \
+  && rm -rf audit-fixes
 RUN npm ci --no-audit --no-fund
 RUN npm run test:decision-boundary \
   && npm run test:same-origin-refresh \

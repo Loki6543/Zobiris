@@ -186,6 +186,16 @@ async function verifyCandidate() {
     const afterIdentity = snapshotIdentity(after.payload);
     if (!afterIdentity.id || afterIdentity.id === beforeIdentity.id) throw new Error('candidate snapshot id did not advance after refresh');
     console.log('PASS candidate snapshot advanced after browser refresh');
+    const list = await jsonCheck(localOrigin, '/api/snapshots?limit=1', {}, [200], 'candidate snapshot list consistency');
+    const strategy = await jsonCheck(localOrigin, '/api/strategy21', {}, [200], 'candidate strategy account context');
+    if (list.payload.snapshots?.[0]?.id !== afterIdentity.id || strategy.payload.asOf !== new Date(afterIdentity.asOf).toISOString()) throw new Error('snapshot endpoints disagree');
+    const account = strategy.payload.strategy21;
+    if (!(account?.portfolioDependency?.grossCurrentExposureUsd > 200)) throw new Error('account holdings missing from Strategy 2.1');
+    if (account.fundedCashUsd !== 713.74 || account.freeCashUsd !== 611.74 || account.reservedBuysUsd !== 102) throw new Error('funded cash accounting mismatch');
+    if (Math.abs(account.portfolioDependency.grossPostFillExposureUsd - account.portfolioDependency.grossCurrentExposureUsd - 102) > 0.02) throw new Error('buy commitments missing from exposure');
+    if (strategy.payload.assets.some(a => a.strategy21?.eligibility?.status === 'WATCH_ONLY' && a.strategy21?.positionAuthority?.maxNextOrderUsd > 0)) throw new Error('WATCH_ONLY asset authorized an order');
+    console.log('PASS candidate holdings, funded cash, commitments, liquidity gates and snapshot consistency');
+
 
     const eth = await jsonCheck(localOrigin, '/api/asset/ETH', {}, [200], 'candidate ETH case file after refresh');
     const comp = await jsonCheck(localOrigin, '/api/asset/COMP', {}, [200], 'candidate COMP case file after refresh');
