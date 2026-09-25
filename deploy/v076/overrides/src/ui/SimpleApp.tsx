@@ -289,7 +289,7 @@ export function App() {
             <div style={styles.sectionHead}>
               <div>
                 <h2 style={styles.h2}>Current positions</h2>
-                <div style={styles.subtle}>Kraken snapshot from Sep 24; prices refresh from the live Zobiris engine.</div>
+                <div style={styles.subtle}>Kraken account snapshot {new Date(PORTFOLIO_CAPTURED_AT).toLocaleString()}; prices refresh from the live Zobiris engine.</div>
               </div>
             </div>
             <div style={styles.tableWrap}>
