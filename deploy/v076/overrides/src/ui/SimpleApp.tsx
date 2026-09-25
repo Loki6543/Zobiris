@@ -7,7 +7,6 @@ import {
   MANEUVER_CAPITAL_USD,
   PROBE_MAX_USD,
   PROBE_TYPICAL_USD,
-  STATE_DEPLOYMENT_CAPS_USD,
   LEARNING_RULES,
   OPEN_ORDERS,
   PORTFOLIO_CAPTURED_AT,
@@ -374,8 +373,6 @@ export function App() {
   const freeCash = Math.max(0, CASH_USD - reservedBuys);
   const regime = String(snapshot?.snapshot?.regime ?? "Loading market regime");
   const regimeConfidence = Number(snapshot?.snapshot?.regimeConfidence ?? 0);
-  const normalizedRegimeKey = regime.toUpperCase().replaceAll(" ", "_") as keyof typeof STATE_DEPLOYMENT_CAPS_USD;
-  const regimeDeploymentCapUsd = STATE_DEPLOYMENT_CAPS_USD[normalizedRegimeKey] ?? STATE_DEPLOYMENT_CAPS_USD.UNCERTAIN;
 
   const candidates = useMemo(() => {
     const held = new Set(HOLDINGS.map((holding) => holding.symbol));
@@ -604,7 +601,6 @@ export function App() {
               <span>Regime confidence {regimeConfidence.toFixed(0)}%</span>
               <span>Free cash {money(freeCash)}</span>
               <span>Protocol capital {money(MANEUVER_CAPITAL_USD)}</span>
-              <span>Regime deploy cap {money(regimeDeploymentCapUsd)}</span>
               <span>{watchlist.length || 50} watchlist assets</span>
             </div>
           </section>
