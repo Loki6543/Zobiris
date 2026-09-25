@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
+  CASH_INFLOW_USD,
+  CASH_UPDATED_AT,
   CASH_USD,
   HOLDINGS,
   LEARNING_RULES,
@@ -201,6 +203,33 @@ function loadCustomTrades(): TradeMemory[] {
   }
 }
 
+const STRATEGY21_PROBE_TYPICAL_USD = 30;
+const STRATEGY21_PROBE_MAX_USD = 37.5;
+const STRATEGY21_MIN_ORDER_CONFIDENCE_PCT = 65;
+const STRATEGY21_LATER_LINE_CONFIDENCE_PCT = 75;
+
+function krakenLimitPurchaseGate(detail: any) {
+  const strategy = detail?.strategy21 ?? {};
+  const eligibility = strategy?.eligibility ?? detail?.eligibility ?? {};
+  const authority = strategy?.positionAuthority ?? detail?.positionAuthority ?? {};
+  const status = String(eligibility?.status ?? "").toUpperCase();
+  const failureReasons = Array.isArray(eligibility?.failureReasons)
+    ? eligibility.failureReasons.map((reason: unknown) => String(reason))
+    : [];
+  const maxNextOrderUsd = Number(authority?.maxNextOrderUsd ?? 0);
+  const krakenFailure = failureReasons.some((reason: string) =>
+    /(kraken|liquidity|volume|turnover|active[- ]minute|trade[- ]count|depth|spread|slippage)/i.test(reason)
+  );
+  const blockedStatus = /(WATCH_ONLY|BLOCK|INELIGIBLE|REJECT)/.test(status);
+
+  return {
+    pass: Number.isFinite(maxNextOrderUsd) && maxNextOrderUsd > 0 && !krakenFailure && !blockedStatus,
+    status: status || "UNKNOWN",
+    failureReasons,
+    maxNextOrderUsd: Number.isFinite(maxNextOrderUsd) ? maxNextOrderUsd : 0,
+  };
+}
+
 export function App() {
   const [view, setView] = useState<View>("portfolio");
   const [snapshot, setSnapshot] = useState<any>(null);
@@ -222,7 +251,10 @@ export function App() {
         fetch("/api/snapshot/latest"),
         fetch("/api/watchlist"),
       ]);
-      if (snapshotResponse.ok) setSnapshot(await snapshotResponse.json());
+      if (snapshotResponse.ok) {
+        setSnapshot(await snapshotResponse.json());
+        setAssetDetails({});
+      }
       if (watchlistResponse.ok) {
         const data = await watchlistResponse.json();
         setWatchlist(Array.isArray(data?.watchlist) ? data.watchlist : []);
@@ -260,6 +292,60 @@ export function App() {
     return map;
   }, [rankedAssets]);
 
+  const candidateResearchUniverse = useMemo(() => {
+    const held = new Set(HOLDINGS.map((holding) => holding.symbol));
+    const existingBuy = new Set(OPEN_ORDERS.filter((order) => order.side === "BUY").map((order) => order.symbol));
+    return rankedAssets
+      .filter((asset) => asset?.mappingStatus === "verified")
+      .filter((asset) => {
+        const symbol = String(asset?.symbol ?? "").toUpperCase();
+        return symbol && !held.has(symbol) && !existingBuy.has(symbol);
+      })
+      .sort((a, b) => researchScore(b) - researchScore(a))
+      .slice(0, 15)
+      .map((asset) => String(asset?.symbol ?? "").toUpperCase());
+  }, [rankedAssets]);
+
+  const candidateResearchKey = candidateResearchUniverse.join("|");
+
+  useEffect(() => {
+    let cancelled = false;
+    const missing = candidateResearchUniverse.filter((symbol) => !assetDetails[symbol] && !assetDetailLoading[symbol]);
+    if (!missing.length) return;
+
+    setAssetDetailLoading((current) => {
+      const next = { ...current };
+      for (const symbol of missing) next[symbol] = true;
+      return next;
+    });
+
+    void Promise.all(missing.map(async (symbol) => {
+      try {
+        const response = await fetch("/api/asset/" + encodeURIComponent(symbol));
+        if (!response.ok) return [symbol, null] as const;
+        return [symbol, await response.json()] as const;
+      } catch {
+        return [symbol, null] as const;
+      }
+    })).then((rows) => {
+      if (cancelled) return;
+      setAssetDetails((current) => {
+        const next = { ...current };
+        for (const [symbol, detail] of rows) {
+          if (detail) next[symbol] = detail;
+        }
+        return next;
+      });
+      setAssetDetailLoading((current) => {
+        const next = { ...current };
+        for (const symbol of missing) next[symbol] = false;
+        return next;
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [candidateResearchKey]);
+
   const mergedTrades = useMemo(() => [...TRADE_MEMORY, ...customTrades], [customTrades]);
   const learning = useMemo(() => fifoRealized(mergedTrades.filter((trade) => trade.orderType !== "INSTANT_MICRO")), [mergedTrades]);
   const reentryRisk = useMemo(() => reentryRiskSymbols(mergedTrades), [mergedTrades]);
@@ -293,23 +379,49 @@ export function App() {
     return rankedAssets
       .filter((asset) => asset?.mappingStatus === "verified")
       .filter((asset) => !held.has(String(asset?.symbol ?? "")) && !existingBuy.has(String(asset?.symbol ?? "")))
-      .map((asset) => {
-        const symbol = String(asset?.symbol ?? "");
+      .flatMap((asset) => {
+        const symbol = String(asset?.symbol ?? "").toUpperCase();
+        const detail = assetDetails[symbol];
+        const gate = krakenLimitPurchaseGate(detail);
         const price = extractPrice(asset);
         const score = researchScore(asset);
         const conf = confidencePct(asset);
+
+        // No limit-purchase recommendation exists until Strategy 2.1's existing
+        // Kraken execution authority reports positive capacity. This keeps the
+        // volume/turnover/depth rules inside the hidden research gate instead of
+        // duplicating or weakening them in the UI.
+        if (!gate.pass || conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null) return [];
+
         let discount = regime.toLowerCase().includes("break") ? 0.05 : 0.03;
         if (score >= 55) discount -= 0.01;
         if (score < 45) discount += 0.01;
         if (reentryRisk.has(symbol)) discount += 0.02;
         discount = Math.max(0.02, Math.min(0.08, discount));
-        const limit = price == null ? null : price * (1 - discount);
-        return { asset, symbol, price, score, conf, discount, limit };
+        const limit = price * (1 - discount);
+
+        const probeTargetUsd = conf >= STRATEGY21_LATER_LINE_CONFIDENCE_PCT
+          ? STRATEGY21_PROBE_MAX_USD
+          : STRATEGY21_PROBE_TYPICAL_USD;
+        const orderUsd = Math.max(0, Math.min(probeTargetUsd, gate.maxNextOrderUsd, freeCash));
+        if (orderUsd <= 0) return [];
+
+        return [{
+          asset,
+          symbol,
+          price,
+          score,
+          conf,
+          discount,
+          limit,
+          orderUsd,
+          maxNextOrderUsd: gate.maxNextOrderUsd,
+          eligibilityStatus: gate.status,
+        }];
       })
-      .filter((row) => row.price != null)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-  }, [rankedAssets, regime, reentryRisk]);
+  }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash]);
 
   const strongestHoldingAction = [...portfolioRows].sort((a, b) => b.upl - a.upl)[0];
 
@@ -385,7 +497,7 @@ export function App() {
         <main>
           <section style={styles.metrics}>
             <Metric label="Portfolio" value={money(total)} />
-            <Metric label="Cash" value={money(CASH_USD)} note={Math.round(CASH_USD / total * 100) + "% of portfolio"} />
+            <Metric label="Cash" value={money(CASH_USD)} note={"+" + money(CASH_INFLOW_USD) + " funded cash added " + CASH_UPDATED_AT + " · " + Math.round(CASH_USD / total * 100) + "% of portfolio"} />
             <Metric label="Reserved buys" value={money(reservedBuys)} />
             <Metric label="Free cash" value={money(freeCash)} />
           </section>
@@ -492,7 +604,7 @@ export function App() {
 
           <section style={styles.card}>
             <h2 style={styles.h2}>New positions to consider</h2>
-            <div style={styles.subtle}>Ranked by the hidden research engine. Entry price is deliberately lower than market because your history favors staged limits over chasing.</div>
+            <div style={styles.subtle}>Ranked by the hidden research engine. A coin is not allowed to become a limit candidate until Strategy 2.1 gives it positive Kraken execution capacity; the existing volume, turnover, depth, spread and slippage gates remain authoritative.</div>
             <div style={{ marginTop: 14 }}>
               {candidates.length ? candidates.map((row, index) => (
                 <div key={row.symbol} style={styles.candidate}>
@@ -500,14 +612,15 @@ export function App() {
                   <div style={{ flex: 1 }}>
                     <strong style={{ fontSize: 18 }}>{row.symbol}</strong>
                     <div style={styles.tiny}>Research {row.score.toFixed(1)} · confidence {row.conf.toFixed(0)}%</div>
+                    <div style={styles.tiny}>Kraken gate passed · max next order {money(row.maxNextOrderUsd)}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={styles.limitLabel}>LIMIT CANDIDATE</div>
-                    <strong style={{ fontSize: 18 }}>{row.limit == null ? "—" : money(row.limit)}</strong>
-                    <div style={styles.tiny}>{Math.round(row.discount * 100)}% below current {row.price == null ? "" : money(row.price)}</div>
+                    <div style={styles.limitLabel}>LIMIT CANDIDATE · {money(row.orderUsd)}</div>
+                    <strong style={{ fontSize: 18 }}>{money(row.limit)}</strong>
+                    <div style={styles.tiny}>{Math.round(row.discount * 100)}% below current {money(row.price)} · initial PROBE only</div>
                   </div>
                 </div>
-              )) : <div style={styles.notice}>No verified live candidates yet.</div>}
+              )) : <div style={styles.notice}>{candidateResearchUniverse.some((symbol) => assetDetailLoading[symbol]) ? "Checking Kraken execution volume and liquidity gates…" : "No Kraken-eligible live limit candidates yet."}</div>}
             </div>
           </section>
 
