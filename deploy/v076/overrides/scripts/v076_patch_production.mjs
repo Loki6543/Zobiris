@@ -678,3 +678,10 @@ describe("v0.7.6 Kraken canonical-watchlist live expansion", () => {
 `,
   "utf8",
 );
+\n
+await writeFile(
+  "src/ui/App.tsx",
+  'export { App } from "./SimpleApp";\nexport { App as default } from "./SimpleApp";\n',
+  "utf8",
+);
+
