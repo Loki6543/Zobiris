@@ -55,6 +55,17 @@ beforeEach(() => {
     if (url.includes("/api/watchlist")) {
       return new Response(JSON.stringify({ watchlist: [{ symbol: "BTC" }, { symbol: "AVAX" }] }), { status: 200, headers: { "content-type": "application/json" } });
     }
+    if (url.includes("/api/asset/SOL")) {
+      return new Response(JSON.stringify({
+        caseFile: {
+          decisionBoundary: { nearestFlip: "HOLD requires higher opportunity score." }
+        },
+        strategy21: {
+          eligibility: { status: "WATCH_ONLY", failureReasons: ["Kraken execution history warming up"] },
+          positionAuthority: { maxNextOrderUsd: 0 }
+        }
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
 });
@@ -64,6 +75,12 @@ describe("simplified Zobiris Core", () => {
     render(<App />);
     expect(await screen.findByText("Current positions")).toBeTruthy();
     expect(screen.getByText("Open orders")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open SOL order analysis" }));
+    expect(await screen.findByText("SELL / HARVEST LADDER")).toBeTruthy();
+    expect(screen.getByText("BUY / RE-ENTRY RANGE")).toBeTruthy();
+    expect(screen.getByText("DEFENSIVE REDUCTION")).toBeTruthy();
+    expect(screen.getByText("WAIT — research range only")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
