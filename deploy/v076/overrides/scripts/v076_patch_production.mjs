@@ -246,6 +246,19 @@ await replaceOnce(
   }).optional(),`,
 );
 
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `          sourceTimestamp: usdQuote?.last_updated,`,
+  `          sourceTimestamp: usdQuote?.last_updated ?? undefined,`,
+);
+
+await replaceOnce(
+  "src/providers/cmc.ts",
+  `        sourceTimestamp: usdQuote?.last_updated,`,
+  `        sourceTimestamp: usdQuote?.last_updated ?? undefined,`,
+);
+
 await replaceOnce(
   "src/providers/cmc.ts",
   `    const parsed = cmcQuoteSchema.safeParse(raw);`,
