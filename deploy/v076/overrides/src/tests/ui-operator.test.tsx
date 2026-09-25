@@ -25,7 +25,7 @@ describe("trade memory seed", () => {
     expect(TRADE_MEMORY.some((trade) => trade.id.includes("reward"))).toBe(false);
 
     render(<App />);
-    expect(await screen.findByText("Current positions")).toBeInTheDocument();
-    expect(screen.getByText("$102.00")).toBeInTheDocument();
+    expect(await screen.findByText("Current positions")).toBeTruthy();
+    expect(screen.getByText("$102.00")).toBeTruthy();
   });
 });
