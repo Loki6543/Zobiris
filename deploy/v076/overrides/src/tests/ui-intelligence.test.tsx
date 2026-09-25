@@ -62,15 +62,15 @@ beforeEach(() => {
 describe("simplified Zobiris Core", () => {
   it("keeps decision making on three primary screens", async () => {
     render(<App />);
-    expect(await screen.findByText("Current positions")).toBeInTheDocument();
-    expect(screen.getByText("Open orders")).toBeInTheDocument();
+    expect(await screen.findByText("Current positions")).toBeTruthy();
+    expect(screen.getByText("Open orders")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
-    expect(await screen.findByText("New positions to consider")).toBeInTheDocument();
-    expect(screen.getByText("Rules learned from you")).toBeInTheDocument();
+    expect(await screen.findByText("New positions to consider")).toBeTruthy();
+    expect(screen.getByText("Rules learned from you")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "History / Learning" }));
-    expect(await screen.findByText("Trade memory")).toBeInTheDocument();
-    expect(screen.getByText("What Zobiris has learned")).toBeInTheDocument();
+    expect(await screen.findByText("Trade memory")).toBeTruthy();
+    expect(screen.getByText("What Zobiris has learned")).toBeTruthy();
   });
 });
