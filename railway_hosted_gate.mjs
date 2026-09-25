@@ -171,6 +171,7 @@ async function verifyCandidate() {
       errors: refresh.errors ?? null,
     }, redact));
     console.log('DIAGNOSTIC candidate providers:', JSON.stringify(diagnosticProviders.payload, redact));
+    if (diagnosticProviders.payload.providers?.find(p => p.provider === 'cmc')?.freshness !== 'live') throw new Error('CMC current quote freshness not reported live');
 
     if (refresh.live !== true) throw new Error('candidate refresh did not run live provider policy');
     if (!(Number(refresh.observationCount) > 2)) throw new Error('candidate refresh did not expand beyond the BTC/SOL-only observation floor');
