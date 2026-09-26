@@ -5,6 +5,12 @@ type Series = { symbol: string; points: Point[] };
 type Comparison = {
   source: string; provenance: string; asOf: string; observedDays: number; series: Series[];
 };
+type Patterns = {
+  sampleCount: number; asOf: string | null;
+  summary: { symbol: string; count: number; medianForwardPct: number | null;
+    positiveCount: number; beatBtcCount: number; worstForwardPct: number | null }[];
+  matches: { start: string; end: string; btcPriorPct: number; forwardPct: Record<string, number> }[];
+};
 const colors = ["#f7b84b", "#65c5ee", "#77dfab", "#ca9af7", "#f08283"];
 const card = { background: "#171c25", border: "1px solid #303744", borderRadius: 12, padding: 18 };
 const button = { background: "#252e3c", color: "#e8f0fb", border: "1px solid #465164",
@@ -51,12 +57,16 @@ function Chart({ series }: { series: Series[] }) {
   </svg>;
 }
 export function CompareLab() {
+  const [mode, setMode] = useState<"compare" | "patterns">("compare");
   const [universe, setUniverse] = useState<string[]>([]);
   const [symbols, setSymbols] = useState(["BTC", "SOL", "LINK"]);
   const [days, setDays] = useState(30);
   const [data, setData] = useState<Comparison | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [threshold, setThreshold] = useState(2);
+  const [patterns, setPatterns] = useState<Patterns | null>(null);
+  const [patternsError, setPatternsError] = useState("");
   useEffect(() => { fetch("/api/compare/universe").then(async r => { if (!r.ok) throw new Error("Coin list unavailable"); return r.json(); }).then(v => setUniverse(v.symbols ?? []))
     .catch(() => setError("Coin list unavailable")); }, []);
   useEffect(() => {
@@ -69,6 +79,18 @@ export function CompareLab() {
       .finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
   }, [symbols.join(","), days]);
+  useEffect(() => {
+    if (mode !== "patterns") return;
+    const controller = new AbortController();
+    setPatterns(null); setPatternsError("");
+    const requested = ["BTC", ...symbols.filter(s => s !== "BTC")].slice(0, 5);
+    if (requested.length < 2) { setPatternsError("Select BTC and another coin."); return; }
+    fetch(`/api/compare/sideways?symbols=${encodeURIComponent(requested.join(","))}&threshold=${threshold}`,
+      { signal: controller.signal })
+      .then(async r => { const v = await r.json(); if (!r.ok) throw new Error(v.error || "Patterns unavailable"); return v; })
+      .then(setPatterns).catch(e => { if (e.name !== "AbortError") setPatternsError(e.message); });
+    return () => controller.abort();
+  }, [mode, symbols.join(","), threshold]);
   const rows = useMemo(() => data?.series.map((s, i) => ({
     symbol: s.symbol, color: colors[i], ...statistics(data.series[0]!, s),
   })) ?? [], [data]);
@@ -76,6 +98,11 @@ export function CompareLab() {
     <section style={card}>
       <h1 style={{ marginTop: 0 }}>Compare Lab</h1>
       <p style={{ color: "#b5c0d0" }}>Choose 2–5 coins and investigate how they moved together. All statistics use completed Kraken daily candles.</p>
+      <div style={{ display: "flex", gap: 8, marginBottom: 15 }}>
+        {(["compare", "patterns"] as const).map(value => <button key={value} type="button" style={{
+          ...button, background: mode === value ? "#174e59" : "#252e3c",
+        }} onClick={() => setMode(value)}>{value === "compare" ? "Compare" : "BTC sideways patterns"}</button>)}
+      </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 15 }}>
         {universe.map(symbol => <button key={symbol} type="button" style={{
           ...button, background: symbols.includes(symbol) ? "#174e59" : "#252e3c",
@@ -83,15 +110,19 @@ export function CompareLab() {
           previous.includes(symbol) ? previous.length > 2 ? previous.filter(s => s !== symbol) : previous
             : previous.length < 5 ? [...previous, symbol] : previous)}>{symbol}</button>)}
       </div>
-      <div style={{ display: "flex", gap: 8 }}>
+      {mode === "compare" ? <div style={{ display: "flex", gap: 8 }}>
         {[7, 30, 90, 180].map(n => <button key={n} type="button" style={{
           ...button, background: n === days ? "#174e59" : "#252e3c",
         }} onClick={() => setDays(n)}>{n} days</button>)}
-      </div>
+      </div> : <div style={{ display: "flex", gap: 8 }}>
+        {[1, 2, 3].map(n => <button key={n} type="button" style={{
+          ...button, background: n === threshold ? "#174e59" : "#252e3c",
+        }} onClick={() => setThreshold(n)}>BTC ±{n}%</button>)}
+      </div>}
     </section>
-    {busy && <p role="status">Loading Kraken candles…</p>}
-    {error && <p role="alert" style={{ color: "#ff9999" }}>{error}</p>}
-    {data && <><section style={card}>
+    {mode === "compare" && busy && <p role="status">Loading Kraken candles…</p>}
+    {mode === "compare" && error && <p role="alert" style={{ color: "#ff9999" }}>{error}</p>}
+    {mode === "compare" && data && <><section style={card}>
       <h2 style={{ marginTop: 0 }}>Indexed performance</h2>
       <p style={{ color: "#aeb9c9" }}>Each coin starts at 100. Base for relative statistics: {data.series[0]!!.symbol}.</p>
       <Chart series={data.series} />
@@ -109,6 +140,23 @@ export function CompareLab() {
       </table>
       <p style={{ color: "#9eabbc", fontSize: 13 }}>Kraken public OHLC · {data.observedDays} overlapping completed days · last candle {new Date(data.asOf).toLocaleDateString()}. Historical relationships do not establish a future trading edge.</p>
     </section></>}
+    {mode === "patterns" && !patterns && !patternsError && <p role="status">Finding completed historical windows…</p>}
+    {mode === "patterns" && patternsError && <p role="alert" style={{ color: "#ff9999" }}>{patternsError}</p>}
+    {mode === "patterns" && patterns && <section style={{ ...card, overflowX: "auto" }}>
+      <h2 style={{ marginTop: 0 }}>After BTC moved sideways for 7 days</h2>
+      <p style={{ color: "#b5c0d0" }}>Past independent windows where BTC stayed within ±{threshold}%. The table shows each coin's following 7 days.</p>
+      <p><strong>{patterns.sampleCount} historical matches</strong>{patterns.asOf ? ` · candles through ${new Date(patterns.asOf).toLocaleDateString()}` : ""}</p>
+      {patterns.sampleCount > 0 ? <table style={{ width: "100%", textAlign: "right", borderSpacing: "12px 10px", whiteSpace: "nowrap" }}>
+        <thead><tr><th style={{ textAlign: "left" }}>Coin</th><th>Median next 7d</th><th>Positive</th><th>Beat BTC</th><th>Worst next 7d</th></tr></thead>
+        <tbody>{patterns.summary.map(row => <tr key={row.symbol}><th style={{ textAlign: "left" }}>{row.symbol}</th>
+          <td>{row.medianForwardPct?.toFixed(1) ?? "—"}%</td>
+          <td>{row.positiveCount}/{row.count}</td><td>{row.beatBtcCount}/{row.count}</td>
+          <td>{row.worstForwardPct?.toFixed(1) ?? "—"}%</td></tr>)}</tbody>
+      </table> : <p>There are no qualifying, fully observed windows for this selection.</p>}
+      {patterns.matches.length > 0 && <details><summary>See matching periods</summary>
+        <ul>{patterns.matches.map(m => <li key={m.start}>{m.start}–{m.end}: BTC {m.btcPriorPct.toFixed(1)}% before the following week</li>)}</ul>
+      </details>}
+      <p style={{ color: "#9eabbc", fontSize: 13 }}>Completed Kraken daily candles only. Windows do not overlap. Small samples and historical selection can mislead; this is an investigation tool, not a trading signal.</p>
+    </section>}
   </main>;
 }
-
