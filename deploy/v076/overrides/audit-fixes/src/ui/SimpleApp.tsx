@@ -768,6 +768,8 @@ export function App() {
                               recentReentry={reentryRisk.has(row.symbol)}
                               detail={assetDetails[row.symbol]}
                               loading={Boolean(assetDetailLoading[row.symbol])}
+                              openOrders={LIVE_OPEN_ORDERS}
+                              cashUsd={LIVE_CASH_USD}
                             />
                           </td>
                         </tr>
@@ -949,7 +951,7 @@ export function App() {
       ) : null}
 
       <footer style={styles.footer}>
-        Portfolio quantities and open orders are seeded from your Sep 24 Kraken screenshots. Live market prices and rankings come from the Zobiris Kraken/CMC engine. This is decision support, not automatic execution.
+        {accountSynced ? "Portfolio quantities, cash, fills, and open orders are synchronized read-only from Kraken. " : "Portfolio quantities and open orders are using the last manual Kraken snapshot. "}Live market prices and rankings come from the Zobiris Kraken/CMC engine. This is decision support, not automatic execution.
       </footer>
     </div>
   );
@@ -969,15 +971,19 @@ function OrderPlanPanel({
   recentReentry,
   detail,
   loading,
+  openOrders,
+  cashUsd,
 }: {
   row: any;
   regime: string;
   recentReentry: boolean;
   detail: any;
   loading: boolean;
+  openOrders: Array<{ side: "BUY" | "SELL"; symbol: string; targetPriceUsd: number; amountUsd: number }>;
+  cashUsd: number;
 }) {
   const plan = buildOrderPlan(row, regime, recentReentry);
-  const sellOrders = LIVE_OPEN_ORDERS.filter((order) => order.side === "SELL" && order.symbol === row.symbol);
+  const sellOrders = openOrders.filter((order) => order.side === "SELL" && order.symbol === row.symbol);
   const plannedSellUsd = sellOrders.reduce((sum, order) => sum + order.amountUsd, 0);
   const plannedPct = row.value > 0 ? (plannedSellUsd / row.value) * 100 : 0;
   const strategy = row.asset?.strategy21 ?? null;
@@ -986,7 +992,7 @@ function OrderPlanPanel({
   const nearestFlip = caseFile?.decisionBoundary?.nearestFlip ?? row.asset?.decisionBoundary?.nearestFlip ?? null;
   const failureReasons = Array.isArray(strategy?.eligibility?.failureReasons) ? strategy.eligibility.failureReasons : [];
   const purchaseGate = krakenLimitPurchaseGate({strategy21: strategy});
-  const availableCash = Math.max(0, LIVE_CASH_USD - LIVE_OPEN_ORDERS.filter(o => o.side === "BUY").reduce((sum,o) => sum + o.amountUsd,0));
+  const availableCash = Math.max(0, cashUsd - openOrders.filter(o => o.side === "BUY").reduce((sum,o) => sum + o.amountUsd,0));
   const watchOnly = !row.priceAvailable || !purchaseGate.pass || plan.confidence < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || availableCash <= 0;
   const addCapacity = watchOnly ? 0 : Math.min(purchaseGate.maxNextOrderUsd, availableCash);
   plan.firstAddPct = row.value > 0 ? Math.min(plan.firstAddPct, addCapacity / row.value * 100) : 0;
