@@ -43,8 +43,10 @@ const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 
 export async function collectStrategy21Kraken(input: { dbPath?:string; watchlist:string[]; totalSlots?:number; prioritySlots?:number }): Promise<Array<{symbol:string;pair?:string;ok:boolean;error?:string}>> {
   const cursor = readCollectorCursor(input.dbPath);
-  const selection = selectCollectionSymbols(input.watchlist,cursor,input.totalSlots ?? 36,input.prioritySlots ?? 9);
   const pairMap = await fetchKrakenUsdPairMap();
+  // Unlisted USD pairs cannot yield a book; they must not consume rotating slots.
+  const tradable = input.watchlist.filter((symbol) => pairMap.has(symbol.toUpperCase()));
+  const selection = selectCollectionSymbols(tradable,cursor,input.totalSlots ?? 36,input.prioritySlots ?? 9);
   const results: Array<{symbol:string;pair?:string;ok:boolean;error?:string}> = [];
   for (const symbol of selection.symbols) {
     const pair = pairMap.get(symbol);
@@ -65,5 +67,7 @@ export async function collectStrategy21Kraken(input: { dbPath?:string; watchlist
     }
   }
   writeCollectorCursor(input.dbPath,selection.nextCursor);
+  const failures = results.filter((result) => !result.ok);
+  if (failures.length) console.warn('Strategy 2.1 Kraken sample failures:', failures.map((result) => `${result.symbol}: ${result.error ?? 'unknown'}`).join('; '));
   return results;
 }
