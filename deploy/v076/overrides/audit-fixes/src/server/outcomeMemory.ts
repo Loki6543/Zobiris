@@ -93,7 +93,7 @@ function returnPct(reference: number, current: number): number {
   return ((current / reference) - 1) * 100;
 }
 
-function seedToRecord(seed: NonNullable<NonNullable<SnapshotLike["rankedAssets"][number]["strategy21"]>["researchIntegrity"]>["outcomeSeed"]): DecisionOutcomeRecord | null {
+function seedToRecord(seed: NonNullable<NonNullable<NonNullable<SnapshotLike["rankedAssets"][number]["strategy21"]>["researchIntegrity"]>["outcomeSeed"]>): DecisionOutcomeRecord | null {
   const referencePriceUsd = finitePositive(seed.referencePriceUsd);
   if (!seed.outcomeId || !seed.symbol || !seed.generatedAt || !referencePriceUsd || !seed.thesisId) return null;
   const horizons = Array.isArray(seed.horizons) ? seed.horizons : [];
