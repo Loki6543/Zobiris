@@ -310,6 +310,21 @@ export function App() {
   }
 
   useEffect(() => { void loadData(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const pollAccount = async () => {
+      try {
+        const response = await fetch("/api/account");
+        if (!response.ok || cancelled) return;
+        const data = await response.json();
+        if (!cancelled) setAccount(data?.account ?? null);
+      } catch {
+        // Keep the last good account snapshot; server-side reconciliation continues.
+      }
+    };
+    const timer = window.setInterval(() => { void pollAccount(); }, 15_000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, []);
 
   const accountSynced = Boolean(account?.privateAccountSynced);
   const LIVE_HOLDINGS = accountSynced && Array.isArray(account?.holdings)
@@ -395,10 +410,10 @@ export function App() {
       .sort((a, b) => researchScore(b) - researchScore(a))
       .slice(0, 15)
       .map((asset) => String(asset?.symbol ?? "").toUpperCase());
-  }, [rankedAssets]);
+  }, [rankedAssets, account]);
 
 
-  const mergedTrades = useMemo(() => [...LIVE_TRADE_MEMORY, ...customTrades], [customTrades]);
+  const mergedTrades = useMemo(() => [...LIVE_TRADE_MEMORY, ...customTrades], [customTrades, account]);
   const learning = useMemo(() => fifoRealized(mergedTrades.filter((trade) => trade.orderType !== "INSTANT_MICRO")), [mergedTrades]);
   const reentryRisk = useMemo(() => reentryRiskSymbols(mergedTrades), [mergedTrades]);
 
@@ -423,7 +438,7 @@ export function App() {
     else if (String(asset?.action ?? "") === "AVOID") action = "NO ADD";
     else if (upl < -8) action = "REVIEW";
     return { ...holding, livePrice, value, upl, action: priceAvailable ? action : "VERIFY PRICE", asset, priceAvailable };
-  }), [assetMap, snapshotFresh, nowMs]);
+  }), [assetMap, snapshotFresh, nowMs, account]);
 
   const invested = portfolioRows.reduce((sum, row) => sum + row.value, 0);
   const total = LIVE_CASH_USD + invested;
@@ -479,7 +494,7 @@ export function App() {
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-  }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs]);
+  }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs, account]);
 
   const orderEvaluations = useMemo(() => LIVE_OPEN_ORDERS.map((order, index) => {
     const symbol = order.symbol.toUpperCase();
@@ -594,7 +609,9 @@ export function App() {
         status: "VERIFY FIRST",
         suggestedPrice: slotTarget,
         suggestedAmountUsd,
-        reason: "This screenshot order is already at/below market and may have filled or been cancelled in Kraken.",
+        reason: accountSynced
+          ? "Kraken still reports this order open even though its limit is at/below current market; verify the order conditions before changing it."
+          : "This snapshot order is already at/below market and may have filled or been cancelled in Kraken.",
       };
     }
 
@@ -624,7 +641,7 @@ export function App() {
       suggestedAmountUsd,
       reason,
     };
-  }), [assetMap, portfolioRows, regime, reentryRisk, freeCash, snapshotFresh, nowMs]);
+  }), [assetMap, portfolioRows, regime, reentryRisk, freeCash, snapshotFresh, nowMs, account]);
 
   const strongestHoldingAction = [...portfolioRows].sort((a, b) => b.upl - a.upl)[0];
 
