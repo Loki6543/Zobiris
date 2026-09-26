@@ -327,7 +327,7 @@ export function App() {
   }, []);
 
   const accountSynced = Boolean(account?.privateAccountSynced);
-  const LIVE_HOLDINGS = accountSynced && Array.isArray(account?.holdings)
+  const LIVE_HOLDINGS: typeof HOLDINGS = accountSynced && Array.isArray(account?.holdings)
     ? account.holdings.map((holding: any) => {
         const fallback = HOLDINGS.find((item) => item.symbol === String(holding?.symbol ?? "").toUpperCase());
         return {
@@ -339,7 +339,7 @@ export function App() {
         };
       })
     : HOLDINGS;
-  const LIVE_OPEN_ORDERS = accountSynced && Array.isArray(account?.openOrders)
+  const LIVE_OPEN_ORDERS: typeof OPEN_ORDERS = accountSynced && Array.isArray(account?.openOrders)
     ? account.openOrders.map((order: any) => ({
         side: String(order?.side ?? "").toUpperCase() === "SELL" ? "SELL" as const : "BUY" as const,
         symbol: String(order?.symbol ?? "").toUpperCase(),
