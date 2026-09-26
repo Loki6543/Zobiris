@@ -34,7 +34,8 @@ export function saveShadowForecasts(path: string, forecasts: ForecastRecord[], b
 
 export function settleShadowForecasts(path: string, feature: BookFeatures): void {
   const at = Date.parse(feature.receivedAt ?? feature.observedAt);
-  if (!Number.isFinite(at) || !(feature.midpoint > 0)) return;
+  const observed = Date.parse(feature.observedAt);
+  if (!Number.isFinite(at) || !Number.isFinite(observed) || !(feature.midpoint > 0)) return;
   const storage = openStorage({ path });
   try {
     storage.sqlite.exec(SQL);
@@ -42,6 +43,7 @@ export function settleShadowForecasts(path: string, feature: BookFeatures): void
       WHERE pair=? AND outcome_status='pending' AND due_at<=?`).all(feature.pair, at) as Array<{ id: string; due_at: number; base_price: number | null }>;
     const update = storage.sqlite.prepare(`UPDATE prediction_shadow_forecasts SET outcome_status=?,evaluated_at=?,outcome_return_pct=?,evaluation_lag_ms=? WHERE id=?`);
     for (const row of pending) {
+      if (observed < row.due_at) continue;
       const lag = at - row.due_at;
       const valid = lag <= 5 * 60_000 && row.base_price != null && row.base_price > 0;
       update.run(valid ? "evaluated" : "missing_window", at, valid ? (feature.midpoint / row.base_price! - 1) * 100 : null, lag, row.id);

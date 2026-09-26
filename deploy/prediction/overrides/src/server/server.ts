@@ -1148,8 +1148,15 @@ export function startZobirisServer(port = PORT, host = HOST) {
   if (process.env.ZOBIRIS_PREDICTION_SHADOW === "1") {
     const configured = (process.env.ZOBIRIS_PREDICTION_PAIRS ?? "BTC/USD,SOL/USD").split(",").map((pair) => pair.trim().toUpperCase());
     const ingest = createShadowFeatureHandler(DEFAULT_DB);
+    const coveredPairs = new Set<string>();
     const stop = startKrakenBookShadow(configured, (feature) => {
-      try { ingest(feature); }
+      try {
+        ingest(feature);
+        if (!coveredPairs.has(feature.pair)) {
+          coveredPairs.add(feature.pair);
+          console.log(`Prediction shadow book coverage: ${feature.pair}`);
+        }
+      }
       catch (error) { console.warn("Prediction shadow storage degraded:", error instanceof Error ? error.message : String(error)); }
     });
     server.on("close", stop);

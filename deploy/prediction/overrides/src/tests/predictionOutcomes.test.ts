@@ -20,4 +20,12 @@ describe("shadow outcomes", () => {
     expect(readShadowForecasts(path, "SOL/USD").find((row) => row.horizon === "1H")?.outcomeStatus).toBe("missing_window");
     expect(readShadowForecasts(path, "SOL/USD").find((row) => row.horizon === "4H")?.outcomeStatus).toBe("pending");
   });
+
+  it("does not settle with a pre-horizon quote delivered after the due time", () => {
+    const dir = mkdtempSync(join(tmpdir(), "zobiris-outcome-")); dirs.push(dir);
+    const path = join(dir, "outcomes.sqlite");
+    saveShadowForecasts(path, predictHorizons({ pair: "SOL/USD", asOf: "2026-09-26T09:00:00Z", features: [feature("2026-09-26T08:59:00Z", 99), feature("2026-09-26T09:00:00Z", 100)], feeBpsPerSide: 40 }), 100);
+    settleShadowForecasts(path, { ...feature("2026-09-26T09:59:59Z", 120), receivedAt: "2026-09-26T10:00:01Z" });
+    expect(readShadowForecasts(path, "SOL/USD").find((row) => row.horizon === "1H")?.outcomeStatus).toBe("pending");
+  });
 });
