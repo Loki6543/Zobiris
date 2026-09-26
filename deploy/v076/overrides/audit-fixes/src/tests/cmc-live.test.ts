@@ -40,7 +40,12 @@ function cmc200Response(): unknown {
         quote: {
           USD: {
             price: 70000.00,
+            percent_change_1h: 0.2,
             percent_change_24h: 2.5,
+            percent_change_7d: 4.5,
+            percent_change_30d: 8.5,
+            percent_change_60d: 20.5,
+            percent_change_90d: 35.5,
             market_cap: 1400000000000,
             volume_24h: 40000000000,
             last_updated: "2026-08-22T02:00:00.000Z",
@@ -54,7 +59,12 @@ function cmc200Response(): unknown {
         quote: {
           USD: {
             price: 3000.00,
+            percent_change_1h: 0.1,
             percent_change_24h: 1.1,
+            percent_change_7d: 3.1,
+            percent_change_30d: 6.1,
+            percent_change_60d: 16.1,
+            percent_change_90d: 25.1,
             market_cap: 360000000000,
             volume_24h: 20000000000,
             last_updated: "2026-08-22T02:00:00.000Z",
@@ -68,7 +78,12 @@ function cmc200Response(): unknown {
         quote: {
           USD: {
             price: 100.00,
+            percent_change_1h: 0.3,
             percent_change_24h: 3.2,
+            percent_change_7d: 5.2,
+            percent_change_30d: 9.2,
+            percent_change_60d: 21.2,
+            percent_change_90d: 31.2,
             market_cap: 45000000000,
             volume_24h: 4000000000,
             last_updated: "2026-08-22T02:00:00.000Z",
@@ -275,6 +290,9 @@ describe("CMCAdapter live mode", () => {
     expect(btc).toBeDefined();
     expect((btc?.payload as { priceUsd: number }).priceUsd).toBe(70000.00);
     expect((btc?.payload as { cmcId: number }).cmcId).toBe(1);
+    expect((btc?.payload as { change7dPct: number }).change7dPct).toBe(4.5);
+    expect((btc?.payload as { change30dPct: number }).change30dPct).toBe(8.5);
+    expect((btc?.payload as { change90dPct: number }).change90dPct).toBe(35.5);
   });
 
   it("setLiveMode(apiKey) flips forceFixtures to false and stores the key", () => {
