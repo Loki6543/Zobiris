@@ -205,11 +205,11 @@ async function verifyCandidate() {
     if (Math.abs(Number(policy?.discoveryBudget?.adversarialAlternativeMechanisms ?? 0) - 0.40) > 1e-9) throw new Error('adversarial discovery budget missing');
     if (Math.abs(Number(policy?.discoveryBudget?.counterContrarianFalsification ?? 0) - 0.20) > 1e-9) throw new Error('counter-contrarian falsification budget missing');
     const researchAsset = strategy.payload.assets.find(a => a.strategy21?.researchIntegrity?.version === '1.0');
-    const integrity = researchAsset?.strategy21?.researchIntegrity;
-    if (!integrity) throw new Error('research-integrity bundle missing from Strategy 2.1 assets');
-    if (!Array.isArray(integrity.evidenceLedger)) throw new Error('research evidence ledger missing');
-    if (!Array.isArray(integrity.thesis?.falsifiers) || integrity.thesis.falsifiers.length === 0) throw new Error('research thesis falsifiers missing');
-    if (integrity.evidenceLedger.some(item => item?.pointInTimeValid === false && item?.limitations?.length === 0)) throw new Error('invalid point-in-time evidence lacks limitations');
+    const researchIntegrityBundle = researchAsset?.strategy21?.researchIntegrity;
+    if (!researchIntegrityBundle) throw new Error('research-integrity bundle missing from Strategy 2.1 assets');
+    if (!Array.isArray(researchIntegrityBundle.evidenceLedger)) throw new Error('research evidence ledger missing');
+    if (!Array.isArray(researchIntegrityBundle.thesis?.falsifiers) || researchIntegrityBundle.thesis.falsifiers.length === 0) throw new Error('research thesis falsifiers missing');
+    if (researchIntegrityBundle.evidenceLedger.some(item => item?.pointInTimeValid === false && item?.limitations?.length === 0)) throw new Error('invalid point-in-time evidence lacks limitations');
     const outcomes = await jsonCheck(localOrigin, '/api/outcomes?limit=5', {}, [200], 'candidate decision outcome memory');
     if (outcomes.payload?.version !== '1.0' || !Array.isArray(outcomes.payload?.records)) throw new Error('decision outcome memory contract missing');
     console.log('PASS candidate research integrity, read-only capability manifest and outcome-memory contract');
