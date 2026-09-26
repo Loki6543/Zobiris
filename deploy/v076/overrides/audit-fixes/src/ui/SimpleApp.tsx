@@ -72,6 +72,17 @@ function extractMarketField(asset: RankedAsset | undefined, field: string): numb
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+const MIN_MEANINGFUL_TRIM_USD = 8;
+const SMALL_POSITION_USD = 25;
+
+function meaningfulTrimPct(positionValueUsd: number, uplPct: number): number {
+  if (!Number.isFinite(positionValueUsd) || positionValueUsd <= 0) return 0;
+  const base = uplPct >= 30 ? 20 : uplPct >= 15 ? 15 : 10;
+  if ((positionValueUsd * base) / 100 >= MIN_MEANINGFUL_TRIM_USD) return base;
+  const needed = Math.ceil(((MIN_MEANINGFUL_TRIM_USD / positionValueUsd) * 100) / 5) * 5;
+  return needed <= 50 ? needed : 0;
+}
+
 function buildOrderPlan(row: any, regime: string, recentReentry: boolean) {
   const current = Number(row.livePrice);
   const avg = Number(row.avgPriceUsd ?? 0);
@@ -105,8 +116,8 @@ function buildOrderPlan(row: any, regime: string, recentReentry: boolean) {
   // Position sizing deliberately reflects the strongest lessons in the user's
   // trade memory: partial harvesting worked, rapid re-entry hurt, and clustered
   // market adds should be smaller and staged.
-  const trimPct = row.upl >= 30 ? 20 : row.upl >= 15 ? 15 : 10;
-  const secondTrimPct = row.upl >= 30 ? 15 : 10;
+  const trimPct = meaningfulTrimPct(row.value, row.upl);
+  const secondTrimPct = row.value < SMALL_POSITION_USD ? 0 : (row.upl >= 30 ? 15 : 10);
 
   let firstAddPct = regimeBreak ? 8 : 12;
   if (score >= 55 && confidence >= 55) firstAddPct += 4;
@@ -352,7 +363,10 @@ export function App() {
     const hasSellPlan = OPEN_ORDERS.some((order) => order.side === "SELL" && order.symbol === holding.symbol);
     let action = "HOLD";
     if (hasSellPlan) action = "HARVEST PLAN";
-    else if (upl >= 15) action = "TRIM 20%";
+    else if (upl >= 15) {
+      const trimPct = meaningfulTrimPct(value, upl);
+      action = trimPct > 0 ? `TRIM ${trimPct}%` : "HOLD — TOO SMALL TO TRIM";
+    }
     else if (String(asset?.action ?? "") === "AVOID") action = "NO ADD";
     else if (upl < -8) action = "REVIEW";
     return { ...holding, livePrice, value, upl, action: priceAvailable ? action : "VERIFY PRICE", asset, priceAvailable };
@@ -413,6 +427,130 @@ export function App() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
   }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs]);
+
+  const orderEvaluations = useMemo(() => OPEN_ORDERS.map((order, index) => {
+    const symbol = order.symbol.toUpperCase();
+    const asset = assetMap.get(symbol);
+    const holding = portfolioRows.find((row) => row.symbol === symbol);
+    const current = extractPrice(asset) ?? (holding?.priceAvailable ? holding.livePrice : null);
+
+    if (order.side === "BUY") {
+      if (!snapshotFresh || !asset || current == null) {
+        return {
+          ...order,
+          key: order.side + symbol + index,
+          status: "VERIFY",
+          suggestedPrice: null as number | null,
+          suggestedAmountUsd: null as number | null,
+          reason: "Current market evidence is unavailable or stale; do not change this order until refresh succeeds.",
+        };
+      }
+      const gate = krakenLimitPurchaseGate(asset);
+      const score = researchScore(asset);
+      const conf = confidencePct(asset);
+      if (!gate.pass || conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT) {
+        const reason = gate.failureReasons[0] ?? (conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT
+          ? `confidence ${conf.toFixed(0)}% is below the 65% execution threshold`
+          : "Kraken execution authority is zero");
+        return {
+          ...order,
+          key: order.side + symbol + index,
+          status: "PAUSE",
+          suggestedPrice: null,
+          suggestedAmountUsd: 0,
+          reason: `Zobiris does not currently authorize this buy: ${reason}.`,
+        };
+      }
+
+      let discount = regime.toLowerCase().includes("break") ? 0.05 : 0.03;
+      if (score >= 55) discount -= 0.01;
+      if (score < 45) discount += 0.01;
+      if (reentryRisk.has(symbol)) discount += 0.02;
+      discount = clamp(discount, 0.02, 0.08);
+      const preferred = current * (1 - discount);
+      const protocolTarget = conf >= STRATEGY21_LATER_LINE_CONFIDENCE_PCT ? PROBE_MAX_USD : PROBE_TYPICAL_USD;
+      const suggestedAmountUsd = Math.max(0, Math.min(protocolTarget, gate.maxNextOrderUsd, freeCash));
+
+      let status = "KEEP";
+      let reason = `Order is close to Zobiris's preferred entry ${money(preferred)}.`;
+      if (order.targetPriceUsd >= current * 0.995 || order.targetPriceUsd > preferred * 1.02) {
+        status = "MOVE LOWER";
+        reason = `Current limit is too high versus the preferred entry; move toward ${money(preferred)}.`;
+      } else if (order.targetPriceUsd < preferred * 0.95 && conf >= STRATEGY21_LATER_LINE_CONFIDENCE_PCT) {
+        status = "MOVE UP";
+        reason = `Order is materially below the preferred entry and may miss a strong setup; move toward ${money(preferred)}.`;
+      }
+      if (suggestedAmountUsd > 0 && order.amountUsd < suggestedAmountUsd * 0.75) {
+        status += " / INCREASE SIZE";
+        reason += ` New protocol size is about ${money(suggestedAmountUsd)}.`;
+      } else if (suggestedAmountUsd > 0 && order.amountUsd > suggestedAmountUsd * 1.2) {
+        status += " / REDUCE SIZE";
+        reason += ` Cap the order near ${money(suggestedAmountUsd)}.`;
+      }
+
+      return {
+        ...order,
+        key: order.side + symbol + index,
+        status,
+        suggestedPrice: preferred,
+        suggestedAmountUsd,
+        reason,
+      };
+    }
+
+    if (!holding || !holding.priceAvailable || current == null) {
+      return {
+        ...order,
+        key: order.side + symbol + index,
+        status: "VERIFY",
+        suggestedPrice: null,
+        suggestedAmountUsd: null,
+        reason: "Current holding/price evidence is unavailable or stale.",
+      };
+    }
+
+    const plan = buildOrderPlan(holding, regime, reentryRisk.has(symbol));
+    const suggestedAmountUsd = plan.trimPct > 0
+      ? Math.min(holding.value, Math.max(MIN_MEANINGFUL_TRIM_USD, holding.value * (plan.trimPct / 100)))
+      : 0;
+
+    if (order.targetPriceUsd <= current * 1.001) {
+      return {
+        ...order,
+        key: order.side + symbol + index,
+        status: "VERIFY FIRST",
+        suggestedPrice: plan.harvestNear,
+        suggestedAmountUsd,
+        reason: "This screenshot order is already at/below market and may have filled or been cancelled in Kraken.",
+      };
+    }
+
+    let status = "KEEP";
+    let reason = "Existing harvest order is inside the current Zobiris sell ladder.";
+    if (plan.trimPct <= 0) {
+      status = "CANCEL PARTIAL TRIM";
+      reason = "The position is too small for a useful partial sale; hold it intact unless the thesis breaks.";
+    } else if (order.targetPriceUsd < plan.harvestNear * 0.97) {
+      status = "MOVE UP";
+      reason = `Current harvest is too low; first Zobiris harvest is near ${money(plan.harvestNear)}.`;
+    } else if (order.targetPriceUsd > plan.harvestHigh * 1.05) {
+      status = "MOVE DOWN";
+      reason = `Current target is beyond the active harvest ladder; move toward ${money(plan.harvestHigh)}.`;
+    }
+    if (suggestedAmountUsd > 0 && order.amountUsd < MIN_MEANINGFUL_TRIM_USD) {
+      status += " / INCREASE SIZE";
+      reason += ` Use at least about ${money(suggestedAmountUsd)} so the trim is meaningful.`;
+    }
+
+    return {
+      ...order,
+      key: order.side + symbol + index,
+      status,
+      suggestedPrice: plan.harvestNear,
+      suggestedAmountUsd,
+      reason,
+    };
+  }), [assetMap, portfolioRows, regime, reentryRisk, freeCash, snapshotFresh, nowMs]);
 
   const strongestHoldingAction = [...portfolioRows].sort((a, b) => b.upl - a.upl)[0];
 
@@ -553,22 +691,19 @@ export function App() {
           <section style={styles.twoCol}>
             <div style={styles.card}>
               <h2 style={styles.h2}>Open orders</h2>
-              {OPEN_ORDERS.map((order, index) => {
-                const current = extractPrice(assetMap.get(order.symbol));
-                const distance = current ? ((order.targetPriceUsd / current) - 1) * 100 : null;
-                return (
-                  <div key={order.side + order.symbol + index} style={styles.orderRow}>
-                    <div>
-                      <strong>{order.side} {order.symbol}</strong>
-                      <div style={styles.tiny}>{money(order.amountUsd)} at {money(order.targetPriceUsd)}</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <strong>{distance == null ? "Pending" : pct(distance)}</strong>
-                      <div style={styles.tiny}>{distance == null ? "from target" : "vs live price"}</div>
-                    </div>
+              {orderEvaluations.map((order) => (
+                <div key={order.key} style={styles.orderReviewRow}>
+                  <div>
+                    <strong>{order.side} {order.symbol} — {order.status}</strong>
+                    <div style={styles.tiny}>Current snapshot order: {money(order.amountUsd)} @ {money(order.targetPriceUsd)}</div>
+                    <div style={styles.tiny}>{order.reason}</div>
                   </div>
-                );
-              })}
+                  <div style={{ textAlign: "right" }}>
+                    <strong>{order.suggestedPrice == null ? "VERIFY" : money(order.suggestedPrice)}</strong>
+                    <div style={styles.tiny}>{order.suggestedAmountUsd == null ? "size pending" : order.suggestedAmountUsd <= 0 ? "no new size authorized" : "suggested " + money(order.suggestedAmountUsd)}</div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div style={styles.card}>
@@ -622,17 +757,20 @@ export function App() {
           <section style={styles.twoCol}>
             <div style={styles.card}>
               <h2 style={styles.h2}>Existing orders review</h2>
-              {OPEN_ORDERS.map((order, index) => {
-                const current = extractPrice(assetMap.get(order.symbol));
-                const distance = current ? ((order.targetPriceUsd / current) - 1) * 100 : null;
-                const label = order.side === "BUY" ? "BUY LIMIT" : "HARVEST";
-                return (
-                  <div key={order.symbol + index} style={styles.orderRow}>
-                    <div><strong>{label} {order.symbol}</strong><div style={styles.tiny}>{money(order.amountUsd)} order</div></div>
-                    <div style={{ textAlign: "right" }}><strong>{money(order.targetPriceUsd)}</strong><div style={styles.tiny}>{distance == null ? "price feed unavailable" : pct(distance) + " vs live"}</div></div>
+              {orderEvaluations.map((order) => (
+                <div key={order.key} style={styles.orderReviewRow}>
+                  <div style={{ flex: 1 }}>
+                    <div style={styles.limitLabel}>{order.side} {order.symbol} · {order.status}</div>
+                    <strong>{money(order.amountUsd)} @ {money(order.targetPriceUsd)}</strong>
+                    <div style={styles.tiny}>{order.reason}</div>
                   </div>
-                );
-              })}
+                  <div style={{ textAlign: "right" }}>
+                    <div style={styles.tiny}>Zobiris target</div>
+                    <strong>{order.suggestedPrice == null ? "—" : money(order.suggestedPrice)}</strong>
+                    <div style={styles.tiny}>{order.suggestedAmountUsd == null ? "reviewing size" : order.suggestedAmountUsd <= 0 ? "pause / no add" : money(order.suggestedAmountUsd)}</div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div style={styles.card}>
@@ -786,6 +924,10 @@ function OrderPlanPanel({
     firstActionTitle = "VERIFY EXISTING KRAKEN ORDER FIRST";
     firstActionDetail = `Do not duplicate the snapshot order. If it is no longer open, the next planned trim is ${plan.trimPct}% near ${money(plan.harvestNear)}.`;
     learnedReason = "Zobiris learned to avoid stacking duplicate exits when an older order may already have filled.";
+  } else if (row.upl >= 15 && plan.trimPct <= 0) {
+    firstActionTitle = "HOLD — POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM";
+    firstActionDetail = `A normal trim would be below ${money(MIN_MEANINGFUL_TRIM_USD)}. Keep the position intact unless the thesis breaks badly enough to justify a full exit.`;
+    learnedReason = "Zobiris now rejects nuisance-size trims that are too small to materially improve the portfolio.";
   } else if (row.upl >= 15) {
     firstActionTitle = `TRIM ${plan.trimPct}% AT ${money(plan.harvestNear)}`;
     firstActionDetail = `About ${num(trimQty, 8)} ${row.symbol} / ${money(trimUsd)}. Keep the remaining position as the runner.`;
@@ -838,8 +980,12 @@ function OrderPlanPanel({
           <div style={styles.limitLabel}>SELL / HARVEST LADDER</div>
           <strong>{money(plan.harvestNear)} → {money(plan.harvestHigh)}</strong>
           <div style={styles.tiny}>
-            Action 1: reduce {plan.trimPct}% ({num(trimQty, 8)} {row.symbol}, about {money(trimUsd)}) near {money(plan.harvestNear)}.
-            {" "}Action 2: reduce another {plan.secondTrimPct}% (about {money(secondTrimUsd)}) near {money(plan.harvestHigh)}.
+            {plan.trimPct > 0
+              ? <>Action 1: reduce {plan.trimPct}% ({num(trimQty, 8)} {row.symbol}, about {money(trimUsd)}) near {money(plan.harvestNear)}.</>
+              : <>No partial trim: the position is too small for a meaningful order.</>}
+            {plan.secondTrimPct > 0
+              ? <>{" "}Action 2: reduce another {plan.secondTrimPct}% (about {money(secondTrimUsd)}) near {money(plan.harvestHigh)}.</>
+              : null}
             {" "}Keep the rest as the runner.
           </div>
         </div>
@@ -936,6 +1082,7 @@ const styles: Record<string, CSSProperties> = {
   bad: { color: "#ff708e", fontWeight: 800 },
   pill: { display: "inline-block", border: "1px solid", borderRadius: 999, padding: "5px 8px", fontSize: 11, fontWeight: 900, letterSpacing: 0.3 },
   orderRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 0", borderBottom: "1px solid #222833" },
+  orderReviewRow: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, padding: "13px 0", borderBottom: "1px solid #222833" },
   rule: { padding: "12px 0", borderBottom: "1px solid #222833", lineHeight: 1.45 },
   candidate: { display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: "1px solid #222833" },
   rank: { width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#202631", color: "#b9c5d6", fontWeight: 900 },
