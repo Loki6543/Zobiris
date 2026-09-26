@@ -109,6 +109,8 @@ export interface Strategy21AssetView {
   dataReadiness: 'READY' | 'KRAKEN_WARMUP' | 'IDENTITY_BLOCKED';
   researchIntegrity: ResearchIntegrityBundle;
   delayedRotation: DelayedRotationProfile;
+  recommendationMode: RecommendationMode;
+  delayedRotationCalibration: DelayedRotationCalibration;
 }
 
 export interface IntegratedAssetLike extends LegacyAssetLike {
@@ -515,6 +517,8 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       dataReadiness,
       researchIntegrity,
       delayedRotation,
+      recommendationMode,
+      delayedRotationCalibration,
     },
   }));
 
