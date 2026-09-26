@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,44 +36,47 @@ function snapshot(asOf: string, price: number) {
   };
 }
 
-test("decision outcome memory records a seed and resolves due horizons without look-ahead", async () => {
+describe("decision outcome memory", () => {
+it("records a seed and resolves due horizons without look-ahead", async () => {
   const dir = await mkdtemp(join(tmpdir(), "zobiris-outcome-"));
   const path = join(dir, "outcomes.json");
   try {
     await updateOutcomeMemory(path, snapshot("2026-09-25T20:00:00.000Z", 100));
     let memory = await readOutcomeMemory(path, "BTC");
-    assert.equal(memory.records.length, 1);
-    assert.equal(memory.records[0]!.evaluations.find((item) => item.horizon === "1H")!.evaluatedAt, null);
+    expect(memory.records.length).toBe(1);
+    expect(memory.records[0]!.evaluations.find((item) => item.horizon === "1H")!.evaluatedAt).toBeNull();
 
     await updateOutcomeMemory(path, snapshot("2026-09-25T21:05:00.000Z", 105));
     memory = await readOutcomeMemory(path, "BTC");
     const record = memory.records[0]!;
     const oneHour = record.evaluations.find((item) => item.horizon === "1H")!;
     const fourHour = record.evaluations.find((item) => item.horizon === "4H")!;
-    assert.equal(oneHour.evaluatedAt, "2026-09-25T21:05:00.000Z");
-    assert.ok(Math.abs((oneHour.returnPct ?? 0) - 5) < 1e-9);
-    assert.equal(fourHour.evaluatedAt, null);
-    assert.ok(record.maxFavorablePct >= 5);
-    assert.equal(record.maxAdversePct, 0);
+    expect(oneHour.evaluatedAt).toBe("2026-09-25T21:05:00.000Z");
+    expect(oneHour.returnPct ?? 0).toBeCloseTo(5, 9);
+    expect(fourHour.evaluatedAt).toBeNull();
+    expect(record.maxFavorablePct).toBeGreaterThanOrEqual(5);
+    expect(record.maxAdversePct).toBe(0);
 
     const summary = summarizeOutcomeMemory(memory.records);
-    assert.equal(summary.byHorizon["1H"].count, 1);
-    assert.equal(summary.byHorizon["1H"].positiveRate, 1);
+    expect(summary.byHorizon["1H"].count).toBe(1);
+    expect(summary.byHorizon["1H"].positiveRate).toBe(1);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
 });
 
-test("outcome memory tracks adverse excursion independently of horizon evaluation", async () => {
+it("tracks adverse excursion independently of horizon evaluation", async () => {
   const dir = await mkdtemp(join(tmpdir(), "zobiris-outcome-"));
   const path = join(dir, "outcomes.json");
   try {
     await updateOutcomeMemory(path, snapshot("2026-09-25T20:00:00.000Z", 100));
     await updateOutcomeMemory(path, snapshot("2026-09-25T20:30:00.000Z", 92));
     const memory = await readOutcomeMemory(path, "BTC");
-    assert.ok(memory.records[0]!.maxAdversePct <= -8);
-    assert.equal(memory.records[0]!.evaluations.find((item) => item.horizon === "1H")!.evaluatedAt, null);
+    expect(memory.records[0]!.maxAdversePct).toBeLessThanOrEqual(-8);
+    expect(memory.records[0]!.evaluations.find((item) => item.horizon === "1H")!.evaluatedAt).toBeNull();
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
 });
