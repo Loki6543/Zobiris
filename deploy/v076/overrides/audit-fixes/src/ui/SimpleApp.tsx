@@ -266,6 +266,7 @@ export function App() {
   useEffect(() => { const timer = window.setInterval(() => setNowMs(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
   const [view, setView] = useState<View>("portfolio");
   const [snapshot, setSnapshot] = useState<any>(null);
+  const [account, setAccount] = useState<any>(null);
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -282,9 +283,10 @@ export function App() {
     setLoading(true);
     setError(null);
     try {
-      const [snapshotResponse, watchlistResponse] = await Promise.all([
+      const [snapshotResponse, watchlistResponse, accountResponse] = await Promise.all([
         fetch("/api/snapshot/latest"),
         fetch("/api/watchlist"),
+        fetch("/api/account"),
       ]);
       if (!snapshotResponse.ok) throw new Error(`Snapshot load failed (HTTP ${snapshotResponse.status}).`);
       if (!watchlistResponse.ok) throw new Error(`Watchlist load failed (HTTP ${watchlistResponse.status}).`);
@@ -296,6 +298,10 @@ export function App() {
         const data = await watchlistResponse.json();
         setWatchlist(Array.isArray(data?.watchlist) ? data.watchlist : []);
       }
+      if (accountResponse.ok) {
+        const data = await accountResponse.json();
+        setAccount(data?.account ?? null);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Market data could not be loaded.");
     } finally {
@@ -304,6 +310,47 @@ export function App() {
   }
 
   useEffect(() => { void loadData(); }, []);
+
+  const accountSynced = Boolean(account?.privateAccountSynced);
+  const LIVE_HOLDINGS = accountSynced && Array.isArray(account?.holdings)
+    ? account.holdings.map((holding: any) => {
+        const fallback = HOLDINGS.find((item) => item.symbol === String(holding?.symbol ?? "").toUpperCase());
+        return {
+          symbol: String(holding?.symbol ?? "").toUpperCase(),
+          name: String(holding?.name ?? fallback?.name ?? holding?.symbol ?? ""),
+          quantity: Number(holding?.quantity ?? 0),
+          avgPriceUsd: holding?.avgPriceUsd == null ? (fallback?.avgPriceUsd ?? null) : Number(holding.avgPriceUsd),
+          fallbackPriceUsd: Number(holding?.fallbackPriceUsd ?? fallback?.fallbackPriceUsd ?? 0),
+        };
+      })
+    : HOLDINGS;
+  const LIVE_OPEN_ORDERS = accountSynced && Array.isArray(account?.openOrders)
+    ? account.openOrders.map((order: any) => ({
+        side: String(order?.side ?? "").toUpperCase() === "SELL" ? "SELL" as const : "BUY" as const,
+        symbol: String(order?.symbol ?? "").toUpperCase(),
+        name: String(order?.name ?? order?.symbol ?? ""),
+        targetPriceUsd: Number(order?.targetPriceUsd ?? 0),
+        amountUsd: Number(order?.amountUsd ?? 0),
+      }))
+    : OPEN_ORDERS;
+  const LIVE_CASH_USD = accountSynced && Number.isFinite(Number(account?.cashUsd))
+    ? Number(account.cashUsd)
+    : CASH_USD;
+  const LIVE_CAPTURED_AT = accountSynced && account?.capturedAt
+    ? String(account.capturedAt)
+    : PORTFOLIO_CAPTURED_AT;
+  const LIVE_TRADE_MEMORY: TradeMemory[] = accountSynced && Array.isArray(account?.trades) && account.trades.length
+    ? account.trades.map((trade: any) => ({
+        id: String(trade?.id ?? [trade?.at, trade?.symbol, trade?.side, trade?.quantity].join(":")) ,
+        at: String(trade?.at ?? new Date().toISOString()),
+        symbol: String(trade?.symbol ?? "").toUpperCase(),
+        side: String(trade?.side ?? "").toUpperCase() === "SELL" ? "SELL" : "BUY",
+        quantity: Number(trade?.quantity ?? 0),
+        usd: trade?.usd == null ? null : Number(trade.usd),
+        orderType: String(trade?.orderType ?? "").toUpperCase() === "LIMIT" ? "LIMIT" : "MARKET",
+        source: "Kraken trades export",
+      }))
+    : TRADE_MEMORY;
 
   async function refresh() {
     setRefreshing(true);
@@ -337,8 +384,8 @@ export function App() {
   }, [rankedAssets]);
 
   const candidateResearchUniverse = useMemo(() => {
-    const held = new Set(HOLDINGS.map((holding) => holding.symbol));
-    const existingBuy = new Set(OPEN_ORDERS.filter((order) => order.side === "BUY").map((order) => order.symbol));
+    const held = new Set(LIVE_HOLDINGS.map((holding) => holding.symbol));
+    const existingBuy = new Set(LIVE_OPEN_ORDERS.filter((order) => order.side === "BUY").map((order) => order.symbol));
     return rankedAssets
       .filter((asset) => asset?.mappingStatus === "verified")
       .filter((asset) => {
@@ -351,13 +398,13 @@ export function App() {
   }, [rankedAssets]);
 
 
-  const mergedTrades = useMemo(() => [...TRADE_MEMORY, ...customTrades], [customTrades]);
+  const mergedTrades = useMemo(() => [...LIVE_TRADE_MEMORY, ...customTrades], [customTrades]);
   const learning = useMemo(() => fifoRealized(mergedTrades.filter((trade) => trade.orderType !== "INSTANT_MICRO")), [mergedTrades]);
   const reentryRisk = useMemo(() => reentryRiskSymbols(mergedTrades), [mergedTrades]);
 
   const snapshotMs = typeof snapshot?.snapshot?.asOf === "number" ? snapshot.snapshot.asOf : Date.parse(snapshot?.snapshot?.asOf ?? "");
   const snapshotFresh = Number.isFinite(snapshotMs) && nowMs - snapshotMs <= 6 * 60 * 60 * 1000;
-  const portfolioRows = useMemo(() => HOLDINGS.map((holding) => {
+  const portfolioRows = useMemo(() => LIVE_HOLDINGS.map((holding) => {
     const asset = assetMap.get(holding.symbol);
     const observedPrice = extractPrice(asset);
     const priceAvailable = observedPrice != null && snapshotFresh;
@@ -366,7 +413,7 @@ export function App() {
     const upl = holding.avgPriceUsd && holding.avgPriceUsd > 0
       ? ((livePrice / holding.avgPriceUsd) - 1) * 100
       : 0;
-    const hasSellPlan = OPEN_ORDERS.some((order) => order.side === "SELL" && order.symbol === holding.symbol);
+    const hasSellPlan = LIVE_OPEN_ORDERS.some((order) => order.side === "SELL" && order.symbol === holding.symbol);
     let action = "HOLD";
     if (hasSellPlan) action = "HARVEST PLAN";
     else if (upl >= 15) {
@@ -379,15 +426,15 @@ export function App() {
   }), [assetMap, snapshotFresh, nowMs]);
 
   const invested = portfolioRows.reduce((sum, row) => sum + row.value, 0);
-  const total = CASH_USD + invested;
-  const reservedBuys = OPEN_ORDERS.filter((order) => order.side === "BUY").reduce((sum, order) => sum + order.amountUsd, 0);
-  const freeCash = Math.max(0, CASH_USD - reservedBuys);
+  const total = LIVE_CASH_USD + invested;
+  const reservedBuys = LIVE_OPEN_ORDERS.filter((order) => order.side === "BUY").reduce((sum, order) => sum + order.amountUsd, 0);
+  const freeCash = Math.max(0, LIVE_CASH_USD - reservedBuys);
   const regime = String(snapshot?.snapshot?.regime ?? "Loading market regime");
   const regimeConfidence = Number(snapshot?.snapshot?.regimeConfidence ?? 0);
 
   const candidates = useMemo(() => {
-    const held = new Set(HOLDINGS.map((holding) => holding.symbol));
-    const existingBuy = new Set(OPEN_ORDERS.filter((order) => order.side === "BUY").map((order) => order.symbol));
+    const held = new Set(LIVE_HOLDINGS.map((holding) => holding.symbol));
+    const existingBuy = new Set(LIVE_OPEN_ORDERS.filter((order) => order.side === "BUY").map((order) => order.symbol));
     return rankedAssets
       .filter((asset) => asset?.mappingStatus === "verified")
       .filter((asset) => !held.has(String(asset?.symbol ?? "")) && !existingBuy.has(String(asset?.symbol ?? "")))
@@ -434,7 +481,7 @@ export function App() {
       .slice(0, 5);
   }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs]);
 
-  const orderEvaluations = useMemo(() => OPEN_ORDERS.map((order, index) => {
+  const orderEvaluations = useMemo(() => LIVE_OPEN_ORDERS.map((order, index) => {
     const symbol = order.symbol.toUpperCase();
     const asset = assetMap.get(symbol);
     const holding = portfolioRows.find((row) => row.symbol === symbol);
@@ -516,7 +563,7 @@ export function App() {
     }
 
     const plan = buildOrderPlan(holding, regime, reentryRisk.has(symbol));
-    const siblingSellOrders = OPEN_ORDERS
+    const siblingSellOrders = LIVE_OPEN_ORDERS
       .map((candidate, candidateIndex) => ({ candidate, candidateIndex }))
       .filter(({ candidate }) => candidate.side === "SELL" && candidate.symbol.toUpperCase() === symbol)
       .sort((a, b) => a.candidate.targetPriceUsd - b.candidate.targetPriceUsd || a.candidateIndex - b.candidateIndex);
@@ -647,7 +694,7 @@ export function App() {
         ))}
       </nav>
 
-      <div style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. Account holdings and orders are user-provided, not privately synced.</div>
+      <div style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. {accountSynced ? `Kraken account synced ${account?.syncMode === "websocket+poll" ? "live by WebSocket + REST reconciliation" : "by automatic REST polling"} · account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}.` : "Account is using the last user-provided Kraken snapshot until private sync succeeds."}</div>
       {error ? <div role="alert" style={styles.notice}>{error}</div> : null}
       {loading && !snapshot ? <div style={styles.notice}>Loading live Zobiris market data…</div> : null}
 
@@ -655,7 +702,7 @@ export function App() {
         <main>
           <section style={styles.metrics}>
             <Metric label="Portfolio" value={money(total)} />
-            <Metric label="Cash" value={money(CASH_USD)} note={"+" + money(CASH_INFLOW_USD) + " funded cash added " + CASH_UPDATED_AT + " · " + Math.round(CASH_USD / total * 100) + "% of portfolio"} />
+            <Metric label="Cash" value={money(LIVE_CASH_USD)} note={"+" + money(CASH_INFLOW_USD) + " funded cash added " + CASH_UPDATED_AT + " · " + Math.round(LIVE_CASH_USD / total * 100) + "% of portfolio"} />
             <Metric label="Reserved buys" value={money(reservedBuys)} />
             <Metric label="Free cash" value={money(freeCash)} />
             <Metric label="Maneuver capital" value={money(MANEUVER_CAPITAL_USD)} note={"Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD)} />
@@ -665,7 +712,7 @@ export function App() {
             <div style={styles.sectionHead}>
               <div>
                 <h2 style={styles.h2}>Current positions</h2>
-                <div style={styles.subtle}>Kraken account snapshot {new Date(PORTFOLIO_CAPTURED_AT).toLocaleString()}; prices refresh from the live Zobiris engine.</div>
+                <div style={styles.subtle}>Kraken account snapshot {new Date(LIVE_CAPTURED_AT).toLocaleString()}; prices refresh from the live Zobiris engine.</div>
               </div>
             </div>
             <div style={styles.tableWrap}>
@@ -913,7 +960,7 @@ function OrderPlanPanel({
   loading: boolean;
 }) {
   const plan = buildOrderPlan(row, regime, recentReentry);
-  const sellOrders = OPEN_ORDERS.filter((order) => order.side === "SELL" && order.symbol === row.symbol);
+  const sellOrders = LIVE_OPEN_ORDERS.filter((order) => order.side === "SELL" && order.symbol === row.symbol);
   const plannedSellUsd = sellOrders.reduce((sum, order) => sum + order.amountUsd, 0);
   const plannedPct = row.value > 0 ? (plannedSellUsd / row.value) * 100 : 0;
   const strategy = row.asset?.strategy21 ?? null;
@@ -922,7 +969,7 @@ function OrderPlanPanel({
   const nearestFlip = caseFile?.decisionBoundary?.nearestFlip ?? row.asset?.decisionBoundary?.nearestFlip ?? null;
   const failureReasons = Array.isArray(strategy?.eligibility?.failureReasons) ? strategy.eligibility.failureReasons : [];
   const purchaseGate = krakenLimitPurchaseGate({strategy21: strategy});
-  const availableCash = Math.max(0, CASH_USD - OPEN_ORDERS.filter(o => o.side === "BUY").reduce((sum,o) => sum + o.amountUsd,0));
+  const availableCash = Math.max(0, LIVE_CASH_USD - LIVE_OPEN_ORDERS.filter(o => o.side === "BUY").reduce((sum,o) => sum + o.amountUsd,0));
   const watchOnly = !row.priceAvailable || !purchaseGate.pass || plan.confidence < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || availableCash <= 0;
   const addCapacity = watchOnly ? 0 : Math.min(purchaseGate.maxNextOrderUsd, availableCash);
   plan.firstAddPct = row.value > 0 ? Math.min(plan.firstAddPct, addCapacity / row.value * 100) : 0;
