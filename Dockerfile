@@ -21,6 +21,8 @@ COPY railway_persistence_wrapper.mjs /app/scripts/railway_persistence_wrapper.mj
 RUN node scripts/v076_patch_production.mjs \
   && cp -r audit-fixes/. /app/ \
   && rm -rf audit-fixes
+COPY deploy/prediction/overrides/. /app/
+
 RUN npm ci --no-audit --no-fund
 RUN npm run test:decision-boundary \
   && npm run test:same-origin-refresh \
