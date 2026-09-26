@@ -101,13 +101,17 @@ export function CompareLab() {
       <div style={{ display: "flex", gap: 8, marginBottom: 15 }}>
         {(["compare", "patterns"] as const).map(value => <button key={value} type="button" style={{
           ...button, background: mode === value ? "#174e59" : "#252e3c",
-        }} onClick={() => setMode(value)}>{value === "compare" ? "Compare" : "BTC sideways patterns"}</button>)}
+        }} onClick={() => {
+          setMode(value);
+          if (value === "patterns") setSymbols(previous => ["BTC", ...previous.filter(s => s !== "BTC")].slice(0, 5));
+        }}>{value === "compare" ? "Compare" : "BTC sideways patterns"}</button>)}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 15 }}>
         {universe.map(symbol => <button key={symbol} type="button" style={{
           ...button, background: symbols.includes(symbol) ? "#174e59" : "#252e3c",
         }} aria-pressed={symbols.includes(symbol)} onClick={() => setSymbols(previous =>
-          previous.includes(symbol) ? previous.length > 2 ? previous.filter(s => s !== symbol) : previous
+          mode === "patterns" && symbol === "BTC" ? previous
+          : previous.includes(symbol) ? previous.length > 2 ? previous.filter(s => s !== symbol) : previous
             : previous.length < 5 ? [...previous, symbol] : previous)}>{symbol}</button>)}
       </div>
       {mode === "compare" ? <div style={{ display: "flex", gap: 8 }}>
