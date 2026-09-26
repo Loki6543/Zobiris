@@ -327,11 +327,19 @@ export function App() {
       .map((asset) => String(asset?.symbol ?? "").toUpperCase());
   }, [rankedAssets]);
 
-  const candidateResearchKey = candidateResearchUniverse.join("|");
+  const assetResearchUniverse = useMemo(
+    () => [...new Set([
+      ...candidateResearchUniverse,
+      ...OPEN_ORDERS.map((order) => order.symbol),
+    ])],
+    [candidateResearchUniverse],
+  );
+
+  const candidateResearchKey = assetResearchUniverse.join("|");
 
   useEffect(() => {
     let cancelled = false;
-    const missing = candidateResearchUniverse.filter((symbol) => !assetDetails[symbol] && !assetDetailLoading[symbol]);
+    const missing = assetResearchUniverse.filter((symbol) => !assetDetails[symbol] && !assetDetailLoading[symbol]);
     if (!missing.length) return;
 
     setAssetDetailLoading((current) => {
@@ -446,6 +454,131 @@ export function App() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
   }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash]);
+
+  const orderEvaluations = useMemo(() => OPEN_ORDERS.map((order, index) => {
+    const symbol = order.symbol.toUpperCase();
+    const asset = assetMap.get(symbol);
+    const detail = assetDetails[symbol];
+    const holding = portfolioRows.find((row) => row.symbol === symbol);
+    const current = extractPrice(asset) ?? holding?.livePrice ?? null;
+
+    if (order.side === "BUY") {
+      if (!detail || current == null) {
+        return {
+          ...order,
+          key: order.side + symbol + index,
+          status: "CHECKING",
+          suggestedPrice: null as number | null,
+          suggestedAmountUsd: null as number | null,
+          reason: "Waiting for the current Zobiris/Kraken execution review.",
+        };
+      }
+      const gate = krakenLimitPurchaseGate(detail);
+      const score = researchScore(asset);
+      const conf = confidencePct(asset);
+      if (!gate.pass || conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT) {
+        const reason = gate.failureReasons[0] ?? (conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT
+          ? `confidence ${conf.toFixed(0)}% is below the 65% execution threshold`
+          : "Kraken execution authority is zero");
+        return {
+          ...order,
+          key: order.side + symbol + index,
+          status: "PAUSE",
+          suggestedPrice: null,
+          suggestedAmountUsd: 0,
+          reason: `Do not increase this order yet: ${reason}.`,
+        };
+      }
+
+      let discount = regime.toLowerCase().includes("break") ? 0.05 : 0.03;
+      if (score >= 55) discount -= 0.01;
+      if (score < 45) discount += 0.01;
+      if (reentryRisk.has(symbol)) discount += 0.02;
+      discount = clamp(discount, 0.02, 0.08);
+      const preferred = current * (1 - discount);
+      const protocolTarget = conf >= STRATEGY21_LATER_LINE_CONFIDENCE_PCT ? PROBE_MAX_USD : PROBE_TYPICAL_USD;
+      const suggestedAmountUsd = Math.max(0, Math.min(protocolTarget, gate.maxNextOrderUsd, freeCash));
+
+      let status = "KEEP";
+      let reason = `Order is close to Zobiris's preferred entry ${money(preferred)}.`;
+      if (order.targetPriceUsd >= current * 0.995 || order.targetPriceUsd > preferred * 1.02) {
+        status = "MOVE LOWER";
+        reason = `Current limit is too high versus the preferred entry; move toward ${money(preferred)}.`;
+      } else if (order.targetPriceUsd < preferred * 0.95 && conf >= STRATEGY21_LATER_LINE_CONFIDENCE_PCT) {
+        status = "MOVE UP";
+        reason = `Order is materially below the preferred entry and may miss a strong setup; move toward ${money(preferred)}.`;
+      }
+      if (suggestedAmountUsd > 0 && order.amountUsd < suggestedAmountUsd * 0.75) {
+        status += " / INCREASE SIZE";
+        reason += ` New protocol size is about ${money(suggestedAmountUsd)}.`;
+      } else if (suggestedAmountUsd > 0 && order.amountUsd > suggestedAmountUsd * 1.2) {
+        status += " / REDUCE SIZE";
+        reason += ` Cap the order near ${money(suggestedAmountUsd)}.`;
+      }
+
+      return {
+        ...order,
+        key: order.side + symbol + index,
+        status,
+        suggestedPrice: preferred,
+        suggestedAmountUsd,
+        reason,
+      };
+    }
+
+    if (!holding || current == null) {
+      return {
+        ...order,
+        key: order.side + symbol + index,
+        status: "VERIFY",
+        suggestedPrice: null,
+        suggestedAmountUsd: null,
+        reason: "No current holding/price context is available for this sell order.",
+      };
+    }
+
+    const plan = buildOrderPlan(holding, regime, reentryRisk.has(symbol));
+    const suggestedAmountUsd = plan.trimPct > 0
+      ? Math.min(holding.value, Math.max(MIN_MEANINGFUL_TRIM_USD, holding.value * (plan.trimPct / 100)))
+      : 0;
+
+    if (order.targetPriceUsd <= current * 1.001) {
+      return {
+        ...order,
+        key: order.side + symbol + index,
+        status: "VERIFY FIRST",
+        suggestedPrice: plan.harvestNear,
+        suggestedAmountUsd,
+        reason: "This snapshot sell target is already at/below market and may have filled or been cancelled in Kraken.",
+      };
+    }
+
+    let status = "KEEP";
+    let reason = "Existing harvest order is inside the current Zobiris sell ladder.";
+    if (plan.trimPct <= 0) {
+      status = "CANCEL PARTIAL TRIM";
+      reason = "The position is too small for a useful partial sale; hold it intact unless the thesis breaks.";
+    } else if (order.targetPriceUsd < plan.harvestNear * 0.97) {
+      status = "MOVE UP";
+      reason = `Current harvest is too low; first Zobiris harvest is near ${money(plan.harvestNear)}.`;
+    } else if (order.targetPriceUsd > plan.harvestHigh * 1.05) {
+      status = "MOVE DOWN";
+      reason = `Current target is beyond the active harvest ladder; move toward ${money(plan.harvestHigh)}.`;
+    }
+    if (suggestedAmountUsd > 0 && order.amountUsd < MIN_MEANINGFUL_TRIM_USD) {
+      status += " / INCREASE SIZE";
+      reason += ` Use at least about ${money(suggestedAmountUsd)} so the trim is meaningful.`;
+    }
+
+    return {
+      ...order,
+      key: order.side + symbol + index,
+      status,
+      suggestedPrice: plan.harvestNear,
+      suggestedAmountUsd,
+      reason,
+    };
+  }), [assetMap, assetDetails, portfolioRows, regime, reentryRisk, freeCash]);
 
   const strongestHoldingAction = [...portfolioRows].sort((a, b) => b.upl - a.upl)[0];
 
@@ -584,22 +717,19 @@ export function App() {
           <section style={styles.twoCol}>
             <div style={styles.card}>
               <h2 style={styles.h2}>Open orders</h2>
-              {OPEN_ORDERS.map((order, index) => {
-                const current = extractPrice(assetMap.get(order.symbol));
-                const distance = current ? ((order.targetPriceUsd / current) - 1) * 100 : null;
-                return (
-                  <div key={order.side + order.symbol + index} style={styles.orderRow}>
-                    <div>
-                      <strong>{order.side} {order.symbol}</strong>
-                      <div style={styles.tiny}>{money(order.amountUsd)} at {money(order.targetPriceUsd)}</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <strong>{distance == null ? "Pending" : pct(distance)}</strong>
-                      <div style={styles.tiny}>{distance == null ? "from target" : "vs live price"}</div>
-                    </div>
+              {orderEvaluations.map((order) => (
+                <div key={order.key} style={styles.orderReviewRow}>
+                  <div>
+                    <strong>{order.side} {order.symbol} — {order.status}</strong>
+                    <div style={styles.tiny}>Current snapshot order: {money(order.amountUsd)} @ {money(order.targetPriceUsd)}</div>
+                    <div style={styles.tiny}>{order.reason}</div>
                   </div>
-                );
-              })}
+                  <div style={{ textAlign: "right" }}>
+                    <strong>{order.suggestedPrice == null ? "VERIFY" : money(order.suggestedPrice)}</strong>
+                    <div style={styles.tiny}>{order.suggestedAmountUsd == null ? "size pending" : order.suggestedAmountUsd <= 0 ? "no new size authorized" : "suggested " + money(order.suggestedAmountUsd)}</div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div style={styles.card}>
@@ -653,17 +783,20 @@ export function App() {
           <section style={styles.twoCol}>
             <div style={styles.card}>
               <h2 style={styles.h2}>Existing orders review</h2>
-              {OPEN_ORDERS.map((order, index) => {
-                const current = extractPrice(assetMap.get(order.symbol));
-                const distance = current ? ((order.targetPriceUsd / current) - 1) * 100 : null;
-                const label = order.side === "BUY" ? "BUY LIMIT" : "HARVEST";
-                return (
-                  <div key={order.symbol + index} style={styles.orderRow}>
-                    <div><strong>{label} {order.symbol}</strong><div style={styles.tiny}>{money(order.amountUsd)} order</div></div>
-                    <div style={{ textAlign: "right" }}><strong>{money(order.targetPriceUsd)}</strong><div style={styles.tiny}>{distance == null ? "price feed unavailable" : pct(distance) + " vs live"}</div></div>
+              {orderEvaluations.map((order) => (
+                <div key={order.key} style={styles.orderReviewRow}>
+                  <div style={{ flex: 1 }}>
+                    <div style={styles.limitLabel}>{order.side} {order.symbol} · {order.status}</div>
+                    <strong>{money(order.amountUsd)} @ {money(order.targetPriceUsd)}</strong>
+                    <div style={styles.tiny}>{order.reason}</div>
                   </div>
-                );
-              })}
+                  <div style={{ textAlign: "right" }}>
+                    <div style={styles.tiny}>Zobiris target</div>
+                    <strong>{order.suggestedPrice == null ? "—" : money(order.suggestedPrice)}</strong>
+                    <div style={styles.tiny}>{order.suggestedAmountUsd == null ? "reviewing size" : order.suggestedAmountUsd <= 0 ? "pause / no add" : money(order.suggestedAmountUsd)}</div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div style={styles.card}>
@@ -966,6 +1099,7 @@ const styles: Record<string, CSSProperties> = {
   bad: { color: "#ff708e", fontWeight: 800 },
   pill: { display: "inline-block", border: "1px solid", borderRadius: 999, padding: "5px 8px", fontSize: 11, fontWeight: 900, letterSpacing: 0.3 },
   orderRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 0", borderBottom: "1px solid #222833" },
+  orderReviewRow: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, padding: "13px 0", borderBottom: "1px solid #222833" },
   rule: { padding: "12px 0", borderBottom: "1px solid #222833", lineHeight: 1.45 },
   candidate: { display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: "1px solid #222833" },
   rank: { width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#202631", color: "#b9c5d6", fontWeight: 900 },
