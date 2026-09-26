@@ -1,0 +1,29 @@
+name: Export Zobiris Source
+
+on:
+  push:
+    paths:
+      - ".github/workflows/export-source.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out deployed Zobiris checkpoint
+        uses: actions/checkout@v4
+        with:
+          ref: 15ca5dc241500bbbb69dbab4533765a1619b8ab8
+          persist-credentials: false
+      - name: Pack clean source
+        run: |
+          tar             --exclude=".git"             --exclude="node_modules"             --exclude="*.sqlite"             --exclude="*.sqlite-shm"             --exclude="*.sqlite-wal"             --exclude=".env"             --exclude=".env.*"             -czf zobiris-current-source.tar.gz .
+      - name: Upload source checkpoint
+        uses: actions/upload-artifact@v4
+        with:
+          name: zobiris-current-source
+          path: zobiris-current-source.tar.gz
+          retention-days: 1
+          if-no-files-found: error
