@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { compareDaily } from "../compareLab/compare.js";
+import { compareDaily, compareUniverse } from "../compareLab/compare.js";
 
 describe("Compare Lab data boundary", () => {
+  it("lists only currently online Kraken USD pairs", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ error: [], result: {
+      btc: { altname: "XBTUSD", status: "online" }, sol: { altname: "SOLUSD", status: "online" },
+      ray: { altname: "RAYUSD", status: "cancel_only" },
+    } }) })));
+    expect(await compareUniverse()).toEqual(["BTC", "SOL"]);
+  });
   afterEach(() => vi.unstubAllGlobals());
   it("accepts only completed real aligned daily Kraken candles", async () => {
     const today = Math.floor(Date.now() / 86400000) * 86400;
