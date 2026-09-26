@@ -1,0 +1,674 @@
+[
+  {
+    "symbol": "BTC",
+    "name": "Bitcoin",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {
+      "cmcSlug": "bitcoin",
+      "coingeckoId": "bitcoin",
+      "krakenPair": "XBTUSD",
+      "cmcNumericId": "1",
+      "lunarcrushId": "1",
+      "coinmarketcalId": "BTC",
+      "coinglassId": "BTC"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.99,
+    "notes": "Native Bitcoin (UTXO, not EVM)."
+  },
+  {
+    "symbol": "ETH",
+    "name": "Ethereum",
+    "chainId": 1,
+    "contractAddress": null,
+    "providerIds": {
+      "cmcSlug": "ethereum",
+      "coingeckoId": "ethereum",
+      "krakenPair": "ETHUSD",
+      "cmcNumericId": "1027",
+      "lunarcrushId": "2",
+      "coinmarketcalId": "ETH",
+      "coinglassId": "ETH"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.99,
+    "notes": "Native ETH on Ethereum mainnet."
+  },
+  {
+    "symbol": "BNB",
+    "name": "BNB",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "XRP",
+    "name": "XRP",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "SOL",
+    "name": "Solana",
+    "chainId": "solana",
+    "contractAddress": "So11111111111111111111111111111111111111112",
+    "providerIds": {
+      "cmcSlug": "solana",
+      "coingeckoId": "solana",
+      "krakenPair": "SOLUSD",
+      "cmcNumericId": "5426",
+      "lunarcrushId": "3",
+      "coinmarketcalId": "SOL",
+      "coinglassId": "SOL"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.98,
+    "notes": "Native SOL identity; contractAddress records the wrapped-native mint for canonical provider resolution."
+  },
+  {
+    "symbol": "TRX",
+    "name": "TRON",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "ZEC",
+    "name": "Zcash",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {
+      "cmcSlug": "zcash",
+      "coingeckoId": "zcash",
+      "cmcNumericId": "1437",
+      "lunarcrushId": "11",
+      "krakenPair": "XZECZUSD"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.99,
+    "notes": "Native Zcash."
+  },
+  {
+    "symbol": "HYPE",
+    "name": "Hyperliquid",
+    "chainId": 999,
+    "contractAddress": null,
+    "providerIds": {
+      "cmcSlug": "hyperliquid",
+      "coingeckoId": "hyperliquid",
+      "cmcNumericId": "32196",
+      "lunarcrushId": "100",
+      "krakenPair": "HYPEUSD"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "Native HYPE on Hyperliquid L1."
+  },
+  {
+    "symbol": "LINK",
+    "name": "Chainlink",
+    "chainId": 1,
+    "contractAddress": "0x514910771aF9Ca656aF840dfF83E8264ECF986CA",
+    "providerIds": {
+      "cmcSlug": "chainlink",
+      "coingeckoId": "chainlink",
+      "krakenPair": "LINKUSD",
+      "cmcNumericId": "1975",
+      "lunarcrushId": "9"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.99,
+    "notes": "ERC-20 on Ethereum. EIP-55 checksummed."
+  },
+  {
+    "symbol": "XMR",
+    "name": "Monero",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "XLM",
+    "name": "Stellar",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "BCH",
+    "name": "Bitcoin Cash",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "NEAR",
+    "name": "NEAR Protocol",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "LTC",
+    "name": "Litecoin",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "SUI",
+    "name": "Sui",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "AVAX",
+    "name": "Avalanche",
+    "chainId": 43114,
+    "contractAddress": null,
+    "providerIds": {
+      "cmcSlug": "avalanche",
+      "coingeckoId": "avalanche",
+      "cmcNumericId": "5805",
+      "lunarcrushId": "7",
+      "krakenPair": "AVAXUSD"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.98,
+    "notes": "Native AVAX on Avalanche C-Chain."
+  },
+  {
+    "symbol": "HBAR",
+    "name": "Hedera",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "GRAM",
+    "name": "Gram",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {
+      "cmcSlug": "gram",
+      "cmcNumericId": "22720"
+    },
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0.0,
+    "notes": "Identity unverified \u2014 needs research (Telegram ICO vs Toncoin)."
+  },
+  {
+    "symbol": "TAO",
+    "name": "Bittensor",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "SHIB",
+    "name": "Shiba Inu",
+    "chainId": 1,
+    "contractAddress": "0x95aD61B0a150D79219dcF64E1e6cC01F0b64C4cE",
+    "providerIds": {
+      "cmcSlug": "shiba-inu",
+      "coingeckoId": "shiba-inu",
+      "cmcNumericId": "5994",
+      "lunarcrushId": "5",
+      "krakenPair": "SHIBUSD"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.98,
+    "notes": "ERC-20 on Ethereum."
+  },
+  {
+    "symbol": "ONDO",
+    "name": "Ondo",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "AAVE",
+    "name": "Aave",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "PUMP",
+    "name": "Pump.fun",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "ASTER",
+    "name": "Aster",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "WLD",
+    "name": "Worldcoin",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "ICP",
+    "name": "Internet Computer",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "ETC",
+    "name": "Ethereum Classic",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "MORPHO",
+    "name": "Morpho",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "QNT",
+    "name": "Quant",
+    "chainId": 1,
+    "contractAddress": "0x4a220e6096b25EaDB88358cb44068A3248254675",
+    "providerIds": {
+      "cmcSlug": "quant-network",
+      "coingeckoId": "quant-network",
+      "cmcNumericId": "3155",
+      "krakenPair": "QNTUSD"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "ERC-20 on Ethereum."
+  },
+  {
+    "symbol": "KAS",
+    "name": "Kaspa",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {
+      "cmcSlug": "kaspa",
+      "coingeckoId": "kaspa",
+      "cmcNumericId": "20396",
+      "krakenPair": "KASUSD"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "Native KAS (PoW, not EVM)."
+  },
+  {
+    "symbol": "ALGO",
+    "name": "Algorand",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "RENDER",
+    "name": "Render",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "JST",
+    "name": "JUST",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "ATOM",
+    "name": "Cosmos",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "XDC",
+    "name": "XDC Network",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "PENGU",
+    "name": "Pudgy Penguins",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "TRUMP",
+    "name": "OFFICIAL TRUMP",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "TIA",
+    "name": "Celestia",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "KITE",
+    "name": "Kite",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "IMX",
+    "name": "Immutable",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "BONK",
+    "name": "Bonk",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "STRK",
+    "name": "Starknet",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "2Z",
+    "name": "DoubleZero",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "EIGEN",
+    "name": "EigenCloud",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "COMP",
+    "name": "Compound",
+    "chainId": 1,
+    "contractAddress": "0xc00E94cB662c3520282E6F5717214004A7f26888",
+    "providerIds": {
+      "cmcSlug": "compound",
+      "coingeckoId": "compound-governance-token",
+      "cmcNumericId": "5692",
+      "krakenPair": "COMPUSD"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.99,
+    "notes": "ERC-20 on Ethereum."
+  },
+  {
+    "symbol": "ZBCN",
+    "name": "Zebec Network",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "MANA",
+    "name": "Decentraland",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "CHZ",
+    "name": "Chiliz",
+    "chainId": 1,
+    "contractAddress": "0x3506424F91fD33084466F402D5d97F05F8E3A4Ab",
+    "providerIds": {
+      "cmcSlug": "chiliz",
+      "coingeckoId": "chiliz",
+      "cmcNumericId": "4066",
+      "krakenPair": "CHZUSD"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "ERC-20 on Ethereum."
+  },
+  {
+    "symbol": "APE",
+    "name": "ApeCoin",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "EGLD",
+    "name": "MultiversX",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {
+      "cmcSlug": "elrond-erd-2",
+      "coingeckoId": "elrond-erd-2",
+      "cmcNumericId": "6892",
+      "krakenPair": "EGLDUSD"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "Native EGLD on MultiversX."
+  },
+  {
+    "symbol": "BAT",
+    "name": "Basic Attention Token",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "SAND",
+    "name": "The Sandbox",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "FLUID",
+    "name": "Fluid",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "DYDX",
+    "name": "dYdX",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "GALA",
+    "name": "Gala",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "QTUM",
+    "name": "Qtum",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "ZRX",
+    "name": "0x Protocol",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "ORDI",
+    "name": "ORDI",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  },
+  {
+    "symbol": "CPOOL",
+    "name": "Clearpool",
+    "chainId": null,
+    "contractAddress": null,
+    "providerIds": {},
+    "mappingStatus": "unmapped",
+    "mappingConfidence": 0,
+    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+  }
+]
