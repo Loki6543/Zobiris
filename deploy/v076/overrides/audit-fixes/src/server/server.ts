@@ -799,6 +799,8 @@ const API: ApiRouter = {
           researchIntegrityVersion: "1.0",
           capabilityManifest: CAPABILITY_MANIFEST,
           narrativeResearchPolicy: NARRATIVE_RESEARCH_POLICY,
+          recommendationMode: strategy21.recommendationMode ?? "LEGACY",
+          delayedRotationCalibration: strategy21.delayedRotationCalibration ?? null,
         } : null,
         assets: ranked.map((a: any) => ({ symbol: a.symbol, strategy21: a.strategy21 ?? null })),
         warmup: strategy21 ? undefined : "Strategy 2.1 data will appear after the next v0.6.0 refresh",
