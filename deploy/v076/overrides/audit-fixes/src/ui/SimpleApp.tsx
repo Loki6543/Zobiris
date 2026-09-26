@@ -573,7 +573,6 @@ export function App() {
         };
       }
       const gate = krakenLimitPurchaseGate(asset);
-      const score = researchScore(asset);
       const conf = confidencePct(asset);
       const rotation = asset?.strategy21?.delayedRotation ?? null;
       if (rotation?.status !== "QUALIFIED") {
