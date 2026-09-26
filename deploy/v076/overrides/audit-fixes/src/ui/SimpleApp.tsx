@@ -455,6 +455,10 @@ export function App() {
   const freeCash = Math.max(0, LIVE_CASH_USD - reservedBuys);
   const regime = String(snapshot?.snapshot?.regime ?? "Loading market regime");
   const regimeConfidence = Number(snapshot?.snapshot?.regimeConfidence ?? 0);
+  const highestConfidence = rankedAssets.reduce((highest, asset) => Math.max(highest, confidencePct(asset)), 0);
+  const incompleteKrakenHistory = rankedAssets.some((asset) =>
+    (asset?.strategy21?.eligibility?.failureReasons ?? []).some((reason: string) => /14-day Kraken book\/notional history/i.test(reason))
+  );
 
   const candidates = useMemo(() => {
     const held = new Set(LIVE_HOLDINGS.map((holding) => holding.symbol));
@@ -853,7 +857,7 @@ export function App() {
                     <div style={styles.tiny}>{Math.round(row.discount * 100)}% below current {money(row.price)} · initial PROBE only</div>
                   </div>
                 </div>
-              )) : <div style={styles.notice}>{candidateResearchUniverse.some((symbol) => assetDetailLoading[symbol]) ? "Checking Kraken execution volume and liquidity gates…" : "No Kraken-eligible live limit candidates yet."}</div>}
+              )) : <div style={styles.notice}>{candidateResearchUniverse.some((symbol) => assetDetailLoading[symbol]) ? "Checking Kraken execution volume and liquidity gates…" : rankedAssets.length ? `No eligible limit candidates. Highest confidence ${highestConfidence.toFixed(1)}% (minimum ${STRATEGY21_MIN_ORDER_CONFIDENCE_PCT}%). ${incompleteKrakenHistory ? "14-day Kraken book/notional history is incomplete for some assets. " : ""}All entry and liquidity gates remain in force.` : "Market research has not loaded yet."}</div>}
             </div>
           </section>
 
@@ -874,6 +878,11 @@ export function App() {
                   </div>
                 </div>
               ))}
+              {!orderEvaluations.length ? <div style={styles.notice}>{accountSynced
+                ? Number(account?.openOrdersReceivedCount ?? 0) > Number(account?.openOrdersParsedCount ?? 0)
+                  ? `Kraken returned orders that Zobiris could not parse (${account.openOrdersParsedCount} of ${account.openOrdersReceivedCount}). Verify orders directly in Kraken until this is resolved.`
+                  : "Kraken returned no open orders for this API key. If Kraken shows active limits, check that the API key belongs to the same Kraken account and has Query Open Orders & Trades access."
+                : "Kraken account sync is unavailable. Verify active orders directly in Kraken."}</div> : null}
             </div>
 
             <div style={styles.card}>
