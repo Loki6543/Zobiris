@@ -26,7 +26,7 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 
 import { openStorage } from "../storage/client.js";
-import { compareDaily, compareSymbols } from "../compareLab/compare.js";
+import { compareDaily, compareUniverse } from "../compareLab/compare.js";
 import {
   getRecentSnapshots,
   getSnapshotById,
@@ -446,7 +446,10 @@ interface ApiRouter {
 }
 
 const API: ApiRouter = {
-  "GET /api/compare/universe": (_req, res) => jsonResponse(res, 200, { symbols: compareSymbols, source: "Kraken public OHLC" }),
+  "GET /api/compare/universe": async (_req, res) => {
+    try { jsonResponse(res, 200, { symbols: await compareUniverse(), source: "Kraken public AssetPairs" }); }
+    catch { jsonResponse(res, 503, { error: "Kraken coin list unavailable" }); }
+  },
   "GET /api/compare/daily": async (req, res) => {
     const url = new URL(req.url ?? "/", "http://localhost");
     try {
@@ -1213,3 +1216,4 @@ const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
 if (invokedPath === fileURLToPath(import.meta.url)) {
   startZobirisServer();
 }
+
