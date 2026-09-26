@@ -142,7 +142,8 @@ test("strategy metadata declares descriptive research, heuristic ranking, and ri
   });
   assert.equal(result.strategy21.researchAuthority, 'DESCRIPTIVE_ONLY');
   assert.equal(result.strategy21.rankingAuthority, 'OPPORTUNITY_HEURISTIC_V1');
-  assert.equal(result.strategy21.positionSizingAuthority, 'RISK_CAPS_ONLY');
+  assert.equal(result.strategy21.positionSizingAuthority, 'CONSERVATIVE_ADAPTIVE_TARGET_WITH_RISK_CAPS');
+  assert.ok(result.rankedAssets.find(a => a.symbol === 'ONDO')!.strategy21.adaptiveTargetUsd <= 222);
   assert.equal(result.strategy21.maneuverCapitalUsd, 1850);
   assert.equal(result.strategy21.deploymentAuthorityUsd, 1572.5);
 });
