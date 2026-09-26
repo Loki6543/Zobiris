@@ -19,11 +19,11 @@ jobs:
           persist-credentials: false
       - name: Pack clean source
         run: |
-          tar             --exclude=".git"             --exclude="node_modules"             --exclude="*.sqlite"             --exclude="*.sqlite-shm"             --exclude="*.sqlite-wal"             --exclude=".env"             --exclude=".env.*"             -czf zobiris-current-source.tar.gz .
+          tar             --exclude=".git"             --exclude="node_modules"             --exclude="*.sqlite"             --exclude="*.sqlite-shm"             --exclude="*.sqlite-wal"             --exclude=".env"             --exclude=".env.*"             -czf /tmp/zobiris-current-source.tar.gz .
       - name: Upload source checkpoint
         uses: actions/upload-artifact@v4
         with:
           name: zobiris-current-source
-          path: zobiris-current-source.tar.gz
+          path: /tmp/zobiris-current-source.tar.gz
           retention-days: 1
           if-no-files-found: error
