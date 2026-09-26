@@ -776,6 +776,153 @@ await replaceOnce(
   `expect('$1,850 maneuver capital is encoded', capital.includes('maneuverNavUsd: 1850'));`,
 );
 
+
+await replaceOnce(
+  "src/server/server.ts",
+  `  getRecentSnapshots,
+  getSnapshotById,`,
+  `  getRecentSnapshots,
+  getLatestSnapshot,
+  getSnapshotById,`,
+);
+
+await replaceOnce(
+  "src/server/server.ts",
+  `import {
+  challengerRequestSchema,
+  ledgerClaimSchema,
+} from "../agents/contracts.js";`,
+  `import {
+  challengerRequestSchema,
+  ledgerClaimSchema,
+} from "../agents/contracts.js";
+import { HOLDINGS, OPEN_ORDERS } from "../ui/simplePortfolioData.js";`,
+);
+
+await replaceOnce(
+  "src/server/server.ts",
+  `const SECURITY = loadSecurityConfig();
+
+function jsonResponse(`,
+  `const SECURITY = loadSecurityConfig();
+
+function extractRankedPrice(asset: any): number | null {
+  const observations = asset?.strategy21?.explanation?.observations ?? [];
+  for (const observation of observations) {
+    try {
+      const claim = typeof observation?.claim === "string" ? JSON.parse(observation.claim) : observation?.claim;
+      const price = Number(claim?.priceUsd);
+      if (Number.isFinite(price) && price > 0) return price;
+    } catch {
+      // Ignore malformed historical claims and fall back to seeded price.
+    }
+  }
+  return null;
+}
+
+function buildSimplePortfolioDependencyInput() {
+  const priceBySymbol = new Map<string, number>();
+  const storage = openStorage({ path: DEFAULT_DB });
+  try {
+    const latest = getLatestSnapshot(storage.db);
+    const ranked = latest?.rankedAssets ? JSON.parse(latest.rankedAssets) : [];
+    for (const asset of Array.isArray(ranked) ? ranked : []) {
+      const symbol = String(asset?.symbol ?? "").toUpperCase();
+      const price = extractRankedPrice(asset);
+      if (symbol && price) priceBySymbol.set(symbol, price);
+    }
+  } finally {
+    storage.close();
+  }
+
+  const symbols = new Set<string>([
+    ...HOLDINGS.map((holding) => holding.symbol),
+    ...OPEN_ORDERS.map((order) => order.symbol),
+  ]);
+  return {
+    asOf: new Date().toISOString(),
+    positions: [...symbols].map((symbol) => {
+      const holding = HOLDINGS.find((item) => item.symbol === symbol);
+      const currentPrice = holding
+        ? (priceBySymbol.get(symbol) ?? holding.fallbackPriceUsd)
+        : 0;
+      return {
+        symbol,
+        currentExposureUsd: holding ? holding.quantity * currentPrice : 0,
+        openBuyCommitmentUsd: OPEN_ORDERS
+          .filter((order) => order.symbol === symbol && order.side === "BUY")
+          .reduce((sum, order) => sum + order.amountUsd, 0),
+        openSellCommitmentUsd: OPEN_ORDERS
+          .filter((order) => order.symbol === symbol && order.side === "SELL")
+          .reduce((sum, order) => sum + order.amountUsd, 0),
+      };
+    }),
+    metadata: [],
+    histories: [],
+  };
+}
+
+function jsonResponse(`,
+);
+
+await replaceOnce(
+  "src/server/server.ts",
+  `  "GET /api/snapshot/latest": (_req, res) => {
+    const storage = openStorage({ path: DEFAULT_DB });
+    try {
+      const recent = getRecentSnapshots(storage.db, 1);
+      if (recent.length === 0)
+        return jsonResponse(res, 404, { error: "no snapshots yet" });
+      const snap = getSnapshotById(storage.db, recent[0]!.id);
+      const session = snap ? getSessionById(storage.db, snap.sessionId) : null;
+      jsonResponse(res, 200, { snapshot: snap, session });
+    } finally {
+      storage.close();
+    }
+  },`,
+  `  "GET /api/snapshot/latest": (_req, res) => {
+    const storage = openStorage({ path: DEFAULT_DB });
+    try {
+      const snap = getLatestSnapshot(storage.db);
+      if (!snap)
+        return jsonResponse(res, 404, { error: "no snapshots yet" });
+      const session = getSessionById(storage.db, snap.sessionId);
+      jsonResponse(res, 200, { snapshot: snap, session });
+    } finally {
+      storage.close();
+    }
+  },`,
+);
+
+await replaceOnce(
+  "src/server/server.ts",
+  `    const result = await runRefresh({
+      mode: "deep",
+      watchlist,
+      policy: DEFAULT_SCORING_CONFIG,
+      adapters,
+      dbPath: DEFAULT_DB,
+    });`,
+  `    const result = await runRefresh({
+      mode: "deep",
+      watchlist,
+      policy: DEFAULT_SCORING_CONFIG,
+      adapters,
+      dbPath: DEFAULT_DB,
+      portfolioDependency: buildSimplePortfolioDependencyInput(),
+    });`,
+);
+
+await replaceOnce(
+  "src/server/server.ts",
+  `      const recent = getRecentSnapshots(storage.db, 1);
+      if (recent.length === 0) return jsonResponse(res, 404, { error: "no snapshots yet" });
+      const snap = getSnapshotById(storage.db, recent[0]!.id);
+      if (!snap) return jsonResponse(res, 404, { error: "snapshot not found" });`,
+  `      const snap = getLatestSnapshot(storage.db);
+      if (!snap) return jsonResponse(res, 404, { error: "no snapshots yet" });`,
+);
+
 await writeFile(
   "src/ui/App.tsx",
   'export { App } from "./SimpleApp";\nexport { App as default } from "./SimpleApp";\n',
