@@ -196,6 +196,23 @@ async function verifyCandidate() {
     if (Math.abs((account.freeCashUsd + account.reservedBuysUsd) - account.fundedCashUsd) > 0.05) throw new Error('account cash components do not reconcile');
     if (account.portfolioDependency.grossPostFillExposureUsd + 0.02 < account.portfolioDependency.grossCurrentExposureUsd) throw new Error('post-fill exposure cannot be below current exposure');
     if (strategy.payload.assets.some(a => a.strategy21?.eligibility?.status === 'WATCH_ONLY' && a.strategy21?.positionAuthority?.maxNextOrderUsd > 0)) throw new Error('WATCH_ONLY asset authorized an order');
+    const capabilities = account?.capabilityManifest;
+    if (capabilities?.exchangePrivateRead !== true) throw new Error('read-only Kraken account capability missing');
+    for (const field of ['exchangeOrderSubmission','exchangeOrderModification','exchangeOrderCancellation','exchangeFundTransfer','exchangeWithdrawal','walletSigning','transactionBroadcast']) {
+      if (capabilities?.[field] !== false) throw new Error(`forbidden capability is not disabled: ${field}`);
+    }
+    const policy = account?.narrativeResearchPolicy;
+    if (Math.abs(Number(policy?.discoveryBudget?.adversarialAlternativeMechanisms ?? 0) - 0.40) > 1e-9) throw new Error('adversarial discovery budget missing');
+    if (Math.abs(Number(policy?.discoveryBudget?.counterContrarianFalsification ?? 0) - 0.20) > 1e-9) throw new Error('counter-contrarian falsification budget missing');
+    const researchAsset = strategy.payload.assets.find(a => a.strategy21?.researchIntegrity?.version === '1.0');
+    const integrity = researchAsset?.strategy21?.researchIntegrity;
+    if (!integrity) throw new Error('research-integrity bundle missing from Strategy 2.1 assets');
+    if (!Array.isArray(integrity.evidenceLedger)) throw new Error('research evidence ledger missing');
+    if (!Array.isArray(integrity.thesis?.falsifiers) || integrity.thesis.falsifiers.length === 0) throw new Error('research thesis falsifiers missing');
+    if (integrity.evidenceLedger.some(item => item?.pointInTimeValid === false && item?.limitations?.length === 0)) throw new Error('invalid point-in-time evidence lacks limitations');
+    const outcomes = await jsonCheck(localOrigin, '/api/outcomes?limit=5', {}, [200], 'candidate decision outcome memory');
+    if (outcomes.payload?.version !== '1.0' || !Array.isArray(outcomes.payload?.records)) throw new Error('decision outcome memory contract missing');
+    console.log('PASS candidate research integrity, read-only capability manifest and outcome-memory contract');
     console.log('PASS candidate holdings, funded cash, commitments, liquidity gates and snapshot consistency');
     for (const symbol of ['BTC', 'AAVE', 'HBAR', 'XRP']) {
       const asset = strategy.payload.assets.find(a => a.symbol === symbol);
