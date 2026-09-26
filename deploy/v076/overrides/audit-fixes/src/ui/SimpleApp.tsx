@@ -79,6 +79,9 @@ function meaningfulTrimPct(positionValueUsd: number, uplPct: number): number {
   if (!Number.isFinite(positionValueUsd) || positionValueUsd <= 0) return 0;
   const base = uplPct >= 30 ? 20 : uplPct >= 15 ? 15 : 10;
   if ((positionValueUsd * base) / 100 >= MIN_MEANINGFUL_TRIM_USD) return base;
+  if (positionValueUsd < SMALL_POSITION_USD) {
+    return positionValueUsd * 0.5 >= MIN_MEANINGFUL_TRIM_USD ? 50 : 0;
+  }
   const needed = Math.ceil(((MIN_MEANINGFUL_TRIM_USD / positionValueUsd) * 100) / 5) * 5;
   return needed <= 50 ? needed : 0;
 }
