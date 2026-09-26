@@ -22,7 +22,7 @@ export function adaptiveTargetUsd(input: AdaptiveTargetInput): number {
   const ceiling = base * (input.assetClass === 'MEME' ? 0.03 : 0.12);
   // Heuristic scores determine only how much of the existing ceiling is sought.
   // An unsupported signal cannot manufacture a minimum order.
-  const confidence = ramp(input.opportunityConfidence, 0.65, 0.85);
+  const confidence = ramp(input.opportunityConfidence, 0.50, 0.85);
   const signal = ramp(input.opportunityScore, 50, 75);
   const market = ramp(input.marketConfidence, 0.5, 0.8);
   const regime = Number.isFinite(input.deploymentCapPct)
