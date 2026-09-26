@@ -3,6 +3,7 @@ import { bookValidity, type BookState, type Level } from "./krakenBook.js";
 export interface BookFeatures {
   pair: string;
   observedAt: string;
+  receivedAt?: string;
   midpoint: number;
   microprice: number;
   spreadBps: number;
@@ -30,6 +31,7 @@ export function extractBookFeatures(state: BookState, asOf: string): BookFeature
   return {
     pair: state.pair,
     observedAt: state.observedAt,
+    receivedAt: asOf,
     midpoint,
     microprice: (ask * bidQty + bid * askQty) / totalQty,
     spreadBps: (ask - bid) / midpoint * 10000,

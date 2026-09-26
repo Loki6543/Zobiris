@@ -16,5 +16,8 @@ describe("book feature persistence", () => {
     appendBookFeatures(path, { ...feature, observedAt: "2026-09-26T09:00:20Z" });
     expect(readBookFeatures(path, "SOL/USD", "2026-09-26T09:00:10Z")).toHaveLength(1);
     expect(readBookFeatures(path, "SOL/USD", "2026-09-26T09:00:00Z")).toHaveLength(0);
+    appendBookFeatures(path, { ...feature, observedAt: "2026-09-26T09:01:00Z", receivedAt: "2026-09-26T09:02:00Z" });
+    expect(readBookFeatures(path, "SOL/USD", "2026-09-26T09:01:30Z")).toHaveLength(1);
+    expect(readBookFeatures(path, "SOL/USD", "2026-09-26T09:02:00Z")).toHaveLength(2);
   });
 });

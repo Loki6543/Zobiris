@@ -30,7 +30,7 @@ export interface PredictionInput {
 const HORIZONS: PredictionHorizon[] = ["1H", "4H", "1D", "3D", "7D"];
 export function predictHorizons(input: PredictionInput): ForecastRecord[] {
   const cutoff = Date.parse(input.asOf);
-  const history = input.features.filter((row) => row.pair === input.pair && Number.isFinite(Date.parse(row.observedAt)) && Date.parse(row.observedAt) <= cutoff)
+  const history = input.features.filter((row) => row.pair === input.pair && Number.isFinite(Date.parse(row.observedAt)) && Date.parse(row.observedAt) <= cutoff && Date.parse(row.receivedAt ?? row.observedAt) <= cutoff)
     .sort((a, b) => Date.parse(a.observedAt) - Date.parse(b.observedAt));
   const recent = history.at(-1);
   const previous = history.at(-2);
@@ -43,7 +43,7 @@ export function predictHorizons(input: PredictionInput): ForecastRecord[] {
   return HORIZONS.map((horizon) => ({
     forecastId: `${input.pair}:${input.asOf}:${horizon}:shadow-baselines/1`,
     pair: input.pair, asOf: input.asOf,
-    featureCutoff: usable ? recent!.observedAt : null,
+    featureCutoff: usable ? recent!.receivedAt ?? recent!.observedAt : null,
     horizon, modelVersion: "shadow-baselines/1",
     availability: usable ? "shadow_uncalibrated" : "insufficient_data",
     regime,

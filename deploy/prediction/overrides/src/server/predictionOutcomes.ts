@@ -33,7 +33,7 @@ export function saveShadowForecasts(path: string, forecasts: ForecastRecord[], b
 }
 
 export function settleShadowForecasts(path: string, feature: BookFeatures): void {
-  const at = Date.parse(feature.observedAt);
+  const at = Date.parse(feature.receivedAt ?? feature.observedAt);
   if (!Number.isFinite(at) || !(feature.midpoint > 0)) return;
   const storage = openStorage({ path });
   try {

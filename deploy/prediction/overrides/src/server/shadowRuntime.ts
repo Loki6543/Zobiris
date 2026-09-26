@@ -9,12 +9,13 @@ export function createShadowFeatureHandler(dbPath: string, feeBpsPerSide = 40): 
   return (feature) => {
     appendBookFeatures(dbPath, feature);
     settleShadowForecasts(dbPath, feature);
-    const asOfMs = Date.parse(feature.observedAt);
+    const asOf = feature.receivedAt ?? feature.observedAt;
+    const asOfMs = Date.parse(asOf);
     const bucket = Math.floor(asOfMs / (15 * 60_000));
     if (forecastBuckets.get(feature.pair) === bucket) return;
-    const history = readBookFeatures(dbPath, feature.pair, feature.observedAt);
+    const history = readBookFeatures(dbPath, feature.pair, asOf);
     if (history.length < 2) return;
-    const forecasts = predictHorizons({ pair: feature.pair, asOf: feature.observedAt, features: history, feeBpsPerSide });
+    const forecasts = predictHorizons({ pair: feature.pair, asOf, features: history, feeBpsPerSide });
     saveShadowForecasts(dbPath, forecasts, feature.midpoint);
     forecastBuckets.set(feature.pair, bucket);
   };
