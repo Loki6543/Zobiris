@@ -75,6 +75,8 @@ import { challengeEvidence } from "../agents/challenger.js";
 import { collectStrategy21Kraken } from "../strategy21/collector.js";
 import { loadStrategyLiquidity, saveStrategyMarketState } from "../strategy21/storage.js";
 import { buildIntelligenceOverview } from "../strategy21/intelligenceVNext/index.js";
+import { CAPABILITY_MANIFEST, NARRATIVE_RESEARCH_POLICY } from "../strategy21/research/researchIntegrity.js";
+import { readOutcomeMemory, summarizeOutcomeMemory, updateOutcomeMemory } from "./outcomeMemory.js";
 import { createAttentionLedgerRepository, getAttentionLedgerStatus, runLiveAttentionCollection, type AttentionFetcher, type StocktwitsFirestreamFetcher } from "../strategy21/attentionLedger/index.js";
 import {
   challengerRequestSchema,
@@ -91,6 +93,8 @@ loadEnv({
 const PUBLIC_DIR = resolve(PROJECT_ROOT, "public");
 const DEFAULT_DB =
   process.env.ZOBIRIS_DB_PATH ?? resolve(PROJECT_ROOT, "zobiris.db");
+const OUTCOME_MEMORY_PATH =
+  process.env.ZOBIRIS_OUTCOME_MEMORY_PATH ?? resolve(dirname(DEFAULT_DB), "zobiris-outcome-memory.json");
 const WATCHLIST_SOURCE_URL =
   "https://coinmarketcap.com/watchlist/69c01b46aed37c7160053535/";
 
@@ -396,6 +400,11 @@ async function runRefreshHandler(
       } catch {
         // Strategy state continuity may degrade, but the persisted refresh remains valid.
       }
+    }
+    try {
+      await updateOutcomeMemory(OUTCOME_MEMORY_PATH, result.snapshot as any);
+    } catch (error) {
+      console.warn("Outcome memory update failed:", error instanceof Error ? error.message : String(error));
     }
     const attentionCollection = await collectAttentionShadowOnRefresh();
     const elapsedMs = Date.now() - startedAt;
@@ -770,6 +779,9 @@ const API: ApiRouter = {
           eventualPortfolioTargetUsd: 3000,
           nextDollarReadyAssets: ranked.filter((a: any) => a?.strategy21?.nextDollarRank != null).length,
           portfolioDependency: snap.portfolioDependency ? JSON.parse(snap.portfolioDependency) : null,
+          researchIntegrityVersion: "1.0",
+          capabilityManifest: CAPABILITY_MANIFEST,
+          narrativeResearchPolicy: NARRATIVE_RESEARCH_POLICY,
         } : null,
         assets: ranked.map((a: any) => ({ symbol: a.symbol, strategy21: a.strategy21 ?? null })),
         warmup: strategy21 ? undefined : "Strategy 2.1 data will appear after the next v0.6.0 refresh",
@@ -845,6 +857,24 @@ const API: ApiRouter = {
       jsonResponse(res, 200, getDbInfo(storage.db, DEFAULT_DB));
     } finally {
       storage.close();
+    }
+  },
+  "GET /api/outcomes": async (_req, res) => {
+    try {
+      const url = new URL(_req.url ?? "/", "http://localhost");
+      const symbol = url.searchParams.get("symbol")?.trim().toUpperCase() || undefined;
+      const memory = await readOutcomeMemory(OUTCOME_MEMORY_PATH, symbol);
+      const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit") ?? "100"), 500));
+      const records = memory.records.slice(-limit).reverse();
+      jsonResponse(res, 200, {
+        version: memory.version,
+        updatedAt: memory.updatedAt,
+        symbol: symbol ?? null,
+        summary: summarizeOutcomeMemory(memory.records),
+        records,
+      });
+    } catch (e) {
+      errorResponse(res, 500, e);
     }
   },
   "GET /api/calibration": async (_req, res) => {
@@ -1146,6 +1176,7 @@ export function startZobirisServer(port = PORT, host = HOST) {
     console.log(`Endpoints:`);
     console.log(`  GET  /api/health`);
     console.log(`  GET  /api/account`);
+    console.log(`  GET  /api/outcomes?symbol=BTC&limit=100`);
     console.log(`  GET  /api/snapshot/latest`);
     console.log(`  GET  /api/snapshot/:id`);
     console.log(`  GET  /api/snapshots?limit=20`);
