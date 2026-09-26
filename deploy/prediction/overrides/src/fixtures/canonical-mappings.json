@@ -40,20 +40,28 @@
     "name": "BNB",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "1839",
+      "cmcSlug": "bnb",
+      "coingeckoId": "binancecoin"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "XRP",
     "name": "XRP",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "52",
+      "cmcSlug": "xrp",
+      "coingeckoId": "ripple"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "SOL",
@@ -78,10 +86,14 @@
     "name": "TRON",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "1958",
+      "cmcSlug": "tron",
+      "coingeckoId": "tron"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "ZEC",
@@ -136,60 +148,84 @@
     "name": "Monero",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "328",
+      "cmcSlug": "monero",
+      "coingeckoId": "monero"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "XLM",
     "name": "Stellar",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "512",
+      "cmcSlug": "stellar",
+      "coingeckoId": "stellar"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "BCH",
     "name": "Bitcoin Cash",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "1831",
+      "cmcSlug": "bitcoin-cash",
+      "coingeckoId": "bitcoin-cash"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "NEAR",
     "name": "NEAR Protocol",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "6535",
+      "cmcSlug": "near-protocol",
+      "coingeckoId": "near"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "LTC",
     "name": "Litecoin",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "2",
+      "cmcSlug": "litecoin",
+      "coingeckoId": "litecoin"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "SUI",
     "name": "Sui",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "20947",
+      "cmcSlug": "sui",
+      "coingeckoId": "sui"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "AVAX",
@@ -212,10 +248,14 @@
     "name": "Hedera",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "4642",
+      "cmcSlug": "hedera",
+      "coingeckoId": "hedera-hashgraph"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "GRAM",
@@ -223,22 +263,27 @@
     "chainId": null,
     "contractAddress": null,
     "providerIds": {
+      "cmcNumericId": "11419",
       "cmcSlug": "gram",
-      "cmcNumericId": "22720"
+      "coingeckoId": "the-open-network"
     },
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0.0,
-    "notes": "Identity unverified \u2014 needs research (Telegram ICO vs Toncoin)."
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "TAO",
     "name": "Bittensor",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "22974",
+      "cmcSlug": "bittensor",
+      "coingeckoId": "bittensor"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "SHIB",
@@ -261,80 +306,112 @@
     "name": "Ondo",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "21159",
+      "cmcSlug": "ondo-finance",
+      "coingeckoId": "ondo-finance"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "AAVE",
     "name": "Aave",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "7278",
+      "cmcSlug": "aave",
+      "coingeckoId": "aave"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "PUMP",
     "name": "Pump.fun",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "36507",
+      "cmcSlug": "pump-fun",
+      "coingeckoId": "pump-fun"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "ASTER",
     "name": "Aster",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "36341",
+      "cmcSlug": "aster",
+      "coingeckoId": "aster-2"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "WLD",
     "name": "Worldcoin",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "13502",
+      "cmcSlug": "worldcoin-org",
+      "coingeckoId": "worldcoin-wld"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "ICP",
     "name": "Internet Computer",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "8916",
+      "cmcSlug": "internet-computer",
+      "coingeckoId": "internet-computer"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "ETC",
     "name": "Ethereum Classic",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "1321",
+      "cmcSlug": "ethereum-classic",
+      "coingeckoId": "ethereum-classic"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "MORPHO",
     "name": "Morpho",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "34104",
+      "cmcSlug": "morpho",
+      "coingeckoId": "morpho"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "QNT",
@@ -371,140 +448,196 @@
     "name": "Algorand",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "4030",
+      "cmcSlug": "algorand",
+      "coingeckoId": "algorand"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "RENDER",
     "name": "Render",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "5690",
+      "cmcSlug": "render",
+      "coingeckoId": "render-token"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "JST",
     "name": "JUST",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "5488",
+      "cmcSlug": "just",
+      "coingeckoId": "just"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "ATOM",
     "name": "Cosmos",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "3794",
+      "cmcSlug": "cosmos",
+      "coingeckoId": "cosmos"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "XDC",
     "name": "XDC Network",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "2634",
+      "cmcSlug": "xdc-network",
+      "coingeckoId": "xdce-crowd-sale"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "PENGU",
     "name": "Pudgy Penguins",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "34466",
+      "cmcSlug": "pudgy-penguins",
+      "coingeckoId": "pudgy-penguins"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "TRUMP",
     "name": "OFFICIAL TRUMP",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "35336",
+      "cmcSlug": "official-trump",
+      "coingeckoId": "official-trump"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "TIA",
     "name": "Celestia",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "22861",
+      "cmcSlug": "celestia",
+      "coingeckoId": "celestia"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "KITE",
     "name": "Kite",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "38828",
+      "cmcSlug": "kite",
+      "coingeckoId": "kite-2"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "IMX",
     "name": "Immutable",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "10603",
+      "cmcSlug": "immutable-x",
+      "coingeckoId": "immutable-x"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "BONK",
     "name": "Bonk",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "23095",
+      "cmcSlug": "bonk1",
+      "coingeckoId": "bonk"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "STRK",
     "name": "Starknet",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "22691",
+      "cmcSlug": "starknet-token",
+      "coingeckoId": "starknet"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "2Z",
     "name": "DoubleZero",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "38515",
+      "cmcSlug": "doublezero",
+      "coingeckoId": "doublezero"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "EIGEN",
     "name": "EigenCloud",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "30494",
+      "cmcSlug": "eigencloud",
+      "coingeckoId": "eigenlayer"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "COMP",
@@ -526,20 +659,28 @@
     "name": "Zebec Network",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "30636",
+      "cmcSlug": "zebec-network",
+      "coingeckoId": "zebec-network"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "MANA",
     "name": "Decentraland",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "1966",
+      "cmcSlug": "decentraland",
+      "coingeckoId": "decentraland"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "CHZ",
@@ -561,10 +702,14 @@
     "name": "ApeCoin",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "18876",
+      "cmcSlug": "apecoin-ape",
+      "coingeckoId": "apecoin"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "EGLD",
@@ -586,89 +731,125 @@
     "name": "Basic Attention Token",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "1697",
+      "cmcSlug": "basic-attention-token",
+      "coingeckoId": "basic-attention-token"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "SAND",
     "name": "The Sandbox",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "6210",
+      "cmcSlug": "the-sandbox",
+      "coingeckoId": "the-sandbox"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "FLUID",
     "name": "Fluid",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "10508",
+      "cmcSlug": "instadapp",
+      "coingeckoId": "instadapp"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "DYDX",
     "name": "dYdX",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "28324",
+      "cmcSlug": "dydx-chain",
+      "coingeckoId": "dydx-chain"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "GALA",
     "name": "Gala",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "7080",
+      "cmcSlug": "gala",
+      "coingeckoId": "gala"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "QTUM",
     "name": "Qtum",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "1684",
+      "cmcSlug": "qtum",
+      "coingeckoId": "qtum"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "ZRX",
     "name": "0x Protocol",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "1896",
+      "cmcSlug": "0x",
+      "coingeckoId": "0x"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "ORDI",
     "name": "ORDI",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "25028",
+      "cmcSlug": "ordi",
+      "coingeckoId": "ordinals"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   },
   {
     "symbol": "CPOOL",
     "name": "Clearpool",
     "chainId": null,
     "contractAddress": null,
-    "providerIds": {},
-    "mappingStatus": "unmapped",
-    "mappingConfidence": 0,
-    "notes": "Added from user watchlist screenshot; provider identity and Kraken pair require verification."
+    "providerIds": {
+      "cmcNumericId": "12573",
+      "cmcSlug": "clearpool",
+      "coingeckoId": "clearpool"
+    },
+    "mappingStatus": "verified",
+    "mappingConfidence": 0.95,
+    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
   }
 ]
