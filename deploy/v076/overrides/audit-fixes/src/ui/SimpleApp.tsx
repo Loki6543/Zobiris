@@ -245,9 +245,6 @@ function krakenLimitPurchaseGate(detail: any) {
 
   const researchIntegrity = strategy?.researchIntegrity ?? detail?.researchIntegrity ?? null;
   const researchEligibility = String(researchIntegrity?.risk?.researchEligibility ?? "").toUpperCase();
-  const evidenceQuality = Number(researchIntegrity?.scorecard?.evidenceQuality);
-  const thesisBand = String(researchIntegrity?.thesis?.confidenceBand ?? "");
-
   const authorityMax = Number(authority?.maxNextOrderUsd ?? 0);
   const eligibilityMax = Number(eligibility?.maximumOrderUsd ?? 0);
   const finiteCaps = [authorityMax, eligibilityMax].filter((value) => Number.isFinite(value) && value >= 0);
@@ -268,8 +265,6 @@ function krakenLimitPurchaseGate(detail: any) {
     failureReasons: researchFailure ? [researchFailure, ...failureReasons] : failureReasons,
     maxNextOrderUsd,
     researchEligibility: researchEligibility || null,
-    evidenceQuality: Number.isFinite(evidenceQuality) ? evidenceQuality : null,
-    thesisBand: thesisBand || null,
   };
 }
 
@@ -503,8 +498,6 @@ export function App() {
           maxNextOrderUsd: gate.maxNextOrderUsd,
           eligibilityStatus: gate.status,
           researchEligibility: gate.researchEligibility,
-          evidenceQuality: gate.evidenceQuality,
-          thesisBand: gate.thesisBand,
         }];
       })
       .sort((a, b) => b.score - a.score)
@@ -849,12 +842,7 @@ export function App() {
                   <div style={styles.rank}>#{index + 1}</div>
                   <div style={{ flex: 1 }}>
                     <strong style={{ fontSize: 18 }}>{row.symbol}</strong>
-                    <div style={styles.tiny}>Research {row.score.toFixed(1)} · confidence {row.conf.toFixed(0)}%</div>
-                    <div style={styles.tiny}>
-                      Evidence {row.evidenceQuality == null ? "legacy" : Math.round(row.evidenceQuality * 100) + "%"}
-                      {row.thesisBand ? ` · thesis ${row.thesisBand.toLowerCase()}` : ""}
-                    </div>
-                    <div style={styles.tiny}>Kraken + research-integrity gates passed · max next order {money(row.maxNextOrderUsd)}</div>
+                    <div style={styles.tiny}>Kraken execution gate passed · max next order {money(row.maxNextOrderUsd)}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={styles.limitLabel}>LIMIT CANDIDATE · {money(row.orderUsd)}</div>
@@ -1017,11 +1005,6 @@ function OrderPlanPanel({
   plan.firstAddPct = row.value > 0 ? Math.min(plan.firstAddPct, addCapacity / row.value * 100) : 0;
   plan.secondAddPct = row.value > 0 ? Math.min(plan.secondAddPct, Math.max(0, addCapacity - row.value * plan.firstAddPct / 100) / row.value * 100) : 0;
   const staleOrderWarning = sellOrders.some((order) => order.targetPriceUsd <= row.livePrice);
-  const researchIntegrity = strategy?.researchIntegrity ?? null;
-  const researchRisk = String(researchIntegrity?.risk?.researchEligibility ?? "LEGACY");
-  const evidenceQuality = Number(researchIntegrity?.scorecard?.evidenceQuality);
-  const thesis = researchIntegrity?.thesis ?? null;
-
   const trimUsd = row.value * (plan.trimPct / 100);
   const trimQty = row.quantity * (plan.trimPct / 100);
   const secondTrimUsd = row.value * (plan.secondTrimPct / 100);
@@ -1068,16 +1051,7 @@ function OrderPlanPanel({
         <div>
           <div style={styles.eyebrow}>{row.symbol} ORDER PLAN</div>
           <div style={styles.analysisTitle}>{money(row.livePrice)} {row.priceAvailable ? "market snapshot" : "snapshot estimate — verify"} · {pct(row.upl)} vs average</div>
-          <div style={styles.subtle}>
-            Research {plan.score.toFixed(1)} · confidence {plan.confidence.toFixed(0)}% · 24h {pct(plan.change24h)}
-          </div>
-          {researchIntegrity ? (
-            <div style={styles.tiny}>
-              Evidence {Number.isFinite(evidenceQuality) ? Math.round(evidenceQuality * 100) + "%" : "unknown"}
-              {" · "}integrity {researchRisk}
-              {thesis?.confidenceBand ? ` · thesis ${String(thesis.confidenceBand).toLowerCase()}` : ""}
-            </div>
-          ) : null}
+          <div style={styles.subtle}>24h {pct(plan.change24h)} · confidence {plan.confidence.toFixed(0)}%</div>
         </div>
         <span style={actionStyle(row.action)}>{row.action}</span>
       </div>
@@ -1088,21 +1062,6 @@ function OrderPlanPanel({
         <div style={styles.firstActionDetail}>{firstActionDetail}</div>
         <div style={styles.learnedWhy}><strong>Why Zobiris learned this:</strong> {learnedReason}</div>
       </div>
-
-      {researchIntegrity ? (
-        <div style={styles.existingPlan}>
-          <strong>Research thesis + falsifiers</strong>
-          <div style={styles.tiny}>{String(thesis?.claim ?? "No current thesis.")}</div>
-          {Array.isArray(thesis?.falsifiers) && thesis.falsifiers.length ? (
-            <div style={styles.tiny}>
-              Break conditions: {thesis.falsifiers.slice(0, 2).map((item: any) => item.metric + " " + item.threshold).join(" · ")}
-            </div>
-          ) : null}
-          {Array.isArray(researchIntegrity?.scorecard?.unmeasuredDimensions) && researchIntegrity.scorecard.unmeasuredDimensions.length ? (
-            <div style={styles.warningText}>Not yet measured: {researchIntegrity.scorecard.unmeasuredDimensions.join(", ")}</div>
-          ) : null}
-        </div>
-      ) : null}
 
       {sellOrders.length ? (
         <div style={styles.existingPlan}>
