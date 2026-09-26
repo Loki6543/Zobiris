@@ -15,7 +15,7 @@ async function daily(symbol: string): Promise<Candle[]> {
   const cached = cache.get(symbol);
   if (cached && cached.expires > Date.now()) return cached.candles;
   const response = await fetch("https://api.kraken.com/0/public/OHLC?pair=" +
-    encodeURIComponent(PAIRS[symbol]) + "&interval=1440", { signal: AbortSignal.timeout(10000) });
+    encodeURIComponent(PAIRS[symbol]!) + "&interval=1440", { signal: AbortSignal.timeout(10000) });
   if (!response.ok) throw new Error("Kraken HTTP " + response.status);
   const payload = await response.json() as {
     error?: string[]; result?: Record<string, unknown>;
@@ -55,5 +55,6 @@ export async function compareDaily(rawSymbols: string[], days: number) {
   });
   return { source: "Kraken public OHLC", provenance: "real-completed-daily",
     requestedDays: days, observedDays: times.length - 1,
-    asOf: new Date(times[times.length - 1] * 1000).toISOString(), series };
+    asOf: new Date(times[times.length - 1]! * 1000).toISOString(), series };
 }
+
