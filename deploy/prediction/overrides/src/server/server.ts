@@ -100,7 +100,7 @@ const DEFAULT_DB =
 const OUTCOME_MEMORY_PATH =
   process.env.ZOBIRIS_OUTCOME_MEMORY_PATH ?? resolve(dirname(DEFAULT_DB), "zobiris-outcome-memory.json");
 const WATCHLIST_SOURCE_URL =
-  "https://coinmarketcap.com/watchlist/69c01b46aed37c7160053535/";
+  "https://coinmarketcap.com/?type=coins&tableRankBy=watchlist&watchListId=6a9a95c387e5a45cc1f40d5e";
 
 /**
  * v0.4.4 audit fix (P0 #4): load the HTTP security policy from env.
