@@ -528,12 +528,15 @@ export function App() {
       const reason = !asset ? "No current research snapshot"
         : !snapshotFresh ? "Refresh market snapshot"
         : confidence <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT ? "Confidence must exceed 50%"
-        : gate?.failureReasons[0] ?? (extractPrice(asset) == null ? "Current price unavailable" : gate?.pass ? "Staged limit available" : "Execution capacity unavailable");
+        : asset?.strategy21?.eligibility?.failureReasons?.[0] ?? gate?.failureReasons[0] ?? (extractPrice(asset) == null ? "Current price unavailable" : gate?.pass ? "Staged limit available" : "Execution capacity unavailable");
       return { symbol, asset, confidence, score: researchScore(asset), move, reason, ready,
         nextDollarScore: Number(asset?.strategy21?.nextDollarScore ?? 0) };
-    }).sort((a, b) => Number(b.ready) - Number(a.ready)
-      || (b.ready ? b.nextDollarScore - a.nextDollarScore : b.score - a.score)
-      || a.symbol.localeCompare(b.symbol));
+    }).sort((a, b) => {
+      const priority = (row: typeof a) => row.ready ? 3 : row.move === "Consider / wait" ? 2 : row.confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT ? 1 : 0;
+      return priority(b) - priority(a)
+        || (b.ready ? b.nextDollarScore - a.nextDollarScore : b.score - a.score)
+        || a.symbol.localeCompare(b.symbol);
+    });
   }, [watchlist, rankedAssets, assetMap, snapshotFresh, nowMs, account]);
 
   const orderEvaluations = useMemo(() => LIVE_OPEN_ORDERS.map((order, index) => {
