@@ -68,6 +68,17 @@ function extractMarketField(asset: RankedAsset | undefined, field: string): numb
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+const MIN_MEANINGFUL_TRIM_USD = 8;
+const SMALL_POSITION_USD = 25;
+
+function meaningfulTrimPct(positionValueUsd: number, uplPct: number): number {
+  if (!Number.isFinite(positionValueUsd) || positionValueUsd <= 0) return 0;
+  const base = uplPct >= 30 ? 20 : uplPct >= 15 ? 15 : 10;
+  if ((positionValueUsd * base) / 100 >= MIN_MEANINGFUL_TRIM_USD) return base;
+  const needed = Math.ceil(((MIN_MEANINGFUL_TRIM_USD / positionValueUsd) * 100) / 5) * 5;
+  return needed <= 50 ? needed : 0;
+}
+
 function buildOrderPlan(row: any, regime: string, recentReentry: boolean) {
   const current = Number(row.livePrice);
   const avg = Number(row.avgPriceUsd ?? 0);
@@ -101,8 +112,8 @@ function buildOrderPlan(row: any, regime: string, recentReentry: boolean) {
   // Position sizing deliberately reflects the strongest lessons in the user's
   // trade memory: partial harvesting worked, rapid re-entry hurt, and clustered
   // market adds should be smaller and staged.
-  const trimPct = row.upl >= 30 ? 20 : row.upl >= 15 ? 15 : 10;
-  const secondTrimPct = row.upl >= 30 ? 15 : 10;
+  const trimPct = meaningfulTrimPct(row.value, row.upl);
+  const secondTrimPct = row.value < SMALL_POSITION_USD ? 0 : (row.upl >= 30 ? 15 : 10);
 
   let firstAddPct = regimeBreak ? 8 : 12;
   if (score >= 55 && confidence >= 55) firstAddPct += 4;
@@ -370,7 +381,10 @@ export function App() {
     const hasSellPlan = OPEN_ORDERS.some((order) => order.side === "SELL" && order.symbol === holding.symbol);
     let action = "HOLD";
     if (hasSellPlan) action = "HARVEST PLAN";
-    else if (upl >= 15) action = "TRIM 20%";
+    else if (upl >= 15) {
+      const trimPct = meaningfulTrimPct(value, upl);
+      action = trimPct > 0 ? `TRIM ${trimPct}%` : "HOLD — TOO SMALL TO TRIM";
+    }
     else if (String(asset?.action ?? "") === "AVOID") action = "NO ADD";
     else if (upl < -8) action = "REVIEW";
     return { ...holding, livePrice, value, upl, action, asset };
@@ -794,6 +808,10 @@ function OrderPlanPanel({
     firstActionTitle = "VERIFY EXISTING KRAKEN ORDER FIRST";
     firstActionDetail = `Do not duplicate the snapshot order. If it is no longer open, the next planned trim is ${plan.trimPct}% near ${money(plan.harvestNear)}.`;
     learnedReason = "Zobiris learned to avoid stacking duplicate exits when an older order may already have filled.";
+  } else if (row.upl >= 15 && plan.trimPct <= 0) {
+    firstActionTitle = "HOLD — POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM";
+    firstActionDetail = `A normal trim would be below ${money(MIN_MEANINGFUL_TRIM_USD)}. Keep the position intact unless the thesis breaks badly enough to justify a full exit.`;
+    learnedReason = "Zobiris now rejects nuisance-size trims that are too small to materially improve the portfolio.";
   } else if (row.upl >= 15) {
     firstActionTitle = `TRIM ${plan.trimPct}% AT ${money(plan.harvestNear)}`;
     firstActionDetail = `About ${num(trimQty, 8)} ${row.symbol} / ${money(trimUsd)}. Keep the remaining position as the runner.`;
@@ -846,8 +864,12 @@ function OrderPlanPanel({
           <div style={styles.limitLabel}>SELL / HARVEST LADDER</div>
           <strong>{money(plan.harvestNear)} → {money(plan.harvestHigh)}</strong>
           <div style={styles.tiny}>
-            Action 1: reduce {plan.trimPct}% ({num(trimQty, 8)} {row.symbol}, about {money(trimUsd)}) near {money(plan.harvestNear)}.
-            {" "}Action 2: reduce another {plan.secondTrimPct}% (about {money(secondTrimUsd)}) near {money(plan.harvestHigh)}.
+            {plan.trimPct > 0
+              ? <>Action 1: reduce {plan.trimPct}% ({num(trimQty, 8)} {row.symbol}, about {money(trimUsd)}) near {money(plan.harvestNear)}.</>
+              : <>No partial trim: the position is too small for a meaningful order.</>}
+            {plan.secondTrimPct > 0
+              ? <>{" "}Action 2: reduce another {plan.secondTrimPct}% (about {money(secondTrimUsd)}) near {money(plan.harvestHigh)}.</>
+              : null}
             {" "}Keep the rest as the runner.
           </div>
         </div>
