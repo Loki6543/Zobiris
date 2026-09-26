@@ -57,7 +57,7 @@ export function CompareLab() {
   const [data, setData] = useState<Comparison | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(() => { fetch("/api/compare/universe").then(r => r.json()).then(v => setUniverse(v.symbols ?? []))
+  useEffect(() => { fetch("/api/compare/universe").then(async r => { if (!r.ok) throw new Error("Coin list unavailable"); return r.json(); }).then(v => setUniverse(v.symbols ?? []))
     .catch(() => setError("Coin list unavailable")); }, []);
   useEffect(() => {
     const controller = new AbortController();
