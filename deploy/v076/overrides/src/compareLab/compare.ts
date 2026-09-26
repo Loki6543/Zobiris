@@ -77,3 +77,48 @@ export async function compareDaily(rawSymbols: string[], days: number) {
     asOf: new Date(times[times.length - 1]! * 1000).toISOString(), series };
 }
 
+/** Historical analogues, evaluated only after their forward seven days completed. */
+export async function sidewaysHistory(rawSymbols: string[], thresholdPct = 2) {
+  const symbols = [...new Set(rawSymbols.map(s => s.trim().toUpperCase()))];
+  if (symbols[0] !== "BTC" || symbols.length < 2 || symbols.length > 5 ||
+      symbols.some(s => !Object.hasOwn(PAIRS, s)) || ![1, 2, 3].includes(thresholdPct))
+    throw new RangeError("Choose BTC plus 1–4 supported coins and a 1%, 2% or 3% threshold.");
+  const histories = await Promise.all(symbols.map(async symbol => ({ symbol, candles: await daily(symbol) })));
+  const common = histories.reduce<Set<number>>((set, history, i) => {
+    const times = new Set(history.candles.map(c => c.time));
+    return i === 0 ? times : new Set([...set].filter(t => times.has(t)));
+  }, new Set());
+  const times = [...common].sort((a, b) => a - b).slice(-380);
+  const prices = histories.map(history => {
+    const byTime = new Map(history.candles.map(c => [c.time, c.close]));
+    return times.map(time => byTime.get(time)!);
+  });
+  const matches: { start: string; end: string; btcPriorPct: number; forwardPct: Record<string, number> }[] = [];
+  let lastSelectedStart = Infinity;
+  for (let i = times.length - 15; i >= 0; i--) {
+    // Complete, consecutive seven-day condition and forward windows are required.
+    if (times[i + 14]! - times[i]! !== 14 * 86400 || lastSelectedStart - i < 14) continue;
+    const btcPriorPct = (prices[0]![i + 7]! / prices[0]![i]! - 1) * 100;
+    if (Math.abs(btcPriorPct) > thresholdPct) continue;
+    const forwardPct = Object.fromEntries(symbols.map((symbol, j) =>
+      [symbol, (prices[j]![i + 14]! / prices[j]![i + 7]! - 1) * 100]));
+    matches.push({ start: new Date(times[i]! * 1000).toISOString().slice(0, 10),
+      end: new Date(times[i + 7]! * 1000).toISOString().slice(0, 10), btcPriorPct, forwardPct });
+    lastSelectedStart = i;
+  }
+  const median = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted.length ? (sorted[Math.floor((sorted.length - 1) / 2)]! + sorted[Math.floor(sorted.length / 2)]!) / 2 : null;
+  };
+  const summary = symbols.map(symbol => {
+    const values = matches.map(m => m.forwardPct[symbol]!);
+    return { symbol, count: values.length, medianForwardPct: median(values),
+      positiveCount: values.filter(v => v > 0).length,
+      beatBtcCount: matches.filter(m => m.forwardPct[symbol]! > m.forwardPct.BTC!).length,
+      worstForwardPct: values.length ? Math.min(...values) : null };
+  });
+  return { source: "Kraken public OHLC", provenance: "real-completed-daily",
+    condition: { btcDays: 7, maxAbsoluteReturnPct: thresholdPct, forwardDays: 7,
+      nonOverlapping: true }, asOf: times.length ? new Date(times.at(-1)! * 1000).toISOString() : null,
+    sampleCount: matches.length, summary, matches: matches.slice(0, 12) };
+}

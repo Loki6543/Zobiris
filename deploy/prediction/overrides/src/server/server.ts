@@ -26,7 +26,7 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 
 import { openStorage } from "../storage/client.js";
-import { compareDaily, compareUniverse } from "../compareLab/compare.js";
+import { compareDaily, compareUniverse, sidewaysHistory } from "../compareLab/compare.js";
 import {
   getRecentSnapshots,
   getSnapshotById,
@@ -449,6 +449,18 @@ interface ApiRouter {
 }
 
 const API: ApiRouter = {
+  "GET /api/compare/sideways": async (req, res) => {
+    const url = new URL(req.url ?? "/", "http://localhost");
+    try {
+      const symbols = (url.searchParams.get("symbols") ?? "").split(",");
+      const threshold = Number(url.searchParams.get("threshold") ?? "2");
+      jsonResponse(res, 200, await sidewaysHistory(symbols, threshold));
+    } catch (error) {
+      jsonResponse(res, error instanceof RangeError ? 400 : 503, {
+        error: error instanceof Error ? error.message : "Patterns unavailable",
+      });
+    }
+  },
   "GET /api/compare/universe": async (_req, res) => {
     try { jsonResponse(res, 200, { symbols: await compareUniverse(), source: "Kraken public AssetPairs" }); }
     catch { jsonResponse(res, 503, { error: "Kraken coin list unavailable" }); }
