@@ -413,7 +413,7 @@ export function buildResearchIntegrity(input: BuildResearchIntegrityInput): Rese
   }
 
   const scorecard: ResearchScorecard = {
-    opportunityQuality: input.opportunityScore == null ? null : clamp01(input.opportunityScore),
+    opportunityQuality: input.opportunityScore == null ? null : clamp01(input.opportunityScore / 100),
     liquidityQuality: input.factors.execution == null ? null : clamp01(input.factors.execution),
     fundamentalQuality: input.factors.fundamental == null ? null : clamp01(input.factors.fundamental),
     discoveryQuality: input.factors.discovery == null ? null : clamp01(input.factors.discovery),
