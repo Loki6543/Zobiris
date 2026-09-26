@@ -78,10 +78,13 @@ async function verifySimpleUi(origin) {
     const response = await fetch(new URL(src, origin), { signal: AbortSignal.timeout(15000) });
     bundle += await response.text();
   }
-  for (const required of ["ZOBIRIS CORE", "Market Today", "History / Learning", "Current positions", "BEST FIRST COURSE OF ACTION", "SELL / HARVEST LADDER", "BUY / RE-ENTRY RANGE", "DEFENSIVE REDUCTION", "Why Zobiris learned this:", "Kraken + research-integrity gates passed", "funded cash added", "Maneuver capital", "Current snapshot order:", "POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM"]) {
+  for (const required of ["ZOBIRIS CORE", "Market Today", "History / Learning", "Current positions", "BEST FIRST COURSE OF ACTION", "SELL / HARVEST LADDER", "BUY / RE-ENTRY RANGE", "DEFENSIVE REDUCTION", "Why Zobiris learned this:", "Kraken execution gate passed", "funded cash added", "Maneuver capital", "Current snapshot order:", "POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM"]) {
     if (!bundle.includes(required)) throw new Error("candidate simplified UI is missing " + required);
   }
-  console.log("PASS candidate simplified three-screen UI bundle");
+  for (const forbidden of ["Research thesis + falsifiers", "Break conditions:", "Not yet measured:", " · thesis "]) {
+    if (bundle.includes(forbidden)) throw new Error("candidate decision UI leaked verbose research copy: " + forbidden);
+  }
+  console.log("PASS candidate simplified three-screen UI bundle with research kept behind the scenes");
 }
 
 async function verifyPublicBaseline() {
