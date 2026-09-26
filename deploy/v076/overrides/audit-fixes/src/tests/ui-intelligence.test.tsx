@@ -148,6 +148,8 @@ describe("simplified Zobiris Core", () => {
     expect(screen.getByText("LIMIT CANDIDATE · $42.50")).toBeTruthy();
     expect(screen.getByText("AVAX")).toBeTruthy();
     expect(screen.getByText("Watchlist ranking")).toBeTruthy();
+    const ranking = screen.getByText("Watchlist ranking").closest("section");
+    expect(ranking?.querySelector("tbody tr td:nth-child(2)")?.textContent).toBe("ATOM");
     expect(screen.getByText("QNT")).toBeTruthy();
     expect(screen.getAllByText(/PAUSE/).length).toBeGreaterThan(0);
     expect(screen.getByText("Rules learned from you")).toBeTruthy();
