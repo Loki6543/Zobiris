@@ -120,7 +120,10 @@ function buildOrderPlan(row: any, regime: string, recentReentry: boolean) {
   // trade memory: partial harvesting worked, rapid re-entry hurt, and clustered
   // market adds should be smaller and staged.
   const trimPct = meaningfulTrimPct(row.value, row.upl);
-  const secondTrimPct = row.value < SMALL_POSITION_USD ? 0 : (row.upl >= 30 ? 15 : 10);
+  const candidateSecondTrimPct = row.value < SMALL_POSITION_USD ? 0 : (row.upl >= 30 ? 15 : 10);
+  const secondTrimPct = candidateSecondTrimPct > 0 && row.value * (candidateSecondTrimPct / 100) >= MIN_MEANINGFUL_TRIM_USD
+    ? candidateSecondTrimPct
+    : 0;
 
   let firstAddPct = regimeBreak ? 8 : 12;
   if (score >= 55 && confidence >= 55) firstAddPct += 4;
@@ -513,43 +516,64 @@ export function App() {
     }
 
     const plan = buildOrderPlan(holding, regime, reentryRisk.has(symbol));
-    const suggestedAmountUsd = plan.trimPct > 0
-      ? Math.min(holding.value, Math.max(MIN_MEANINGFUL_TRIM_USD, holding.value * (plan.trimPct / 100)))
+    const siblingSellOrders = OPEN_ORDERS
+      .map((candidate, candidateIndex) => ({ candidate, candidateIndex }))
+      .filter(({ candidate }) => candidate.side === "SELL" && candidate.symbol.toUpperCase() === symbol)
+      .sort((a, b) => a.candidate.targetPriceUsd - b.candidate.targetPriceUsd || a.candidateIndex - b.candidateIndex);
+    const ladderSlot = siblingSellOrders.findIndex(({ candidateIndex }) => candidateIndex === index);
+    const slotTrimPct = ladderSlot === 0 ? plan.trimPct : ladderSlot === 1 ? plan.secondTrimPct : 0;
+    const slotTarget = ladderSlot === 0 ? plan.harvestNear : ladderSlot === 1 ? plan.harvestHigh : null;
+    const suggestedAmountUsd = slotTrimPct > 0
+      ? Math.min(holding.value, holding.value * (slotTrimPct / 100))
       : 0;
+
+    if (slotTarget == null || slotTrimPct <= 0) {
+      return {
+        ...order,
+        key: order.side + symbol + index,
+        status: ladderSlot === 0 ? "CANCEL PARTIAL TRIM" : "CANCEL SECOND TRIM",
+        suggestedPrice: null,
+        suggestedAmountUsd: 0,
+        reason: ladderSlot === 0
+          ? `This position does not support a meaningful partial sale of at least ${money(MIN_MEANINGFUL_TRIM_USD)}.`
+          : `The next ladder slice is below ${money(MIN_MEANINGFUL_TRIM_USD)}; suppress the nuisance-size follow-up instead of stacking another small order.`,
+      };
+    }
 
     if (order.targetPriceUsd <= current * 1.001) {
       return {
         ...order,
         key: order.side + symbol + index,
         status: "VERIFY FIRST",
-        suggestedPrice: plan.harvestNear,
+        suggestedPrice: slotTarget,
         suggestedAmountUsd,
         reason: "This screenshot order is already at/below market and may have filled or been cancelled in Kraken.",
       };
     }
 
     let status = "KEEP";
-    let reason = "Existing harvest order is inside the current Zobiris sell ladder.";
-    if (plan.trimPct <= 0) {
-      status = "CANCEL PARTIAL TRIM";
-      reason = "The position is too small for a useful partial sale; hold it intact unless the thesis breaks.";
-    } else if (order.targetPriceUsd < plan.harvestNear * 0.97) {
+    let reason = `Existing harvest order is inside Zobiris ladder line ${ladderSlot + 1}.`;
+    if (order.targetPriceUsd < slotTarget * 0.97) {
       status = "MOVE UP";
-      reason = `Current harvest is too low; first Zobiris harvest is near ${money(plan.harvestNear)}.`;
-    } else if (order.targetPriceUsd > plan.harvestHigh * 1.05) {
+      reason = `This ladder line is too low; Zobiris line ${ladderSlot + 1} is near ${money(slotTarget)}.`;
+    } else if (order.targetPriceUsd > slotTarget * 1.05) {
       status = "MOVE DOWN";
-      reason = `Current target is beyond the active harvest ladder; move toward ${money(plan.harvestHigh)}.`;
+      reason = `This ladder line is too high; Zobiris line ${ladderSlot + 1} is near ${money(slotTarget)}.`;
     }
-    if (suggestedAmountUsd > 0 && order.amountUsd < MIN_MEANINGFUL_TRIM_USD) {
+
+    if (order.amountUsd < suggestedAmountUsd * 0.75) {
       status += " / INCREASE SIZE";
-      reason += ` Use at least about ${money(suggestedAmountUsd)} so the trim is meaningful.`;
+      reason += ` Resize this line toward ${money(suggestedAmountUsd)} so the action is meaningful.`;
+    } else if (order.amountUsd > suggestedAmountUsd * 1.25) {
+      status += " / REDUCE SIZE";
+      reason += ` Resize this line toward ${money(suggestedAmountUsd)} instead of over-harvesting the position.`;
     }
 
     return {
       ...order,
       key: order.side + symbol + index,
       status,
-      suggestedPrice: plan.harvestNear,
+      suggestedPrice: slotTarget,
       suggestedAmountUsd,
       reason,
     };
