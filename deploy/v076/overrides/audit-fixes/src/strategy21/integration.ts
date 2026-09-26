@@ -2,6 +2,7 @@ import { classifyMarketState, deploymentCapForState, doctrineAlias, type Previou
 import { assessLiquidityAcceleration, buildLiquidityProfile, evaluateLiquidityEligibility, quantile, simulateImpactBps, type LiquidityAccelerationResult, type LiquidityProfile } from './engine/liquidity.js';
 import { computeDiscoveryCatalyst, computeExecutionQuality, computeOpportunityHeuristic, type FactorResult } from './engine/factors.js';
 import { createCapitalLedger, type CapitalLedger } from './engine/capital.js';
+import { adaptiveTargetUsd } from './engine/adaptiveTarget.js';
 import { evaluateZobirisDecision, type ZobirisDecision } from './engine/zobiris.js';
 import type { EvidenceItem } from './domain/evidence.js';
 import { classifyBehavioralPersonality, type BehavioralPersonalityResult, type BehavioralProfileInput } from './engine/personality.js';
@@ -92,6 +93,7 @@ export interface Strategy21AssetView {
   factors: ZobirisDecision['factors'];
   opportunity: ZobirisDecision['opportunity'];
   positionAuthority: ZobirisDecision['authority'];
+  adaptiveTargetUsd: number;
   stagedExecution: ZobirisDecision['stagedExecution'];
   explanation: ZobirisDecision['explanation'];
   personality: BehavioralPersonalityResult | null;
@@ -114,7 +116,7 @@ export interface Strategy21PortfolioSummary {
   maneuverCapitalUsd: 1850;
   researchAuthority: 'DESCRIPTIVE_ONLY';
   rankingAuthority: 'OPPORTUNITY_HEURISTIC_V1';
-  positionSizingAuthority: 'RISK_CAPS_ONLY';
+  positionSizingAuthority: 'CONSERVATIVE_ADAPTIVE_TARGET_WITH_RISK_CAPS';
   strategicReserveTargetUsd: 1800;
   strategicReserveFundedUsd: 0;
   eventualPortfolioTargetUsd: 3000;
@@ -359,7 +361,14 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
     const factors = buildFactors(asset, liq);
     const opp = computeOpportunityHeuristic({ ...factors, evidenceConfidence: clamp01(asset.confidence.pct/100) });
     const rScore = researchScore(asset);
-    const requestedTargetUsd = MEME_SYMBOLS.has(symbol) ? ledger.maneuverNavUsd * 0.03 : ledger.maneuverNavUsd * 0.12;
+    const requestedTargetUsd = adaptiveTargetUsd({
+      capitalBaseUsd: ledger.maneuverNavUsd,
+      assetClass: MEME_SYMBOLS.has(symbol) ? 'MEME' : 'CORE',
+      opportunityScore: asset.opportunity.adjusted,
+      opportunityConfidence: opp.confidence,
+      marketConfidence: market.confidence,
+      deploymentCapPct: market.deploymentCapPct,
+    });
     const flowVal = factors.flow.value ?? 0.5;
     const fundVal = factors.fundamental.value ?? 0.5;
     const discoveryVal = factors.discovery.value ?? 0.5;
@@ -436,7 +445,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
         .filter((gate) => gate.active)
         .map((gate) => ({ code: gate.code ?? 'UNSPECIFIED_RISK_GATE', effect: gate.effect ?? 'advisory' })),
     });
-    return { asset, decision, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity };
+    return { asset, decision, requestedTargetUsd, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity };
   });
 
   const researchOrder = [...provisional].sort((a,b) => b.researchScore - a.researchScore);
@@ -444,7 +453,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
   const nextOrder = provisional.filter((x) => x.nextDollarScore !== null).sort((a,b) => (b.nextDollarScore ?? -1) - (a.nextDollarScore ?? -1));
   const nextRank = new Map(nextOrder.map((x,i) => [x.asset.symbol.toUpperCase(), i+1]));
 
-  const rankedAssets: IntegratedAssetLike[] = provisional.map(({asset, decision, researchScore: rs, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity}) => ({
+  const rankedAssets: IntegratedAssetLike[] = provisional.map(({asset, decision, requestedTargetUsd, researchScore: rs, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity}) => ({
     ...asset,
     strategy21: {
       researchScore: rs,
@@ -461,6 +470,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       factors: decision.factors,
       opportunity: decision.opportunity,
       positionAuthority: decision.authority,
+      adaptiveTargetUsd: requestedTargetUsd,
       stagedExecution: decision.stagedExecution,
       explanation: decision.explanation,
       personality: decision.personality,
@@ -507,7 +517,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       maneuverCapitalUsd: 1850,
       researchAuthority: 'DESCRIPTIVE_ONLY',
       rankingAuthority: 'OPPORTUNITY_HEURISTIC_V1',
-      positionSizingAuthority: 'RISK_CAPS_ONLY',
+      positionSizingAuthority: 'CONSERVATIVE_ADAPTIVE_TARGET_WITH_RISK_CAPS',
       strategicReserveTargetUsd: 1800,
       strategicReserveFundedUsd: 0,
       eventualPortfolioTargetUsd: 3000,
