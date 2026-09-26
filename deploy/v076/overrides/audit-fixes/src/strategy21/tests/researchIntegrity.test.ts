@@ -46,7 +46,7 @@ test("high opportunity cannot manufacture high research confidence when evidence
     action: "ACCUMULATE",
     assetState: "CONFIRMED_TREND",
     researchScore: 90,
-    opportunityScore: 0.95,
+    opportunityScore: 95,
     opportunityConfidence: 0.95,
     eligibilityStatus: "ACTIVE_ELIGIBLE",
     dataReadiness: "READY",
@@ -58,6 +58,7 @@ test("high opportunity cannot manufacture high research confidence when evidence
 
   assert.equal(result.risk.researchEligibility, "DATA_INSUFFICIENT");
   assert.equal(result.scorecard.evidenceQuality, 0);
+  assert.equal(result.scorecard.opportunityQuality, 0.95);
   assert.ok(result.thesis.confidence < 0.5);
   assert.equal(result.scorecard.manipulationRisk, null);
   assert.ok(result.scorecard.unmeasuredDimensions.includes("manipulationRisk"));
@@ -72,7 +73,7 @@ test("hard risk veto overrides otherwise strong setup", () => {
     action: "ACCUMULATE",
     assetState: "CONFIRMED_TREND",
     researchScore: 88,
-    opportunityScore: 0.9,
+    opportunityScore: 90,
     opportunityConfidence: 0.9,
     eligibilityStatus: "ACTIVE_ELIGIBLE",
     dataReadiness: "READY",
