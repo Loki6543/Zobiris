@@ -104,6 +104,10 @@ describe("simplified Zobiris Core", () => {
     expect(screen.getByText("Open orders")).toBeTruthy();
     expect(screen.getByText("$713.74")).toBeTruthy();
 
+    fireEvent.click(screen.getByRole("button", { name: "Open KAS order analysis" }));
+    expect(await screen.findByText(/TRIM 50% AT/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close KAS order analysis" }));
+
     fireEvent.click(screen.getByRole("button", { name: "Open SOL order analysis" }));
     expect(await screen.findByText("BEST FIRST COURSE OF ACTION")).toBeTruthy();
     expect(screen.getByText("SELL / HARVEST LADDER")).toBeTruthy();
@@ -120,6 +124,7 @@ describe("simplified Zobiris Core", () => {
     expect(screen.getByText(/Kraken gate passed · max next order \$42\.50/)).toBeTruthy();
     expect(screen.getByText("LIMIT CANDIDATE · $42.50")).toBeTruthy();
     expect(screen.queryByText("AVAX")).toBeNull();
+    expect(screen.getAllByText(/PAUSE/).length).toBeGreaterThan(0);
     expect(screen.getByText("Rules learned from you")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "History / Learning" }));
