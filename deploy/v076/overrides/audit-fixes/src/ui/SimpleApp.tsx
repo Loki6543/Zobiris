@@ -14,7 +14,9 @@ import {
   type TradeMemory,
 } from "./simplePortfolioData";
 
-type View = "portfolio" | "market" | "history";
+import { CompareLab } from "./CompareLab";
+
+type View = "portfolio" | "market" | "history" | "compare";
 type RankedAsset = Record<string, any>;
 
 const money = (value: number) => new Intl.NumberFormat("en-US", {
@@ -712,6 +714,7 @@ export function App() {
           ["portfolio", "Portfolio"],
           ["market", "Market Today"],
           ["history", "History / Learning"],
+          ["compare", "Compare Lab"],
         ] as Array<[View, string]>).map(([key, label]) => (
           <button key={key} onClick={() => setView(key)} style={view === key ? styles.navActive : styles.navButton}>
             {label}
@@ -885,6 +888,8 @@ export function App() {
           </section>
         </main>
       ) : null}
+
+      {view === "compare" ? <CompareLab /> : null}
 
       {view === "history" ? (
         <main>
