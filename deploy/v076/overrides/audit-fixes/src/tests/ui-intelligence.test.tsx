@@ -121,6 +121,8 @@ describe("simplified Zobiris Core", () => {
     expect(await screen.findByText("Current positions")).toBeTruthy();
     expect(screen.getByText("Open orders")).toBeTruthy();
     expect(screen.getByText("$713.74")).toBeTruthy();
+    expect(screen.getByText("SELL SOL — KEEP / REDUCE SIZE")).toBeTruthy();
+    expect(screen.getByText("SELL SOL — CANCEL SECOND TRIM")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Open KAS order analysis" }));
     expect(await screen.findByText(/TRIM 50% AT/)).toBeTruthy();
