@@ -162,7 +162,7 @@ describe("v0.4.13 watchlist-only HTTP boundary", () => {
     expect(watchlistResponse.status).toBe(200);
     const watchlist = (await watchlistResponse.json()) as JsonRecord;
     expect(watchlist.source).toBe(
-      "https://coinmarketcap.com/watchlist/69c01b46aed37c7160053535/",
+      "https://coinmarketcap.com/?type=coins&tableRankBy=watchlist&watchListId=6a9a95c387e5a45cc1f40d5e",
     );
     expect(watchlist.watchlist.length).toBeGreaterThan(0);
     expect(watchlist.watchlist.map((a: any) => a.symbol)).toEqual(expect.arrayContaining(["AAVE", "HBAR", "XRP"]));
