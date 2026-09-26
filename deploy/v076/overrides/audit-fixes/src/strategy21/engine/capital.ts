@@ -88,8 +88,8 @@ const ADDABLE_ASSET_STATES = new Set<AssetStateName>(["PRE_IGNITION", "PROBE", "
 export function calculatePositionAuthority(input: PositionAuthorityInput): PositionAuthority {
   const mandate = input.mandate ?? "TACTICAL";
   const reasons: string[] = [];
-  if (input.confidence < 0.65) {
-    return { assetId: input.assetId, maxPositionUsd: input.portfolio.assetExposureUsd, maxNextOrderUsd: 0, probeOnly: false, reasons: ["confidence_below_0.65"] };
+  if (input.confidence <= 0.50) {
+    return { assetId: input.assetId, maxPositionUsd: input.portfolio.assetExposureUsd, maxNextOrderUsd: 0, probeOnly: false, reasons: ["confidence_not_above_0.50"] };
   }
   if (!ADDABLE_ASSET_STATES.has(input.assetState)) {
     return { assetId: input.assetId, maxPositionUsd: input.portfolio.assetExposureUsd, maxNextOrderUsd: 0, probeOnly: false, reasons: [`asset_state_${input.assetState}_does_not_permit_addition`] };

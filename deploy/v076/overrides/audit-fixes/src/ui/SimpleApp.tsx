@@ -229,7 +229,7 @@ function loadCustomTrades(): TradeMemory[] {
   }
 }
 
-const STRATEGY21_MIN_ORDER_CONFIDENCE_PCT = 65;
+const STRATEGY21_MIN_ORDER_CONFIDENCE_PCT = 50;
 const STRATEGY21_LATER_LINE_CONFIDENCE_PCT = 75;
 
 function krakenLimitPurchaseGate(detail: any) {
@@ -274,6 +274,8 @@ export function App() {
   const [nowMs, setNowMs] = useState(Date.now);
   useEffect(() => { const timer = window.setInterval(() => setNowMs(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
   const [view, setView] = useState<View>("portfolio");
+  const [showAllRankings, setShowAllRankings] = useState(false);
+  const [analysisSymbol, setAnalysisSymbol] = useState("BTC");
   const [snapshot, setSnapshot] = useState<any>(null);
   const [account, setAccount] = useState<any>(null);
   const [watchlist, setWatchlist] = useState<any[]>([]);
@@ -477,7 +479,7 @@ export function App() {
         // Kraken execution authority reports positive capacity. This keeps the
         // volume/turnover/depth rules inside the hidden research gate instead of
         // duplicating or weakening them in the UI.
-        if (!snapshotFresh || !gate.pass || conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null) return [];
+        if (!snapshotFresh || !gate.pass || conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null) return [];
 
         let discount = regime.toLowerCase().includes("break") ? 0.05 : 0.03;
         if (score >= 55) discount -= 0.01;
@@ -510,6 +512,30 @@ export function App() {
       .slice(0, 5);
   }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs, account]);
 
+  const watchlistRankings = useMemo(() => {
+    const symbols = watchlist.length
+      ? watchlist.map((entry) => String(entry?.symbol ?? entry ?? "").toUpperCase()).filter(Boolean)
+      : rankedAssets.map((asset) => String(asset?.symbol ?? "").toUpperCase());
+    const held = new Set(LIVE_HOLDINGS.map((holding) => holding.symbol));
+    const existingBuy = new Set(LIVE_OPEN_ORDERS.filter((order) => order.side === "BUY").map((order) => order.symbol));
+    return [...new Set(symbols)].map((symbol) => {
+      const asset = assetMap.get(symbol);
+      const gate = asset ? krakenLimitPurchaseGate(asset) : null;
+      const confidence = confidencePct(asset);
+      const ready = Boolean(asset && snapshotFresh && extractPrice(asset) != null && confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT && gate?.pass && !held.has(symbol) && !existingBuy.has(symbol));
+      const move = held.has(symbol) ? "Manage holding" : existingBuy.has(symbol) ? "Review existing limit"
+        : ready ? "Limit setup" : confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT ? "Consider / wait" : "Research";
+      const reason = !asset ? "No current research snapshot"
+        : !snapshotFresh ? "Refresh market snapshot"
+        : confidence <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT ? "Confidence must exceed 50%"
+        : gate?.failureReasons[0] ?? (extractPrice(asset) == null ? "Current price unavailable" : gate?.pass ? "Staged limit available" : "Execution capacity unavailable");
+      return { symbol, asset, confidence, score: researchScore(asset), move, reason, ready,
+        nextDollarScore: Number(asset?.strategy21?.nextDollarScore ?? 0) };
+    }).sort((a, b) => Number(b.ready) - Number(a.ready)
+      || (b.ready ? b.nextDollarScore - a.nextDollarScore : b.score - a.score)
+      || a.symbol.localeCompare(b.symbol));
+  }, [watchlist, rankedAssets, assetMap, snapshotFresh, nowMs, account]);
+
   const orderEvaluations = useMemo(() => LIVE_OPEN_ORDERS.map((order, index) => {
     const symbol = order.symbol.toUpperCase();
     const asset = assetMap.get(symbol);
@@ -532,7 +558,7 @@ export function App() {
       const conf = confidencePct(asset);
       if (!gate.pass || conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT) {
         const reason = gate.failureReasons[0] ?? (conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT
-          ? `confidence ${conf.toFixed(0)}% is below the 65% execution threshold`
+          ? `confidence ${conf.toFixed(1)}% must be above 50% for consideration`
           : "Kraken execution authority is zero");
         return {
           ...order,
@@ -857,7 +883,33 @@ export function App() {
                     <div style={styles.tiny}>{Math.round(row.discount * 100)}% below current {money(row.price)} · initial PROBE only</div>
                   </div>
                 </div>
-              )) : <div style={styles.notice}>{candidateResearchUniverse.some((symbol) => assetDetailLoading[symbol]) ? "Checking Kraken execution volume and liquidity gates…" : rankedAssets.length ? `No eligible limit candidates. Highest confidence ${highestConfidence.toFixed(1)}% (minimum ${STRATEGY21_MIN_ORDER_CONFIDENCE_PCT}%). ${incompleteKrakenHistory ? "14-day Kraken book/notional history is incomplete for some assets. " : ""}All entry and liquidity gates remain in force.` : "Market research has not loaded yet."}</div>}
+              )) : <div style={styles.notice}>{candidateResearchUniverse.some((symbol) => assetDetailLoading[symbol]) ? "Checking Kraken execution volume and liquidity gates…" : rankedAssets.length ? `No eligible limit candidates. Highest confidence ${highestConfidence.toFixed(1)}% (consideration requires more than ${STRATEGY21_MIN_ORDER_CONFIDENCE_PCT}%). ${incompleteKrakenHistory ? "14-day Kraken book/notional history is incomplete for some assets. " : ""}All entry and liquidity gates remain in force.` : "Market research has not loaded yet."}</div>}
+            </div>
+          </section>
+
+          <section style={styles.card}>
+            <div style={styles.sectionHead}>
+              <div>
+                <h2 style={styles.h2}>Watchlist ranking</h2>
+                <div style={styles.subtle}>Best available next move first; then research score. Every watchlist coin remains visible even when no limit is authorized.</div>
+              </div>
+              <button type="button" style={styles.secondaryButton} onClick={() => setShowAllRankings(!showAllRankings)}>
+                {showAllRankings ? "Show top 10" : `Show all ${watchlistRankings.length}`}
+              </button>
+            </div>
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead><tr><th>Rank</th><th>Coin</th><th>Best move</th><th>Confidence</th><th>Research</th><th>Reason</th><th>Analysis</th></tr></thead>
+                <tbody>{watchlistRankings.slice(0, showAllRankings ? undefined : 10).map((row, index) => (
+                  <tr key={row.symbol}>
+                    <td>#{index + 1}</td><td><strong>{row.symbol}</strong></td>
+                    <td>{row.move}</td><td>{row.asset ? row.confidence.toFixed(1) + "%" : "—"}</td>
+                    <td>{row.asset ? row.score.toFixed(1) : "—"}</td>
+                    <td style={styles.tiny}>{row.reason}</td>
+                    <td><button type="button" style={styles.secondaryButton} onClick={() => { setAnalysisSymbol(row.symbol); setView("compare"); }}>Analyze</button></td>
+                  </tr>
+                ))}</tbody>
+              </table>
             </div>
           </section>
 
@@ -898,7 +950,7 @@ export function App() {
         </main>
       ) : null}
 
-      {view === "compare" ? <CompareLab /> : null}
+      {view === "compare" ? <CompareLab rankedAssets={rankedAssets} focusSymbol={analysisSymbol} /> : null}
 
       {view === "history" ? (
         <main>
@@ -1014,7 +1066,7 @@ function OrderPlanPanel({
   const failureReasons = Array.isArray(strategy?.eligibility?.failureReasons) ? strategy.eligibility.failureReasons : [];
   const purchaseGate = krakenLimitPurchaseGate({strategy21: strategy});
   const availableCash = Math.max(0, cashUsd - openOrders.filter(o => o.side === "BUY").reduce((sum,o) => sum + o.amountUsd,0));
-  const watchOnly = !row.priceAvailable || !purchaseGate.pass || plan.confidence < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || availableCash <= 0;
+  const watchOnly = !row.priceAvailable || !purchaseGate.pass || plan.confidence <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || availableCash <= 0;
   const addCapacity = watchOnly ? 0 : Math.min(purchaseGate.maxNextOrderUsd, availableCash);
   plan.firstAddPct = row.value > 0 ? Math.min(plan.firstAddPct, addCapacity / row.value * 100) : 0;
   plan.secondAddPct = row.value > 0 ? Math.min(plan.secondAddPct, Math.max(0, addCapacity - row.value * plan.firstAddPct / 100) / row.value * 100) : 0;
@@ -1049,7 +1101,7 @@ function OrderPlanPanel({
     firstActionTitle = `TRIM ${plan.trimPct}% AT ${money(plan.harvestNear)}`;
     firstActionDetail = `About ${num(trimQty, 8)} ${row.symbol} / ${money(trimUsd)}. Keep the remaining position as the runner.`;
     learnedReason = "Partial harvesting has been one of your better behaviors; fast re-entry after harvesting has been weaker.";
-  } else if (!watchOnly && plan.score >= 55 && plan.confidence >= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT && row.upl < 8) {
+  } else if (!watchOnly && plan.score >= 55 && plan.confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT && row.upl < 8) {
     firstActionTitle = `ADD ${plan.firstAddPct}% AT ${money(plan.buyNear)}`;
     firstActionDetail = `About ${num(firstAddQty, 8)} ${row.symbol} / ${money(firstAddUsd)}. Use a limit, not a market chase.`;
     learnedReason = "Your cleaner historical trades came from planned limit entries, while clustered market buys added risk.";

@@ -89,7 +89,7 @@ test("cluster and total meme caps constrain otherwise eligible positions", () =>
   assert.equal(meme.maxPositionUsd, 27.5);
 });
 
-test("confidence below 0.65 blocks orders while 0.65-0.75 is probe-only", () => {
+test("confidence of 50% blocks while above 50% is probe-only until 75%", () => {
   const ledger = createCapitalLedger();
   const blocked = calculatePositionAuthority({
     assetId: "X",
@@ -97,7 +97,7 @@ test("confidence below 0.65 blocks orders while 0.65-0.75 is probe-only", () => 
     requestedTargetUsd: 100,
     marketState: "BROAD_EXPANSION",
     assetState: "PRE_IGNITION",
-    confidence: 0.6,
+    confidence: 0.5,
     eligibilityMaximumPositionUsd: 1000,
     eligibilityMaximumOrderUsd: 500,
     ledger,
@@ -109,7 +109,7 @@ test("confidence below 0.65 blocks orders while 0.65-0.75 is probe-only", () => 
     requestedTargetUsd: 100,
     marketState: "BROAD_EXPANSION",
     assetState: "PRE_IGNITION",
-    confidence: 0.7,
+    confidence: 0.51,
     eligibilityMaximumPositionUsd: 1000,
     eligibilityMaximumOrderUsd: 500,
     ledger,

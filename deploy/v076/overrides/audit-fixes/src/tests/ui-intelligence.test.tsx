@@ -82,7 +82,7 @@ beforeEach(() => {
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
     if (url.includes("/api/watchlist")) {
-      return new Response(JSON.stringify({ watchlist: [{ symbol: "BTC" }, { symbol: "AVAX" }] }), { status: 200, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ watchlist: [{ symbol: "BTC" }, ...rankedAssets.map(asset => ({symbol: asset.symbol}))] }), { status: 200, headers: { "content-type": "application/json" } });
     }
     if (url.includes("/api/asset/SOL")) {
       return new Response(JSON.stringify({
@@ -140,13 +140,15 @@ describe("simplified Zobiris Core", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
-    expect(await screen.findByText("ATOM")).toBeTruthy();
+    expect((await screen.findAllByText("ATOM")).length).toBeGreaterThan(0);
     expect(screen.getByText("Kraken execution gate passed · max next order $42.50")).toBeTruthy();
     expect(screen.queryByText("Research thesis + falsifiers")).toBeNull();
     expect(screen.queryByText(/Break conditions:/)).toBeNull();
     expect(screen.queryByText(/Not yet measured:/)).toBeNull();
     expect(screen.getByText("LIMIT CANDIDATE · $42.50")).toBeTruthy();
-    expect(screen.queryByText("AVAX")).toBeNull();
+    expect(screen.getByText("AVAX")).toBeTruthy();
+    expect(screen.getByText("Watchlist ranking")).toBeTruthy();
+    expect(screen.getByText("QNT")).toBeTruthy();
     expect(screen.getAllByText(/PAUSE/).length).toBeGreaterThan(0);
     expect(screen.getByText("Rules learned from you")).toBeTruthy();
 
