@@ -57,6 +57,7 @@ import { DEFAULT_SCORING_CONFIG, type ScoringConfig } from "../domain/scoring.js
 import { resolve } from "node:path";
 import { type OrchestratorResult } from "../specialists/orchestrator.js";
 import { integrateStrategy21 } from "../strategy21/integration.js";
+import { DELAYED_ROTATION_MODE } from "../strategy21/engine/delayedRotation.js";
 import type { PortfolioDependencyInput } from "../strategy21/engine/portfolioDependency.js";
 import { loadStrategyLiquidity, loadStrategyMarketState } from "../strategy21/storage.js";
 
@@ -456,6 +457,7 @@ export async function runRefresh(opts: RefreshOptions): Promise<RefreshResult> {
       ? opts.portfolioDependencyBuilder(dedupedObservations.filter(o => eligibleObservationIds.has(o.id)))
       : opts.portfolioDependency,
     capitalLedger: opts.capitalLedger,
+    recommendationMode: DELAYED_ROTATION_MODE,
   }) as typeof snapshot;
   appendStage(session, { index: 13, name: "score", status: "succeeded", notes: "legacy scoring + Strategy Engine 2.1" });
   appendStage(session, { index: 15, name: "allocate", status: "succeeded" });

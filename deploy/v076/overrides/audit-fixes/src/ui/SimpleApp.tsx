@@ -474,24 +474,21 @@ export function App() {
         const price = extractPrice(asset);
         const score = researchScore(asset);
         const conf = confidencePct(asset);
+        const rotation = asset?.strategy21?.delayedRotation ?? null;
 
-        // No limit-purchase recommendation exists until Strategy 2.1's existing
-        // Kraken execution authority reports positive capacity. This keeps the
-        // volume/turnover/depth rules inside the hidden research gate instead of
-        // duplicating or weakening them in the UI.
-        if (!snapshotFresh || !gate.pass || conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null) return [];
+        // Pilot mode is intentionally fail-closed: deep research can keep running,
+        // but new capital is only recommended for a strict delayed-rotation setup
+        // that also passes the existing Kraken execution + research-integrity gates.
+        if (!snapshotFresh || !gate.pass || conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null || rotation?.status !== "QUALIFIED") return [];
 
-        let discount = regime.toLowerCase().includes("break") ? 0.05 : 0.03;
-        if (score >= 55) discount -= 0.01;
-        if (score < 45) discount += 0.01;
+        let discount = Number(rotation?.recommendedPullbackPct ?? 4) / 100;
         if (reentryRisk.has(symbol)) discount += 0.02;
-        discount = Math.max(0.02, Math.min(0.08, discount));
+        discount = Math.max(0.04, Math.min(0.10, discount));
         const limit = price * (1 - discount);
 
-        const probeTargetUsd = conf >= STRATEGY21_LATER_LINE_CONFIDENCE_PCT
-          ? PROBE_MAX_USD
-          : PROBE_TYPICAL_USD;
-        const orderUsd = Math.max(0, Math.min(probeTargetUsd, gate.maxNextOrderUsd, freeCash));
+        // Keep pilot sizing deliberately small while the strategy builds an
+        // outcome sample; Strategy 2.1 can lower this further via its authority.
+        const orderUsd = Math.max(0, Math.min(PROBE_TYPICAL_USD, gate.maxNextOrderUsd, freeCash));
         if (orderUsd <= 0) return [];
 
         return [{
@@ -500,6 +497,7 @@ export function App() {
           price,
           score,
           conf,
+          rotationScore: Number(rotation?.score ?? 0),
           discount,
           limit,
           orderUsd,
@@ -508,7 +506,7 @@ export function App() {
           researchEligibility: gate.researchEligibility,
         }];
       })
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.rotationScore - a.rotationScore || Number(b.asset?.strategy21?.nextDollarScore ?? 0) - Number(a.asset?.strategy21?.nextDollarScore ?? 0) || b.score - a.score)
       .slice(0, 5);
   }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs, account]);
 
@@ -522,19 +520,37 @@ export function App() {
       const asset = assetMap.get(symbol);
       const gate = asset ? krakenLimitPurchaseGate(asset) : null;
       const confidence = confidencePct(asset);
-      const ready = Boolean(asset && snapshotFresh && extractPrice(asset) != null && confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT && gate?.pass && !held.has(symbol) && !existingBuy.has(symbol));
+      const rotation = asset?.strategy21?.delayedRotation ?? null;
+      const strictRotation = rotation?.status === "QUALIFIED";
+      const ready = Boolean(asset && strictRotation && snapshotFresh && extractPrice(asset) != null && confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT && gate?.pass && !held.has(symbol) && !existingBuy.has(symbol));
       const move = held.has(symbol) ? "Manage holding" : existingBuy.has(symbol) ? "Review existing limit"
-        : ready ? "Limit setup" : confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT ? "Consider / wait" : "Research";
+        : ready ? "Delayed-rotation limit"
+        : rotation?.status === "QUALIFIED" ? "Qualified / wait"
+        : rotation?.status === "NEAR_ROTATION" ? "Watch rotation"
+        : "Wait";
+      const rotationReason: Record<string, string> = {
+        QUALIFIED: "30d/90d laggard; 7d recovery confirmed — wait for pullback limit",
+        NEAR_ROTATION: "Lagging BTC, but not a strict 30d + 90d loser yet",
+        TOO_EARLY: "7d recovery has not turned positive",
+        EXTENDED: "Recovery already moved too far to chase",
+        STRUCTURALLY_WEAK: "Medium-term losses exceed pilot safety floor",
+        NOT_LAGGING: "Not a delayed-rotation setup",
+        MARKET_NOT_BULLISH: "Broad market/BTC backdrop does not qualify",
+        DATA_INSUFFICIENT: "7d/30d/90d calibration data incomplete",
+        BENCHMARK: "BTC is the benchmark for this strategy",
+      };
       const reason = !asset ? "No current research snapshot"
         : !snapshotFresh ? "Refresh market snapshot"
-        : confidence <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT ? "Confidence must exceed 50%"
-        : asset?.strategy21?.eligibility?.failureReasons?.[0] ?? gate?.failureReasons[0] ?? (extractPrice(asset) == null ? "Current price unavailable" : gate?.pass ? "Staged limit available" : "Execution capacity unavailable");
-      return { symbol, asset, confidence, score: researchScore(asset), move, reason, ready,
+        : rotationReason[String(rotation?.status ?? "DATA_INSUFFICIENT")]
+          ?? (confidence <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT ? "Confidence must exceed 50%" : asset?.strategy21?.eligibility?.failureReasons?.[0] ?? gate?.failureReasons[0] ?? "Wait");
+      return { symbol, asset, confidence, score: researchScore(asset), rotationScore: Number(rotation?.score ?? 0), move, reason, ready,
         nextDollarScore: Number(asset?.strategy21?.nextDollarScore ?? 0) };
     }).sort((a, b) => {
-      const priority = (row: typeof a) => row.ready ? 3 : row.move === "Consider / wait" ? 2 : row.confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT ? 1 : 0;
+      const priority = (row: typeof a) => row.ready ? 4 : row.move === "Qualified / wait" ? 3 : row.move === "Watch rotation" ? 2 : row.confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT ? 1 : 0;
       return priority(b) - priority(a)
-        || (b.ready ? b.nextDollarScore - a.nextDollarScore : b.score - a.score)
+        || b.rotationScore - a.rotationScore
+        || b.nextDollarScore - a.nextDollarScore
+        || b.score - a.score
         || a.symbol.localeCompare(b.symbol);
     });
   }, [watchlist, rankedAssets, assetMap, snapshotFresh, nowMs, account]);
@@ -559,6 +575,17 @@ export function App() {
       const gate = krakenLimitPurchaseGate(asset);
       const score = researchScore(asset);
       const conf = confidencePct(asset);
+      const rotation = asset?.strategy21?.delayedRotation ?? null;
+      if (rotation?.status !== "QUALIFIED") {
+        return {
+          ...order,
+          key: order.side + symbol + index,
+          status: "PAUSE",
+          suggestedPrice: null,
+          suggestedAmountUsd: 0,
+          reason: `Delayed-rotation pilot does not authorize new capital here (${String(rotation?.status ?? "DATA_INSUFFICIENT")}).`,
+        };
+      }
       if (!gate.pass || conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT) {
         const reason = gate.failureReasons[0] ?? (conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT
           ? `confidence ${conf.toFixed(1)}% must be above 50% for consideration`
@@ -573,13 +600,11 @@ export function App() {
         };
       }
 
-      let discount = regime.toLowerCase().includes("break") ? 0.05 : 0.03;
-      if (score >= 55) discount -= 0.01;
-      if (score < 45) discount += 0.01;
+      let discount = Number(rotation?.recommendedPullbackPct ?? 4) / 100;
       if (reentryRisk.has(symbol)) discount += 0.02;
-      discount = clamp(discount, 0.02, 0.08);
+      discount = clamp(discount, 0.04, 0.10);
       const preferred = current * (1 - discount);
-      const protocolTarget = conf >= STRATEGY21_LATER_LINE_CONFIDENCE_PCT ? PROBE_MAX_USD : PROBE_TYPICAL_USD;
+      const protocolTarget = PROBE_TYPICAL_USD;
       const suggestedAmountUsd = Math.max(0, Math.min(protocolTarget, gate.maxNextOrderUsd, freeCash));
 
       let status = "KEEP";
@@ -871,14 +896,14 @@ export function App() {
 
           <section style={styles.card}>
             <h2 style={styles.h2}>New positions to consider</h2>
-            <div style={styles.subtle}>Ranked by the hidden research engine. A coin is not allowed to become a limit candidate until Strategy 2.1 gives it positive Kraken execution capacity; the existing volume, turnover, depth, spread and slippage gates remain authoritative.</div>
+            <div style={styles.subtle}>Pilot mode: new capital only goes to 30d + 90d laggards with a fresh 7d recovery, and only through a pullback limit after Kraken execution gates pass.</div>
             <div style={{ marginTop: 14 }}>
               {candidates.length ? candidates.map((row, index) => (
                 <div key={row.symbol} style={styles.candidate}>
                   <div style={styles.rank}>#{index + 1}</div>
                   <div style={{ flex: 1 }}>
                     <strong style={{ fontSize: 18 }}>{row.symbol}</strong>
-                    <div style={styles.tiny}>Kraken execution gate passed · max next order {money(row.maxNextOrderUsd)}</div>
+                    <div style={styles.tiny}>Kraken execution gate passed · rotation qualified · max next order {money(row.maxNextOrderUsd)}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={styles.limitLabel}>LIMIT CANDIDATE · {money(row.orderUsd)}</div>
@@ -894,7 +919,7 @@ export function App() {
             <div style={styles.sectionHead}>
               <div>
                 <h2 style={styles.h2}>Watchlist ranking</h2>
-                <div style={styles.subtle}>Best available next move first; then research score. Every watchlist coin remains visible even when no limit is authorized.</div>
+                <div style={styles.subtle}>Delayed-rotation candidates first. Near-rotation coins stay on watch; everything remains visible even when no new buy is authorized.</div>
               </div>
               <button type="button" style={styles.secondaryButton} onClick={() => setShowAllRankings(!showAllRankings)}>
                 {showAllRankings ? "Show top 10" : `Show all ${watchlistRankings.length}`}

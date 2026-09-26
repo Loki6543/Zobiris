@@ -14,6 +14,14 @@ import {
   NARRATIVE_RESEARCH_POLICY,
   type ResearchIntegrityBundle,
 } from './research/researchIntegrity.js';
+import {
+  DELAYED_ROTATION_MODE,
+  calibrateDelayedRotationMarket,
+  evaluateDelayedRotation,
+  type DelayedRotationCalibration,
+  type DelayedRotationProfile,
+  type RecommendationMode,
+} from './engine/delayedRotation.js';
 
 export interface LegacyFactorLike {
   family?: string;
@@ -100,6 +108,7 @@ export interface Strategy21AssetView {
   liquidityAcceleration: LiquidityAccelerationResult;
   dataReadiness: 'READY' | 'KRAKEN_WARMUP' | 'IDENTITY_BLOCKED';
   researchIntegrity: ResearchIntegrityBundle;
+  delayedRotation: DelayedRotationProfile;
 }
 
 export interface IntegratedAssetLike extends LegacyAssetLike {
@@ -129,6 +138,8 @@ export interface Strategy21PortfolioSummary {
   researchIntegrityVersion: '1.0';
   capabilityManifest: typeof CAPABILITY_MANIFEST;
   narrativeResearchPolicy: typeof NARRATIVE_RESEARCH_POLICY;
+  recommendationMode: RecommendationMode;
+  delayedRotationCalibration: DelayedRotationCalibration;
 }
 
 export interface IntegratedSnapshotLike extends LegacySnapshotLike {
@@ -149,6 +160,7 @@ export interface IntegrateStrategy21Input {
   portfolioDependency?: PortfolioDependencyInput;
   capitalLedger?: Partial<CapitalLedger>;
   intelligenceShadowInput?: IntelligenceShadowInput;
+  recommendationMode?: RecommendationMode;
 }
 
 const MEME_SYMBOLS = new Set(['BONK', 'SHIB', 'DOGE', 'PEPE', 'TRUMP', 'FLOKI', 'WIF']);
@@ -330,6 +342,8 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
     histories: [],
   };
   const portfolioDependency = calculatePortfolioDependency(portfolioDependencyInput, { capitalBaseUsd: ledger.maneuverNavUsd });
+  const recommendationMode: RecommendationMode = input.recommendationMode ?? 'LEGACY';
+  const delayedRotationCalibration = calibrateDelayedRotationMarket(input.evidenceClaims);
 
   const provisional = input.snapshot.rankedAssets.map((asset) => {
     const symbol = asset.symbol.toUpperCase();
@@ -379,6 +393,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       : { status: 'UNKNOWN' as const, ratio: null, baselineTradeCount24h: null };
     const portfolioContext = currentPortfolioContextForAsset(portfolioDependencyInput, portfolioDependency, symbol, MEME_SYMBOLS);
     const dependencyRisk = portfolioDependency.assets.find((x) => x.symbol === symbol);
+    const delayedRotation = evaluateDelayedRotation(symbol, input.evidenceClaims, delayedRotationCalibration);
     const decision = evaluateZobirisDecision({
       asset: { id: canonical?.id ?? asset.canonicalAssetId ?? symbol, symbol, name: canonical?.name ?? symbol, assetClass: MEME_SYMBOLS.has(symbol) ? 'MEME' : 'CORE' },
       asOf: input.snapshot.asOf,
@@ -419,7 +434,24 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
         covarianceAcceptable: dependencyRisk?.covarianceAcceptable === true,
       },
     });
-    const nextDollarScore = (eligibility.status === 'ACTIVE_ELIGIBLE' || eligibility.status === 'CONDITIONAL_PROBE_ELIGIBLE') && decision.authority.maxNextOrderUsd > 0 && opp.eligibleForRanking ? opp.score : null;
+    const pilotQualified = recommendationMode !== DELAYED_ROTATION_MODE || delayedRotation.qualifiesForNewCapital;
+    const pilotOrderCapUsd = Math.round(ledger.maneuverNavUsd * 0.02 * 100) / 100;
+    const positionAuthority: ZobirisDecision['authority'] = pilotQualified
+      ? {
+          ...decision.authority,
+          maxNextOrderUsd: recommendationMode === DELAYED_ROTATION_MODE
+            ? Math.min(decision.authority.maxNextOrderUsd, pilotOrderCapUsd)
+            : decision.authority.maxNextOrderUsd,
+        }
+      : { ...decision.authority, maxNextOrderUsd: 0 };
+    const nextDollarScore = (eligibility.status === 'ACTIVE_ELIGIBLE' || eligibility.status === 'CONDITIONAL_PROBE_ELIGIBLE')
+      && positionAuthority.maxNextOrderUsd > 0
+      && opp.eligibleForRanking
+      && pilotQualified
+      ? (recommendationMode === DELAYED_ROTATION_MODE
+          ? Math.round((0.65 * delayedRotation.score + 0.35 * opp.score) * 100) / 100
+          : opp.score)
+      : null;
     const dataReadiness: Strategy21AssetView['dataReadiness'] = !identityVerified ? 'IDENTITY_BLOCKED' : liq && eligibility.status !== 'WATCH_ONLY' ? 'READY' : 'KRAKEN_WARMUP';
     const researchIntegrity = buildResearchIntegrity({
       assetId: canonical?.id ?? asset.canonicalAssetId ?? symbol,
@@ -445,7 +477,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
         .filter((gate) => gate.active)
         .map((gate) => ({ code: gate.code ?? 'UNSPECIFIED_RISK_GATE', effect: gate.effect ?? 'advisory' })),
     });
-    return { asset, decision, requestedTargetUsd, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity };
+    return { asset, decision, positionAuthority, requestedTargetUsd, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity, delayedRotation };
   });
 
   const researchOrder = [...provisional].sort((a,b) => b.researchScore - a.researchScore);
@@ -453,7 +485,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
   const nextOrder = provisional.filter((x) => x.nextDollarScore !== null).sort((a,b) => (b.nextDollarScore ?? -1) - (a.nextDollarScore ?? -1));
   const nextRank = new Map(nextOrder.map((x,i) => [x.asset.symbol.toUpperCase(), i+1]));
 
-  const rankedAssets: IntegratedAssetLike[] = provisional.map(({asset, decision, requestedTargetUsd, researchScore: rs, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity}) => ({
+  const rankedAssets: IntegratedAssetLike[] = provisional.map(({asset, decision, positionAuthority, requestedTargetUsd, researchScore: rs, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity, delayedRotation}) => ({
     ...asset,
     strategy21: {
       researchScore: rs,
@@ -469,7 +501,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       eligibility: decision.eligibility,
       factors: decision.factors,
       opportunity: decision.opportunity,
-      positionAuthority: decision.authority,
+      positionAuthority,
       adaptiveTargetUsd: requestedTargetUsd,
       stagedExecution: decision.stagedExecution,
       explanation: decision.explanation,
@@ -477,6 +509,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       liquidityAcceleration,
       dataReadiness,
       researchIntegrity,
+      delayedRotation,
     },
   }));
 
@@ -528,6 +561,8 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       researchIntegrityVersion: '1.0',
       capabilityManifest: CAPABILITY_MANIFEST,
       narrativeResearchPolicy: NARRATIVE_RESEARCH_POLICY,
+      recommendationMode,
+      delayedRotationCalibration,
       ...(intelligenceShadow ? { intelligenceShadow } : {}),
       ...(input.previousMarketState ? { previousState: input.previousMarketState } : {}),
     },

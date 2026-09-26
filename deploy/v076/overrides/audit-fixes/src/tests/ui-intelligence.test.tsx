@@ -49,6 +49,17 @@ const rankedAssets = [
       eligibility: { status: "ACTIVE_ELIGIBLE", maximumOrderUsd: 42.5, failureReasons: [] },
       positionAuthority: { maxNextOrderUsd: 42.5 },
       researchScore: 62,
+      delayedRotation: {
+        mode: "DELAYED_ROTATION_PILOT_V1",
+        status: "QUALIFIED",
+        qualifiesForNewCapital: true,
+        score: 84,
+        change24hPct: -1,
+        change7dPct: 5,
+        change30dPct: -8,
+        change90dPct: -24,
+        recommendedPullbackPct: 5,
+      },
       explanation: { observations: [{ observedAt: new Date().toISOString(), expiresAt: new Date(Date.now()+3600000).toISOString(), claim: JSON.stringify({ priceUsd: 2.5 }) }] }
     }
   },
@@ -141,11 +152,11 @@ describe("simplified Zobiris Core", () => {
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
     expect((await screen.findAllByText("ATOM")).length).toBeGreaterThan(0);
-    expect(screen.getByText("Kraken execution gate passed · max next order $42.50")).toBeTruthy();
+    expect(screen.getByText("Kraken execution gate passed · rotation qualified · max next order $42.50")).toBeTruthy();
     expect(screen.queryByText("Research thesis + falsifiers")).toBeNull();
     expect(screen.queryByText(/Break conditions:/)).toBeNull();
     expect(screen.queryByText(/Not yet measured:/)).toBeNull();
-    expect(screen.getByText("LIMIT CANDIDATE · $42.50")).toBeTruthy();
+    expect(screen.getByText("LIMIT CANDIDATE · $37.00")).toBeTruthy();
     expect(screen.getByText("AVAX")).toBeTruthy();
     expect(screen.getByText("Watchlist ranking")).toBeTruthy();
     const ranking = screen.getByText("Watchlist ranking").closest("section");
