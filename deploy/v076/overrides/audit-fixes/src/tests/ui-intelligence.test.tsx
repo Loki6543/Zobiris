@@ -141,7 +141,10 @@ describe("simplified Zobiris Core", () => {
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
     expect(await screen.findByText("ATOM")).toBeTruthy();
-    expect(screen.getByText("Kraken + research-integrity gates passed · max next order $42.50")).toBeTruthy();
+    expect(screen.getByText("Kraken execution gate passed · max next order $42.50")).toBeTruthy();
+    expect(screen.queryByText("Research thesis + falsifiers")).toBeNull();
+    expect(screen.queryByText(/Break conditions:/)).toBeNull();
+    expect(screen.queryByText(/Not yet measured:/)).toBeNull();
     expect(screen.getByText("LIMIT CANDIDATE · $42.50")).toBeTruthy();
     expect(screen.queryByText("AVAX")).toBeNull();
     expect(screen.getAllByText(/PAUSE/).length).toBeGreaterThan(0);
