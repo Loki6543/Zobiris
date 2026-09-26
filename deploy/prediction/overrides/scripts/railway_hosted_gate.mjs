@@ -78,7 +78,7 @@ async function verifySimpleUi(origin) {
     const response = await fetch(new URL(src, origin), { signal: AbortSignal.timeout(15000) });
     bundle += await response.text();
   }
-  for (const required of ["ZOBIRIS CORE", "Market Today", "History / Learning", "Current positions", "BEST FIRST COURSE OF ACTION", "SELL / HARVEST LADDER", "BUY / RE-ENTRY RANGE", "DEFENSIVE REDUCTION", "Why Zobiris learned this:", "Kraken execution gate passed", "funded cash added", "Maneuver capital", "Current snapshot order:", "POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM"]) {
+  for (const required of ["ZOBIRIS CORE", "Market Today", "History / Learning", "Current positions", "BEST FIRST COURSE OF ACTION", "SELL / HARVEST LADDER", "BUY / RE-ENTRY RANGE", "DEFENSIVE REDUCTION", "Why Zobiris learned this:", "Kraken execution gate passed", "funded cash added", "Maneuver capital", "Current snapshot order:", "POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM", "Pilot mode: new capital only goes to 30d + 90d laggards with a fresh 7d recovery"]) {
     if (!bundle.includes(required)) throw new Error("candidate simplified UI is missing " + required);
   }
   for (const forbidden of ["Research thesis + falsifiers", "Break conditions:", "Not yet measured:", " · thesis "]) {
@@ -194,6 +194,25 @@ async function verifyCandidate() {
     const strategy = await jsonCheck(localOrigin, '/api/strategy21', {}, [200], 'candidate strategy account context');
     if (list.payload.snapshots?.[0]?.id !== afterIdentity.id || strategy.payload.asOf !== new Date(afterIdentity.asOf).toISOString()) throw new Error('snapshot endpoints disagree');
     const account = strategy.payload.strategy21;
+    if (account?.recommendationMode !== 'DELAYED_ROTATION_PILOT_V1') throw new Error('delayed-rotation pilot recommendation mode is not active');
+    const rotationCalibration = account?.delayedRotationCalibration;
+    if (!rotationCalibration || rotationCalibration.mode !== 'DELAYED_ROTATION_PILOT_V1') throw new Error('delayed-rotation watchlist calibration missing');
+    if (!(Number(rotationCalibration.sampleSize) >= 10)) throw new Error('delayed-rotation calibration has insufficient live watchlist coverage');
+    const rotationAssets = strategy.payload.assets ?? [];
+    const qualifiedRotationAssets = [];
+    const authorizedRotationAssets = [];
+    for (const asset of rotationAssets) {
+      const rotation = asset?.strategy21?.delayedRotation;
+      if (!rotation) throw new Error(`${asset?.symbol ?? 'unknown'} missing delayed-rotation profile`);
+      if (rotation.status === 'QUALIFIED') qualifiedRotationAssets.push(asset.symbol);
+      if (Number(asset?.strategy21?.positionAuthority?.maxNextOrderUsd ?? 0) > 0) {
+        authorizedRotationAssets.push(asset.symbol);
+        if (rotation.status !== 'QUALIFIED') {
+          throw new Error(`${asset.symbol} received new-buy authority without strict delayed-rotation qualification`);
+        }
+      }
+    }
+    console.log(`PASS candidate delayed-rotation pilot calibrated ${rotationCalibration.sampleSize} watchlist assets; market=${rotationCalibration.marketStatus}; qualified=${qualifiedRotationAssets.length} [${qualifiedRotationAssets.join(',')}]; authorized=${authorizedRotationAssets.length} [${authorizedRotationAssets.join(',')}]`);
     if (!(account?.portfolioDependency?.grossCurrentExposureUsd > 200)) throw new Error('account holdings missing from Strategy 2.1');
     if (![account.fundedCashUsd, account.freeCashUsd, account.reservedBuysUsd].every(v => Number.isFinite(v) && v >= 0)) throw new Error('account cash accounting invalid');
     if (Math.abs((account.freeCashUsd + account.reservedBuysUsd) - account.fundedCashUsd) > 0.05) throw new Error('account cash components do not reconcile');
@@ -215,7 +234,8 @@ async function verifyCandidate() {
     if (researchIntegrityBundle.evidenceLedger.some(item => item?.pointInTimeValid === false && item?.limitations?.length === 0)) throw new Error('invalid point-in-time evidence lacks limitations');
     const outcomes = await jsonCheck(localOrigin, '/api/outcomes?limit=5', {}, [200], 'candidate decision outcome memory');
     if (outcomes.payload?.version !== '1.0' || !Array.isArray(outcomes.payload?.records)) throw new Error('decision outcome memory contract missing');
-    console.log('PASS candidate research integrity, read-only capability manifest and outcome-memory contract');
+    if (!outcomes.payload.records.some(record => record?.strategyTag === 'DELAYED_ROTATION_PILOT_V1')) throw new Error('delayed-rotation outcome tagging missing');
+    console.log('PASS candidate research integrity, read-only capability manifest and delayed-rotation outcome-memory contract');
     console.log('PASS candidate holdings, funded cash, commitments, liquidity gates and snapshot consistency');
     for (const symbol of ['BTC', 'AAVE', 'HBAR', 'XRP']) {
       const asset = strategy.payload.assets.find(a => a.symbol === symbol);
@@ -255,13 +275,6 @@ async function verifyCandidate() {
     await verifyNoSecret(localOrigin, ['/', '/api/health', '/api/integrity', '/api/db-info', '/api/watchlist', '/api/providers', '/api/snapshots?limit=5']);
     console.log('PASS candidate secret absent from checked UI/API responses');
     await verifySimpleUi(localOrigin);
-    await jsonCheck(localOrigin, '/api/prediction/shadow?symbol=BTC', {}, [401], 'candidate shadow diagnostics require operator token');
-    const shadow = await jsonCheck(localOrigin, '/api/prediction/shadow?symbol=BTC', {
-      headers: { Authorization: `Bearer ${token}` },
-    }, [200], 'candidate shadow diagnostics');
-    if (shadow.payload?.mode !== 'SHADOW' || shadow.payload?.authority !== 'ABSTAIN') {
-      throw new Error('candidate prediction layer gained decision authority');
-    }
 
     console.log(JSON.stringify({
       checkedAt: new Date().toISOString(),

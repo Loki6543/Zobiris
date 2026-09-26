@@ -22,6 +22,8 @@ RUN node scripts/v076_patch_production.mjs \
   && cp -r audit-fixes/. /app/ \
   && rm -rf audit-fixes
 COPY deploy/prediction/overrides/. /app/
+# Keep the root hosted gate canonical; prediction overlays must not silently replace release policy.
+COPY railway_hosted_gate.mjs /app/scripts/railway_hosted_gate.mjs
 
 RUN npm ci --no-audit --no-fund
 RUN npm run test:decision-boundary \

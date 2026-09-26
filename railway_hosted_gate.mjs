@@ -198,14 +198,21 @@ async function verifyCandidate() {
     const rotationCalibration = account?.delayedRotationCalibration;
     if (!rotationCalibration || rotationCalibration.mode !== 'DELAYED_ROTATION_PILOT_V1') throw new Error('delayed-rotation watchlist calibration missing');
     if (!(Number(rotationCalibration.sampleSize) >= 10)) throw new Error('delayed-rotation calibration has insufficient live watchlist coverage');
-    for (const asset of strategy.payload.assets ?? []) {
+    const rotationAssets = strategy.payload.assets ?? [];
+    const qualifiedRotationAssets = [];
+    const authorizedRotationAssets = [];
+    for (const asset of rotationAssets) {
       const rotation = asset?.strategy21?.delayedRotation;
       if (!rotation) throw new Error(`${asset?.symbol ?? 'unknown'} missing delayed-rotation profile`);
-      if (rotation.status !== 'QUALIFIED' && Number(asset?.strategy21?.positionAuthority?.maxNextOrderUsd ?? 0) > 0) {
-        throw new Error(`${asset.symbol} received new-buy authority without strict delayed-rotation qualification`);
+      if (rotation.status === 'QUALIFIED') qualifiedRotationAssets.push(asset.symbol);
+      if (Number(asset?.strategy21?.positionAuthority?.maxNextOrderUsd ?? 0) > 0) {
+        authorizedRotationAssets.push(asset.symbol);
+        if (rotation.status !== 'QUALIFIED') {
+          throw new Error(`${asset.symbol} received new-buy authority without strict delayed-rotation qualification`);
+        }
       }
     }
-    console.log(`PASS candidate delayed-rotation pilot calibrated ${rotationCalibration.sampleSize} watchlist assets; market=${rotationCalibration.marketStatus}`);
+    console.log(`PASS candidate delayed-rotation pilot calibrated ${rotationCalibration.sampleSize} watchlist assets; market=${rotationCalibration.marketStatus}; qualified=${qualifiedRotationAssets.length} [${qualifiedRotationAssets.join(',')}]; authorized=${authorizedRotationAssets.length} [${authorizedRotationAssets.join(',')}]`);
     if (!(account?.portfolioDependency?.grossCurrentExposureUsd > 200)) throw new Error('account holdings missing from Strategy 2.1');
     if (![account.fundedCashUsd, account.freeCashUsd, account.reservedBuysUsd].every(v => Number.isFinite(v) && v >= 0)) throw new Error('account cash accounting invalid');
     if (Math.abs((account.freeCashUsd + account.reservedBuysUsd) - account.fundedCashUsd) > 0.05) throw new Error('account cash components do not reconcile');
