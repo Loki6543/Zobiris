@@ -7,6 +7,25 @@ const PAIRS: Record<string, string> = {
   DOGE: "DOGEUSD", ADA: "ADAUSD",
 };
 export const compareSymbols = Object.keys(PAIRS);
+let universeCache: { expires: number; symbols: string[] } | null = null;
+export async function compareUniverse(): Promise<string[]> {
+  if (universeCache && universeCache.expires > Date.now()) return universeCache.symbols;
+  const response = await fetch("https://api.kraken.com/0/public/AssetPairs", {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error("Kraken pair list unavailable");
+  const payload = await response.json() as {
+    error?: string[]; result?: Record<string, { altname?: string; status?: string }>;
+  };
+  if (payload.error?.length || !payload.result) throw new Error("Kraken pair list unavailable");
+  const listed = new Set(Object.values(payload.result)
+    .filter(pair => !pair.status || pair.status === "online")
+    .map(pair => pair.altname));
+  const symbols = compareSymbols.filter(symbol => listed.has(PAIRS[symbol]));
+  if (symbols.length < 2) throw new Error("No comparable Kraken USD pairs available");
+  universeCache = { expires: Date.now() + 1800000, symbols };
+  return symbols;
+}
 export type Series = { symbol: string; points: { time: number; close: number }[] };
 type Candle = { time: number; close: number };
 const cache = new Map<string, { expires: number; candles: Candle[] }>();
