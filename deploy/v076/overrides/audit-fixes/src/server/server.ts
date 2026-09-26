@@ -1,4 +1,4 @@
-import { accountCapital, accountProvenance, accountMappings, buildAccountDependency } from "./accountContext.js";
+import { accountCapital, accountProvenance, accountMappings, buildAccountDependency, getAccountView, refreshAccountContextFromKraken, startAccountContextSync } from "./accountContext.js";
 /**
  * Zobiris HTTP API + static SPA server.
  *
@@ -45,7 +45,10 @@ import { loadWatchlist as loadCmcWatchlist } from "../scripts/_watchlist.js";
 import { HOLDINGS, OPEN_ORDERS } from "../ui/simplePortfolioData.js";
 async function loadWatchlist() {
   const assets = new Map((await loadCmcWatchlist()).map(a => [a.symbol, a]));
-  for (const asset of [...HOLDINGS, ...OPEN_ORDERS]) if (!assets.has(asset.symbol)) assets.set(asset.symbol, {symbol: asset.symbol, name: asset.name});
+  const account = getAccountView();
+  for (const asset of [...HOLDINGS, ...OPEN_ORDERS, ...account.holdings, ...account.openOrders]) {
+    if (!assets.has(asset.symbol)) assets.set(asset.symbol, {symbol: asset.symbol, name: asset.name});
+  }
   return [...assets.values()];
 }
 import { buildCaseFile } from "../portfolio/caseFile.js";
@@ -342,6 +345,7 @@ async function runRefreshHandler(
   try {
     const stale = Number(url.searchParams.get("stale") ?? "0") || 0;
     const adapters = buildAdapters({ staleSeconds: stale, live });
+    await refreshAccountContextFromKraken();
     const watchlist = await loadWatchlist();
     const startedAt = Date.now();
     const result = await runRefresh({
@@ -433,11 +437,28 @@ interface ApiRouter {
 
 const API: ApiRouter = {
   "GET /api/health": (_req, res) => {
+    const account = getAccountView();
     jsonResponse(res, 200, {
       status: "ok",
       db: DEFAULT_DB,
       time: new Date().toISOString(),
+      krakenAccount: {
+        privateAccountSynced: account.privateAccountSynced,
+        capturedAt: account.capturedAt,
+        syncMode: account.syncMode,
+        websocketConnected: account.websocketConnected,
+        lastError: account.lastError,
+        dangerousPermissionCount: account.dangerousPermissionsDetected.length,
+      },
     });
+  },
+  "GET /api/account": async (_req, res) => {
+    try {
+      await refreshAccountContextFromKraken();
+      jsonResponse(res, 200, { account: getAccountView() });
+    } catch (e) {
+      errorResponse(res, 500, e);
+    }
   },
   "GET /api/integrity": (_req, res) => {
     const storage = openStorage({ path: DEFAULT_DB });
@@ -1083,6 +1104,7 @@ export function createZobirisServer() {
 
 export function startZobirisServer(port = PORT, host = HOST) {
   const server = createZobirisServer();
+  startAccountContextSync();
 
   // Strategy 2.1 execution-liquidity warm-up. This only samples Kraken public
   // market data; it never submits orders or uses private exchange endpoints.
@@ -1123,6 +1145,7 @@ export function startZobirisServer(port = PORT, host = HOST) {
     console.log(`SPA: ${PUBLIC_DIR}`);
     console.log(`Endpoints:`);
     console.log(`  GET  /api/health`);
+    console.log(`  GET  /api/account`);
     console.log(`  GET  /api/snapshot/latest`);
     console.log(`  GET  /api/snapshot/:id`);
     console.log(`  GET  /api/snapshots?limit=20`);
