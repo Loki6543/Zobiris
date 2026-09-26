@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 
 import { openStorage } from "../storage/client.js";
+import { compareDaily, compareSymbols } from "../compareLab/compare.js";
 import {
   getRecentSnapshots,
   getSnapshotById,
@@ -445,6 +446,19 @@ interface ApiRouter {
 }
 
 const API: ApiRouter = {
+  "GET /api/compare/universe": (_req, res) => jsonResponse(res, 200, { symbols: compareSymbols, source: "Kraken public OHLC" }),
+  "GET /api/compare/daily": async (req, res) => {
+    const url = new URL(req.url ?? "/", "http://localhost");
+    try {
+      const symbols = (url.searchParams.get("symbols") ?? "").split(",");
+      const days = Number(url.searchParams.get("days") ?? "30");
+      jsonResponse(res, 200, await compareDaily(symbols, days));
+    } catch (error) {
+      jsonResponse(res, error instanceof RangeError ? 400 : 503, {
+        error: error instanceof Error ? error.message : "Comparison unavailable",
+      });
+    }
+  },
   "GET /api/health": (_req, res) => {
     const account = getAccountView();
     jsonResponse(res, 200, {
