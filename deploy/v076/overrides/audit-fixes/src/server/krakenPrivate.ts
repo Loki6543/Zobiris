@@ -257,16 +257,20 @@ function parseTrades(raw: any): KrakenSyncedTrade[] {
 }
 
 const DANGEROUS_PERMISSION_PATTERNS = [
-  /modify-trades/i,
-  /close-trades/i,
-  /withdraw-funds/i,
-  /add-funds/i,
-  /earn-funds/i,
-  /add-withdraw-address/i,
-  /update-withdraw-address/i,
+  /modify[- ]?(trades|orders)/i,
+  /(create|add|place)[- ]?(trade|order)/i,
+  /(cancel|close)[- ]?(trade|order)/i,
+  /withdraw/i,
+  /deposit/i,
+  /transfer/i,
+  /earn/i,
+  /stake|staking/i,
+  /add[- ]?funds/i,
+  /add[- ]?withdraw[- ]?address/i,
+  /update[- ]?withdraw[- ]?address/i,
 ];
 
-function dangerousPermissions(permissions: string[]): string[] {
+export function dangerousPermissions(permissions: string[]): string[] {
   return permissions.filter((permission) => DANGEROUS_PERMISSION_PATTERNS.some((pattern) => pattern.test(permission)));
 }
 
@@ -297,6 +301,21 @@ export async function refreshKrakenAccount(options: { force?: boolean } = {}): P
     try {
       // Keep private calls sequential so nonce order cannot race at Kraken.
       const keyInfo = await privateCall("GetApiKeyInfo");
+      const permissions = Array.isArray((keyInfo as any)?.permissions)
+        ? (keyInfo as any).permissions.map((value: unknown) => String(value))
+        : [];
+      const forbidden = dangerousPermissions(permissions);
+      if (forbidden.length) {
+        state = {
+          ...fallbackState(),
+          permissions,
+          dangerousPermissionsDetected: forbidden,
+          lastError: `Kraken key rejected: prohibited write-capable permission(s): ${forbidden.join(", ")}`,
+        };
+        updateCallback?.();
+        return getKrakenAccountState();
+      }
+
       const balanceResult = await privateCall("Balance");
       const openOrdersResult = await privateCall("OpenOrders", { trades: "false" });
       const tradesResult = await privateCall("TradesHistory", { type: "all", trades: "false" });
@@ -313,10 +332,6 @@ export async function refreshKrakenAccount(options: { force?: boolean } = {}): P
           fallbackPriceUsd: FALLBACK_PRICE.get(symbol) ?? 0,
         }))
         .sort((a, b) => a.symbol.localeCompare(b.symbol));
-
-      const permissions = Array.isArray((keyInfo as any)?.permissions)
-        ? (keyInfo as any).permissions.map((value: unknown) => String(value))
-        : [];
 
       state = {
         privateAccountSynced: true,
