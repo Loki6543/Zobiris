@@ -59,8 +59,10 @@ function Chart({ series }: { series: Series[] }) {
     <text x="680" y="310" fill="#aeb9c9" fontSize="12">{formatUtcDay(series[0]!.points.at(-1)!.time)}</text>
   </svg>;
 }
-export function CompareLab() {
-  const [mode, setMode] = useState<"compare" | "patterns">("compare");
+export function CompareLab({ rankedAssets = [], focusSymbol = "BTC" }: { rankedAssets?: any[]; focusSymbol?: string }) {
+  const [mode, setMode] = useState<"compare" | "patterns" | "analysis">("compare");
+  const [selectedSymbol, setSelectedSymbol] = useState(focusSymbol);
+  useEffect(() => { setSelectedSymbol(focusSymbol); if (focusSymbol !== "BTC") setMode("analysis"); }, [focusSymbol]);
   const [universe, setUniverse] = useState<string[]>([]);
   const [symbols, setSymbols] = useState(["BTC", "SOL", "LINK"]);
   const [days, setDays] = useState(30);
@@ -94,6 +96,9 @@ export function CompareLab() {
       .then(setPatterns).catch(e => { if (e.name !== "AbortError") setPatternsError(e.message); });
     return () => controller.abort();
   }, [mode, symbols.join(","), threshold]);
+  const selectedAsset = rankedAssets.find(asset => String(asset?.symbol ?? "").toUpperCase() === selectedSymbol);
+  const btcSol = data?.series.find(s => s.symbol === "BTC") && data?.series.find(s => s.symbol === "SOL")
+    ? statistics(data.series.find(s => s.symbol === "BTC")!, data.series.find(s => s.symbol === "SOL")!) : null;
   const rows = useMemo(() => data?.series.map((s, i) => ({
     symbol: s.symbol, color: colors[i], ...statistics(data.series[0]!, s),
   })) ?? [], [data]);
@@ -102,14 +107,18 @@ export function CompareLab() {
       <h1 style={{ marginTop: 0 }}>Compare Lab</h1>
       <p style={{ color: "#b5c0d0" }}>Choose 2–5 coins and investigate how they moved together. All statistics use completed Kraken daily candles.</p>
       <div style={{ display: "flex", gap: 8, marginBottom: 15 }}>
-        {(["compare", "patterns"] as const).map(value => <button key={value} type="button" style={{
+        {(["compare", "patterns", "analysis"] as const).map(value => <button key={value} type="button" style={{
           ...button, background: mode === value ? "#174e59" : "#252e3c",
         }} onClick={() => {
           setMode(value);
           if (value === "patterns") setSymbols(previous => ["BTC", ...previous.filter(s => s !== "BTC")].slice(0, 5));
-        }}>{value === "compare" ? "Compare" : "BTC sideways patterns"}</button>)}
+        }}>{value === "compare" ? "BTC / SOL & compare" : value === "patterns" ? "BTC sideways patterns" : "Crypto analysis"}</button>)}
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 15 }}>
+      {mode === "compare" ? <button type="button" style={{ ...button, marginBottom: 12 }} onClick={() => { setSymbols(["BTC", "SOL"]); setDays(30); }}>BTC / SOL analysis preset</button> : null}
+      {mode === "analysis" ? <label style={{ color: "#b5c0d0" }}>Analyze coin{" "}<select aria-label="Analyze coin" value={selectedSymbol} onChange={event => setSelectedSymbol(event.target.value)} style={button}>
+        {[...new Set(rankedAssets.map(asset => String(asset?.symbol ?? "").toUpperCase()))].sort().map(symbol => <option key={symbol}>{symbol}</option>)}
+      </select></label> : null}
+      {mode !== "analysis" && <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 15 }}>
         {universe.map(symbol => <button key={symbol} type="button" style={{
           ...button, background: symbols.includes(symbol) ? "#174e59" : "#252e3c",
         }} aria-pressed={symbols.includes(symbol)} onClick={() => setSymbols(previous =>
@@ -117,19 +126,35 @@ export function CompareLab() {
           : previous.includes(symbol) ? previous.length > 2 ? previous.filter(s => s !== symbol) : previous
             : previous.length < 5 ? [...previous, symbol] : previous)}>{symbol}</button>)}
       </div>
+      }
       {mode === "compare" ? <div style={{ display: "flex", gap: 8 }}>
         {[7, 30, 90, 180].map(n => <button key={n} type="button" style={{
           ...button, background: n === days ? "#174e59" : "#252e3c",
         }} onClick={() => setDays(n)}>{n} days</button>)}
-      </div> : <div style={{ display: "flex", gap: 8 }}>
+      </div> : mode === "patterns" ? <div style={{ display: "flex", gap: 8 }}>
         {[1, 2, 3].map(n => <button key={n} type="button" style={{
           ...button, background: n === threshold ? "#174e59" : "#252e3c",
         }} onClick={() => setThreshold(n)}>BTC ±{n}%</button>)}
-      </div>}
+      </div> : null}
     </section>
+    {mode === "analysis" && <section style={card}>
+      <h2 style={{ marginTop: 0 }}>{selectedSymbol} crypto analysis</h2>
+      {selectedAsset ? <>
+        <p style={{ color: "#b5c0d0" }}>Research rank #{selectedAsset.strategy21?.researchRank ?? "—"} · research score {Number(selectedAsset.strategy21?.researchScore ?? selectedAsset.opportunity?.adjusted ?? 0).toFixed(1)} · confidence {Number(selectedAsset.confidence?.pct ?? 0).toFixed(1)}%</p>
+        <p><strong>Current decision:</strong> {selectedAsset.strategy21?.action ?? selectedAsset.action ?? "Research"} · {selectedAsset.strategy21?.assetState ?? "state unknown"}</p>
+        <p><strong>Kraken execution:</strong> {String(selectedAsset.strategy21?.eligibility?.status ?? "UNKNOWN").replaceAll("_", " ")} · maximum next order {Number(selectedAsset.strategy21?.positionAuthority?.maxNextOrderUsd ?? 0).toFixed(2)} USD</p>
+        <p><strong>What needs to improve:</strong> {selectedAsset.strategy21?.eligibility?.failureReasons?.[0] ?? selectedAsset.decisionBoundary?.nearestFlip ?? "Review the latest evidence and entry quality."}</p>
+        <p style={{ color: "#9eabbc", fontSize: 13 }}>This is the current Strategy 2.1 snapshot, including its execution blocks. Research rank does not authorize a limit order.</p>
+      </> : <p>No current research snapshot for this coin. Refresh Market Today.</p>}
+    </section>}
     {mode === "compare" && busy && <p role="status">Loading Kraken candles…</p>}
     {mode === "compare" && error && <p role="alert" style={{ color: "#ff9999" }}>{error}</p>}
-    {mode === "compare" && data && <><section style={card}>
+    {mode === "compare" && data && <>{btcSol && <section style={card}>
+      <h2 style={{ marginTop: 0 }}>BTC / SOL analysis</h2>
+      <p>SOL {btcSol.change >= 0 ? "+" : ""}{btcSol.change.toFixed(1)}% over the selected window · {btcSol.relative >= 0 ? "+" : ""}{btcSol.relative.toFixed(1)}% relative to BTC.</p>
+      <p>Correlation {btcSol.correlation?.toFixed(2) ?? "—"} · beta {btcSol.beta?.toFixed(2) ?? "—"} · SOL max drawdown {btcSol.drawdown.toFixed(1)}%.</p>
+      <p style={{ color: "#9eabbc", fontSize: 13 }}>Completed Kraken daily candles only. These describe the observed relationship, not a forecast or entry instruction.</p>
+    </section>}<section style={card}>
       <h2 style={{ marginTop: 0 }}>Indexed performance</h2>
       <p style={{ color: "#aeb9c9" }}>Each coin starts at 100. Base for relative statistics: {data.series[0]!!.symbol}.</p>
       <Chart series={data.series} />
