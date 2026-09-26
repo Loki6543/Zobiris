@@ -47,7 +47,7 @@ export async function compareDaily(rawSymbols: string[], days: number) {
     return i === 0 ? times : new Set([...set].filter(t => times.has(t)));
   }, new Set());
   const times = [...common].sort((a, b) => a - b).slice(-(days + 1));
-  if (times.length < Math.min(days + 1, 8))
+  if (times.length < days + 1)
     throw new Error("Insufficient overlapping completed Kraken candles.");
   const series: Series[] = histories.map(({ symbol, candles }) => {
     const byTime = new Map(candles.map(c => [c.time, c.close]));
