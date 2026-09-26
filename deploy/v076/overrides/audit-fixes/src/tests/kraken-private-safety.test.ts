@@ -1,27 +1,28 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, it } from "vitest";
 import { dangerousPermissions } from "../server/krakenPrivate.js";
 
-test("Kraken read-only scopes are accepted", () => {
-  const permissions = [
-    "Query Funds",
-    "Query Open Orders & Trades",
-    "Query Closed Orders & Trades",
-    "Query Ledger Entries",
-    "Access WebSockets API",
-  ];
-  assert.deepEqual(dangerousPermissions(permissions), []);
-});
+describe("Kraken private API safety boundary", () => {
+  it("accepts read-only scopes", () => {
+    const permissions = [
+      "Query Funds",
+      "Query Open Orders & Trades",
+      "Query Closed Orders & Trades",
+      "Query Ledger Entries",
+      "Access WebSockets API",
+    ];
+    expect(dangerousPermissions(permissions)).toEqual([]);
+  });
 
-test("Kraken write-capable scopes are detected fail-closed", () => {
-  const permissions = [
-    "Query Funds",
-    "Modify Orders",
-    "Cancel/Close Orders",
-    "Withdraw Funds",
-  ];
-  const blocked = dangerousPermissions(permissions);
-  assert.ok(blocked.includes("Modify Orders"));
-  assert.ok(blocked.includes("Cancel/Close Orders"));
-  assert.ok(blocked.includes("Withdraw Funds"));
+  it("detects write-capable scopes fail-closed", () => {
+    const permissions = [
+      "Query Funds",
+      "Modify Orders",
+      "Cancel/Close Orders",
+      "Withdraw Funds",
+    ];
+    const blocked = dangerousPermissions(permissions);
+    expect(blocked).toContain("Modify Orders");
+    expect(blocked).toContain("Cancel/Close Orders");
+    expect(blocked).toContain("Withdraw Funds");
+  });
 });
