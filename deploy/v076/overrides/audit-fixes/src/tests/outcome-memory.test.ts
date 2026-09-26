@@ -72,7 +72,7 @@ it("tracks adverse excursion independently of horizon evaluation", async () => {
     await updateOutcomeMemory(path, snapshot("2026-09-25T20:00:00.000Z", 100));
     await updateOutcomeMemory(path, snapshot("2026-09-25T20:30:00.000Z", 92));
     const memory = await readOutcomeMemory(path, "BTC");
-    expect(memory.records[0]!.maxAdversePct).toBeLessThanOrEqual(-8);
+    expect(memory.records[0]!.maxAdversePct).toBeCloseTo(-8, 9);
     expect(memory.records[0]!.evaluations.find((item) => item.horizon === "1H")!.evaluatedAt).toBeNull();
   } finally {
     await rm(dir, { recursive: true, force: true });
