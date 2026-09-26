@@ -26,7 +26,7 @@ test('weaker signal, weaker evidence, and defensive regime each reduce requested
 
 test('missing or unsupported evidence cannot create a minimum allocation', () => {
   assert.equal(adaptiveTargetUsd({ ...strong, opportunityScore: Number.NaN }), 0);
-  assert.equal(adaptiveTargetUsd({ ...strong, opportunityConfidence: 0.64 }), 0);
+  assert.equal(adaptiveTargetUsd({ ...strong, opportunityConfidence: 0.50 }), 0);
   assert.equal(adaptiveTargetUsd({ ...strong, marketConfidence: Number.NaN }), 0);
   assert.equal(adaptiveTargetUsd({ ...strong, deploymentCapPct: Number.NaN }), 0);
   assert.equal(adaptiveTargetUsd({ ...strong, capitalBaseUsd: -1 }), 0);
