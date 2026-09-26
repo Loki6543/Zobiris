@@ -22,6 +22,9 @@ export interface DecisionOutcomeRecord {
   researchScore: number;
   evidenceQuality: number;
   thesisId: string;
+  strategyTag?: string;
+  strategyStatus?: string;
+  recommendedPullbackPct?: number | null;
   maxFavorablePct: number;
   maxAdversePct: number;
   evaluations: OutcomeEvaluation[];
@@ -50,6 +53,9 @@ interface SnapshotLike {
           researchScore?: number;
           evidenceQuality?: number;
           thesisId?: string;
+          strategyTag?: string;
+          strategyStatus?: string;
+          recommendedPullbackPct?: number | null;
           horizons?: Array<{ horizon: OutcomeHorizon; dueAt: string }>;
         };
       };
@@ -108,6 +114,9 @@ function seedToRecord(seed: NonNullable<NonNullable<NonNullable<SnapshotLike["ra
     researchScore: Number.isFinite(Number(seed.researchScore)) ? Number(seed.researchScore) : 0,
     evidenceQuality: Number.isFinite(Number(seed.evidenceQuality)) ? Number(seed.evidenceQuality) : 0,
     thesisId: seed.thesisId,
+    ...(seed.strategyTag ? { strategyTag: seed.strategyTag } : {}),
+    ...(seed.strategyStatus ? { strategyStatus: seed.strategyStatus } : {}),
+    ...(seed.recommendedPullbackPct != null ? { recommendedPullbackPct: Number(seed.recommendedPullbackPct) } : {}),
     maxFavorablePct: 0,
     maxAdversePct: 0,
     evaluations: horizons.map((item) => ({

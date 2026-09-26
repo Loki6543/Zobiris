@@ -22,6 +22,9 @@ function snapshot(asOf: string, price: number) {
             researchScore: 70,
             evidenceQuality: 0.8,
             thesisId: "btc:2026-09-25T20:00:00.000Z:thesis-v1",
+            strategyTag: "DELAYED_ROTATION_PILOT_V1",
+            strategyStatus: "QUALIFIED",
+            recommendedPullbackPct: 5,
             horizons: [
               { horizon: "1H" as const, dueAt: "2026-09-25T21:00:00.000Z" },
               { horizon: "4H" as const, dueAt: "2026-09-26T00:00:00.000Z" },
@@ -44,6 +47,9 @@ it("records a seed and resolves due horizons without look-ahead", async () => {
     await updateOutcomeMemory(path, snapshot("2026-09-25T20:00:00.000Z", 100));
     let memory = await readOutcomeMemory(path, "BTC");
     expect(memory.records.length).toBe(1);
+    expect(memory.records[0]!.strategyTag).toBe("DELAYED_ROTATION_PILOT_V1");
+    expect(memory.records[0]!.strategyStatus).toBe("QUALIFIED");
+    expect(memory.records[0]!.recommendedPullbackPct).toBe(5);
     expect(memory.records[0]!.evaluations.find((item) => item.horizon === "1H")!.evaluatedAt).toBeNull();
 
     await updateOutcomeMemory(path, snapshot("2026-09-25T21:05:00.000Z", 105));

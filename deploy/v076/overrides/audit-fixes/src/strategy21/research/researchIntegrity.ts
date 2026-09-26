@@ -142,6 +142,9 @@ export interface DecisionOutcomeSeed {
   researchScore: number;
   evidenceQuality: number;
   thesisId: string;
+  strategyTag?: string;
+  strategyStatus?: string;
+  recommendedPullbackPct?: number | null;
   horizons: Array<{ horizon: "1H" | "4H" | "1D" | "3D" | "7D"; dueAt: string }>;
 }
 
@@ -369,6 +372,9 @@ export interface BuildResearchIntegrityInput {
     resilience: number | null;
   };
   activeRiskGates: Array<{ code: string; effect: string }>;
+  strategyTag?: string;
+  strategyStatus?: string;
+  recommendedPullbackPct?: number | null;
 }
 
 export function buildResearchIntegrity(input: BuildResearchIntegrityInput): ResearchIntegrityBundle {
@@ -560,6 +566,9 @@ export function buildResearchIntegrity(input: BuildResearchIntegrityInput): Rese
     researchScore: input.researchScore,
     evidenceQuality,
     thesisId,
+    ...(input.strategyTag ? { strategyTag: input.strategyTag } : {}),
+    ...(input.strategyStatus ? { strategyStatus: input.strategyStatus } : {}),
+    ...(input.recommendedPullbackPct != null ? { recommendedPullbackPct: input.recommendedPullbackPct } : {}),
     horizons: [
       { horizon: "1H", dueAt: hours(1) },
       { horizon: "4H", dueAt: hours(4) },

@@ -227,7 +227,8 @@ async function verifyCandidate() {
     if (researchIntegrityBundle.evidenceLedger.some(item => item?.pointInTimeValid === false && item?.limitations?.length === 0)) throw new Error('invalid point-in-time evidence lacks limitations');
     const outcomes = await jsonCheck(localOrigin, '/api/outcomes?limit=5', {}, [200], 'candidate decision outcome memory');
     if (outcomes.payload?.version !== '1.0' || !Array.isArray(outcomes.payload?.records)) throw new Error('decision outcome memory contract missing');
-    console.log('PASS candidate research integrity, read-only capability manifest and outcome-memory contract');
+    if (!outcomes.payload.records.some(record => record?.strategyTag === 'DELAYED_ROTATION_PILOT_V1')) throw new Error('delayed-rotation outcome tagging missing');
+    console.log('PASS candidate research integrity, read-only capability manifest and delayed-rotation outcome-memory contract');
     console.log('PASS candidate holdings, funded cash, commitments, liquidity gates and snapshot consistency');
     for (const symbol of ['BTC', 'AAVE', 'HBAR', 'XRP']) {
       const asset = strategy.payload.assets.find(a => a.symbol === symbol);

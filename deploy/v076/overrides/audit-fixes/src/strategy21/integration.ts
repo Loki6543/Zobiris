@@ -476,6 +476,11 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       activeRiskGates: (asset.riskGates ?? [])
         .filter((gate) => gate.active)
         .map((gate) => ({ code: gate.code ?? 'UNSPECIFIED_RISK_GATE', effect: gate.effect ?? 'advisory' })),
+      ...(recommendationMode === DELAYED_ROTATION_MODE ? {
+        strategyTag: DELAYED_ROTATION_MODE,
+        strategyStatus: delayedRotation.status,
+        recommendedPullbackPct: delayedRotation.recommendedPullbackPct,
+      } : {}),
     });
     return { asset, decision, positionAuthority, requestedTargetUsd, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity, delayedRotation };
   });
