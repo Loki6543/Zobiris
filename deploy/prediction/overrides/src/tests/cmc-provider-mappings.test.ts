@@ -21,16 +21,16 @@ describe("current watchlist provider identities", () => {
   });
 
   it("pins exact identities for TRX, ATOM, XDC, and the ambiguous KITE ticker", () => {
-    for (const [symbol, cmcNumericId, coingeckoId] of [
-      ["TRX", "1958", "tron"],
-      ["ATOM", "3794", "cosmos"],
-      ["XDC", "2634", "xdce-crowd-sale"],
-      ["KITE", "38828", "kite-2"],
+    for (const [symbol, cmcNumericId, coingeckoId, krakenPair] of [
+      ["TRX", "1958", "tron", "TRXUSD"],
+      ["ATOM", "3794", "cosmos", "ATOMUSD"],
+      ["XDC", "2634", "xdce-crowd-sale", "XDCUSD"],
+      ["KITE", "38828", "kite-2", undefined],
     ]) {
       const entry = mappings.find((item) => item.symbol === symbol);
       expect(entry?.providerIds.cmcNumericId).toBe(cmcNumericId);
       expect(entry?.providerIds.coingeckoId).toBe(coingeckoId);
-      expect(entry?.providerIds.krakenPair).toBeUndefined();
+      expect(entry?.providerIds.krakenPair).toBe(krakenPair);
     }
   });
 });

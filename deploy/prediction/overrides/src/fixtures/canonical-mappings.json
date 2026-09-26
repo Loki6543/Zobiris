@@ -89,11 +89,12 @@
     "providerIds": {
       "cmcNumericId": "1958",
       "cmcSlug": "tron",
-      "coingeckoId": "tron"
+      "coingeckoId": "tron",
+      "krakenPair": "TRXUSD"
     },
     "mappingStatus": "verified",
     "mappingConfidence": 0.95,
-    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
+    "notes": "CMC and CoinGecko identity verified 2026-09-26; Kraken USD spot pair observed in live Strategy 2.1 liquidity profile. Execution remains blocked until 14-day history and all risk gates pass."
   },
   {
     "symbol": "ZEC",
@@ -493,11 +494,12 @@
     "providerIds": {
       "cmcNumericId": "3794",
       "cmcSlug": "cosmos",
-      "coingeckoId": "cosmos"
+      "coingeckoId": "cosmos",
+      "krakenPair": "ATOMUSD"
     },
     "mappingStatus": "verified",
     "mappingConfidence": 0.95,
-    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
+    "notes": "CMC and CoinGecko identity verified 2026-09-26; Kraken USD spot pair observed in live Strategy 2.1 liquidity profile. Execution remains blocked until 14-day history and all risk gates pass."
   },
   {
     "symbol": "XDC",
@@ -507,11 +509,12 @@
     "providerIds": {
       "cmcNumericId": "2634",
       "cmcSlug": "xdc-network",
-      "coingeckoId": "xdce-crowd-sale"
+      "coingeckoId": "xdce-crowd-sale",
+      "krakenPair": "XDCUSD"
     },
     "mappingStatus": "verified",
     "mappingConfidence": 0.95,
-    "notes": "CMC exact symbol/name and CoinGecko identity verified 2026-09-26. Kraken spot pair and liquidity are not asserted; execution requires live Kraken certification."
+    "notes": "CMC and CoinGecko identity verified 2026-09-26; Kraken USD spot pair observed in live Strategy 2.1 liquidity profile. Execution remains blocked until 14-day history and all risk gates pass."
   },
   {
     "symbol": "PENGU",
