@@ -100,7 +100,7 @@ test("adversarial discovery allocation is symmetric and does not control conclus
   const budget = NARRATIVE_RESEARCH_POLICY.discoveryBudget;
   const total = Object.values(budget).reduce((sum, value) => sum + value, 0);
   assert.equal(total, 1);
-  assert.equal(budget.adversarialAlternativeMechanisms + budget.counterContrarianFalsification, 0.6);
+  assert.ok(Math.abs((budget.adversarialAlternativeMechanisms + budget.counterContrarianFalsification) - 0.6) < 1e-12);
   assert.match(NARRATIVE_RESEARCH_POLICY.conclusionWeighting, /EVIDENCE_QUALITY/);
 });
 
