@@ -43,6 +43,8 @@ export type KrakenAccountState = {
   cashUsd: number;
   holdings: KrakenSyncedHolding[];
   openOrders: KrakenSyncedOrder[];
+  openOrdersReceivedCount: number | null;
+  openOrdersParsedCount: number;
   trades: KrakenSyncedTrade[];
   permissions: string[];
   dangerousPermissionsDetected: string[];
@@ -80,6 +82,8 @@ function fallbackState(): KrakenAccountState {
       remainingQuantity: o.targetPriceUsd > 0 ? o.amountUsd / o.targetPriceUsd : 0,
       status: "open",
     })),
+    openOrdersReceivedCount: null,
+    openOrdersParsedCount: FALLBACK_ORDERS.length,
     trades: FALLBACK_TRADES.map((t) => ({
       ...t,
       source: "Kraken private API" as const,
@@ -318,6 +322,11 @@ export async function refreshKrakenAccount(options: { force?: boolean } = {}): P
 
       const balanceResult = await privateCall("Balance");
       const openOrdersResult = await privateCall("OpenOrders", { trades: "false" });
+      if (!openOrdersResult?.open || typeof openOrdersResult.open !== "object" || Array.isArray(openOrdersResult.open)) {
+        throw new Error("Kraken OpenOrders response has an unexpected shape; retaining the previous account snapshot.");
+      }
+      const openOrders = parseOpenOrders(openOrdersResult);
+      const openOrdersReceivedCount = Object.keys(openOrdersResult.open).length;
       const tradesResult = await privateCall("TradesHistory", { type: "all", trades: "false" });
 
       const balances = aggregateBalances(balanceResult as Record<string, unknown>);
@@ -339,7 +348,9 @@ export async function refreshKrakenAccount(options: { force?: boolean } = {}): P
         capturedAt: new Date().toISOString(),
         cashUsd,
         holdings,
-        openOrders: parseOpenOrders(openOrdersResult),
+        openOrders,
+        openOrdersReceivedCount,
+        openOrdersParsedCount: openOrders.length,
         trades: parseTrades(tradesResult),
         permissions,
         dangerousPermissionsDetected: dangerousPermissions(permissions),
