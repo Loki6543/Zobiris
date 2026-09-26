@@ -7,6 +7,12 @@ import type { EvidenceItem } from './domain/evidence.js';
 import { classifyBehavioralPersonality, type BehavioralPersonalityResult, type BehavioralProfileInput } from './engine/personality.js';
 import { calculatePortfolioDependency, currentPortfolioContextForAsset, type PortfolioDependencyInput, type PortfolioDependencySummary } from './engine/portfolioDependency.js';
 import { buildIntelligenceShadow, type IntelligenceShadowInput, type IntelligenceShadowResult } from './intelligence/index.js';
+import {
+  buildResearchIntegrity,
+  CAPABILITY_MANIFEST,
+  NARRATIVE_RESEARCH_POLICY,
+  type ResearchIntegrityBundle,
+} from './research/researchIntegrity.js';
 
 export interface LegacyFactorLike {
   family?: string;
@@ -54,6 +60,12 @@ export interface EvidenceClaimLike {
   observedAt?: string;
   receivedAt?: string;
   freshness?: string;
+  providerIds?: string[];
+  source?: string;
+  dataMode?: string;
+  claimOrigin?: string;
+  epistemicState?: string;
+  parentClaimIds?: string[];
 }
 
 export interface StrategyLiquidityInput {
@@ -85,6 +97,7 @@ export interface Strategy21AssetView {
   personality: BehavioralPersonalityResult | null;
   liquidityAcceleration: LiquidityAccelerationResult;
   dataReadiness: 'READY' | 'KRAKEN_WARMUP' | 'IDENTITY_BLOCKED';
+  researchIntegrity: ResearchIntegrityBundle;
 }
 
 export interface IntegratedAssetLike extends LegacyAssetLike {
@@ -111,6 +124,9 @@ export interface Strategy21PortfolioSummary {
   previousState?: PreviousMarketState;
   portfolioDependency: PortfolioDependencySummary;
   intelligenceShadow?: IntelligenceShadowResult;
+  researchIntegrityVersion: '1.0';
+  capabilityManifest: typeof CAPABILITY_MANIFEST;
+  narrativeResearchPolicy: typeof NARRATIVE_RESEARCH_POLICY;
 }
 
 export interface IntegratedSnapshotLike extends LegacySnapshotLike {
@@ -226,9 +242,12 @@ function claimDependency(family: string | undefined): string {
 }
 
 function toEvidence(claims: EvidenceClaimLike[], symbol: string, asOf: string): EvidenceItem[] {
-  return claims.filter((c) => c.symbol.toUpperCase() === symbol.toUpperCase()).map((c): EvidenceItem => {
+  return claims.filter((c) => c.symbol.toUpperCase() === symbol.toUpperCase()).map((c): EvidenceItem | null => {
     const timing = evidenceTimingForFamily(c.factorFamily);
     const observedAt = c.observedAt ?? c.receivedAt ?? asOf;
+    const retrievedAt = c.receivedAt ?? observedAt;
+    const asOfMs = Date.parse(asOf);
+    if (Date.parse(observedAt) > asOfMs || Date.parse(retrievedAt) > asOfMs) return null;
     return {
       id: c.id,
       type: c.factorFamily === 'socialAttention' || c.factorFamily === 'catalystsNarrative' ? 'NARRATIVE_SIGNAL' : 'OBSERVATION',
@@ -237,11 +256,11 @@ function toEvidence(claims: EvidenceClaimLike[], symbol: string, asOf: string): 
       observedAt,
       expiresAt: new Date(Date.parse(observedAt) + timing.ttlMs).toISOString(),
       horizon: timing.horizon,
-      sourceClass: 'legacy-evidence-ledger',
+      sourceClass: 'point-in-time-evidence-ledger',
       dependencies: [claimDependency(c.factorFamily)],
       contradictions: [],
     };
-  }).filter(item => Date.parse(item.expiresAt) > Date.parse(asOf));
+  }).filter((item): item is EvidenceItem => item !== null && Date.parse(item.expiresAt) > Date.parse(asOf));
 }
 
 function emptyEligibility(reason: string, status: 'WATCH_ONLY' | 'INELIGIBLE' = 'WATCH_ONLY'): ZobirisDecision['eligibility'] {
@@ -393,7 +412,31 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
     });
     const nextDollarScore = (eligibility.status === 'ACTIVE_ELIGIBLE' || eligibility.status === 'CONDITIONAL_PROBE_ELIGIBLE') && decision.authority.maxNextOrderUsd > 0 && opp.eligibleForRanking ? opp.score : null;
     const dataReadiness: Strategy21AssetView['dataReadiness'] = !identityVerified ? 'IDENTITY_BLOCKED' : liq && eligibility.status !== 'WATCH_ONLY' ? 'READY' : 'KRAKEN_WARMUP';
-    return { asset, decision, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration };
+    const researchIntegrity = buildResearchIntegrity({
+      assetId: canonical?.id ?? asset.canonicalAssetId ?? symbol,
+      symbol,
+      asOf: input.snapshot.asOf,
+      action: decision.action,
+      assetState: decision.assetState.state,
+      researchScore: rScore,
+      opportunityScore: Number.isFinite(opp.score) ? opp.score : null,
+      opportunityConfidence: clamp01(opp.confidence),
+      eligibilityStatus: eligibility.status,
+      dataReadiness,
+      evidenceCoverage: asset.evidenceCoverage ?? 0,
+      evidenceClaims: input.evidenceClaims,
+      factors: {
+        fundamental: factors.fundamental.value,
+        execution: factors.execution.value,
+        flow: factors.flow.value,
+        discovery: factors.discovery.value,
+        resilience: factors.resilience.value,
+      },
+      activeRiskGates: (asset.riskGates ?? [])
+        .filter((gate) => gate.active)
+        .map((gate) => ({ code: gate.code ?? 'UNSPECIFIED_RISK_GATE', effect: gate.effect ?? 'advisory' })),
+    });
+    return { asset, decision, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity };
   });
 
   const researchOrder = [...provisional].sort((a,b) => b.researchScore - a.researchScore);
@@ -401,7 +444,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
   const nextOrder = provisional.filter((x) => x.nextDollarScore !== null).sort((a,b) => (b.nextDollarScore ?? -1) - (a.nextDollarScore ?? -1));
   const nextRank = new Map(nextOrder.map((x,i) => [x.asset.symbol.toUpperCase(), i+1]));
 
-  const rankedAssets: IntegratedAssetLike[] = provisional.map(({asset, decision, researchScore: rs, nextDollarScore, dataReadiness, liquidityAcceleration}) => ({
+  const rankedAssets: IntegratedAssetLike[] = provisional.map(({asset, decision, researchScore: rs, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity}) => ({
     ...asset,
     strategy21: {
       researchScore: rs,
@@ -423,6 +466,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       personality: decision.personality,
       liquidityAcceleration,
       dataReadiness,
+      researchIntegrity,
     },
   }));
 
@@ -471,6 +515,9 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       enteredAt: market.enteredAt,
       minimumDwellUntil: market.minimumDwellUntil,
       portfolioDependency,
+      researchIntegrityVersion: '1.0',
+      capabilityManifest: CAPABILITY_MANIFEST,
+      narrativeResearchPolicy: NARRATIVE_RESEARCH_POLICY,
       ...(intelligenceShadow ? { intelligenceShadow } : {}),
       ...(input.previousMarketState ? { previousState: input.previousMarketState } : {}),
     },
