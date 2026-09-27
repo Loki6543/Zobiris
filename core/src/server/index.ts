@@ -32,7 +32,7 @@ if (config.NODE_ENV === "production") {
   const here = fileURLToPath(new URL(".", import.meta.url));
   const staticDir = join(here, "../../../dist");
   app.use(express.static(staticDir));
-  app.get("*", (_req, res) => res.sendFile(join(staticDir, "index.html")));
+  app.get("/{*splat}", (_req, res) => res.sendFile(join(staticDir, "index.html")));
 }
 
 const server = app.listen(config.PORT, "0.0.0.0", () => {
