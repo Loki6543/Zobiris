@@ -31,3 +31,48 @@ describe("EngineRuntime",()=>{
     db.close();
   });
 });
+
+
+describe("EngineRuntime execution rotation",()=>{
+  it("rotates limited execution sampling and keeps recent results cached",async()=>{
+    const db=openDatabase(":memory:");migrate(db);
+    const watchlist=[
+      {symbol:"BTC",name:"Bitcoin",cmcId:"1"},
+      {symbol:"AAVE",name:"Aave",cmcId:"2"},
+      {symbol:"LINK",name:"Chainlink",cmcId:"3"},
+      {symbol:"COMP",name:"Compound",cmcId:"4"},
+    ];
+    const mk=(symbol:string,id:string,change30dPct:number,change90dPct:number)=>({
+      cmcId:id,symbol,name:symbol,priceUsd:100,change1hPct:0,change24hPct:0,
+      change7dPct:5,change30dPct,change60dPct:-10,change90dPct,
+      marketCapUsd:1,volume24hUsd:1,volumeChange24hPct:0,lastUpdated:null
+    });
+    const quotes:any[]=[
+      {...mk("BTC","1",10,40),priceUsd:85000,change7dPct:4},
+      mk("AAVE","2",-20,-40),mk("LINK","3",-15,-30),mk("COMP","4",-10,-20),
+    ];
+    let nowMs=Date.parse("2026-09-27T01:00:00Z");
+    const calls:string[]=[];
+    const deps:EngineRuntimeDeps={
+      fetchQuotes:async()=>quotes,
+      fetchMetadata:async()=>watchlist.map(a=>({cmcId:a.cmcId,symbol:a.symbol,name:a.name,category:"coin",tags:[],logo:null})),
+      fetchInstruments:async()=>new Map(watchlist.map(a=>[a.symbol,{symbol:a.symbol,pairKey:`${a.symbol}/USD`,altname:`${a.symbol}USD`,wsname:`${a.symbol}/USD`,status:"online",online:true,orderMin:null,costMinUsd:null,tickSize:null,pairDecimals:null,lotDecimals:null}])),
+      fetchBook:async(pair)=>{calls.push(pair);return {pair,observedAt:new Date(nowMs).toISOString(),bids:[{price:99.9,qty:100}],asks:[{price:100.1,qty:100}]};},
+      now:()=>new Date(nowMs),
+      sleep:async()=>{},
+    };
+    const runtime=new EngineRuntime(db,undefined,{watchlist,availableCashUsd:600,executionSampleLimit:1},deps);
+    const first=await runtime.refresh();
+    nowMs+=5*60_000;
+    const second=await runtime.refresh();
+    nowMs+=5*60_000;
+    const third=await runtime.refresh();
+
+    expect(new Set(calls).size).toBe(3);
+    expect(first.health.executionSampled).toBe(1);
+    expect(second.health.executionSampled).toBe(2);
+    expect(third.health.executionSampled).toBe(3);
+    expect(third.rows.filter(r=>["AAVE","LINK","COMP"].includes(r.symbol)).every(r=>r.state!=="EXECUTION_WARMUP")).toBe(true);
+    db.close();
+  });
+});
