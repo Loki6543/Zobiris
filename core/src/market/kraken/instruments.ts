@@ -93,7 +93,9 @@ export function buildUsdInstrumentRegistry(raw: Record<string, KrakenPairRaw>): 
 export type WatchlistInstrumentState =
   | { symbol: string; state: "ACTIVE"; instrument: KrakenUsdInstrument }
   | { symbol: string; state: "NO_KRAKEN_USD_MARKET"; instrument: null }
-  | { symbol: string; state: "KRAKEN_MARKET_NOT_ONLINE"; instrument: KrakenUsdInstrument };
+  | { symbol: string; state: "KRAKEN_MARKET_NOT_ONLINE"; instrument: KrakenUsdInstrument }
+  | { symbol: string; state: "KRAKEN_IDENTITY_UNVERIFIED"; instrument: KrakenUsdInstrument; reason: string }
+  | { symbol: string; state: "KRAKEN_ASSET_MISMATCH"; instrument: KrakenUsdInstrument; referencePrice: number; krakenPrice: number; gapPct: number };
 
 export function resolveWatchlistInstruments(symbols: string[], registry: Map<string, KrakenUsdInstrument>): WatchlistInstrumentState[] {
   return symbols.map((raw) => {
@@ -113,4 +115,42 @@ export function snapBuyLimitToTick(price:number|null,tickSize:number|null):numbe
   const snapped=steps*tickSize;
   const decimals=Math.min(12,Math.max(0,Math.ceil(-Math.log10(tickSize))+2));
   return Number(snapped.toFixed(decimals));
+}
+
+
+export interface KrakenIdentityTicker {
+  pairKey:string;
+  bid:number|null;
+  ask:number|null;
+  last:number|null;
+}
+
+export function verifyKrakenInstrumentPrices(
+  states:WatchlistInstrumentState[],
+  referencePrices:Map<string,number>,
+  tickers:Map<string,KrakenIdentityTicker>,
+  maxGapPct=0.10,
+):WatchlistInstrumentState[] {
+  return states.map(state=>{
+    if(state.state!=="ACTIVE") return state;
+    const referencePrice=referencePrices.get(state.symbol);
+    if(referencePrice==null || !Number.isFinite(referencePrice) || referencePrice<=0) {
+      return {symbol:state.symbol,state:"KRAKEN_IDENTITY_UNVERIFIED",instrument:state.instrument,reason:"reference_price_missing"};
+    }
+    const ticker=tickers.get(state.instrument.pairKey);
+    if(!ticker) {
+      return {symbol:state.symbol,state:"KRAKEN_IDENTITY_UNVERIFIED",instrument:state.instrument,reason:"kraken_ticker_missing"};
+    }
+    const krakenPrice=ticker.bid!=null&&ticker.ask!=null&&ticker.bid>0&&ticker.ask>0
+      ? (ticker.bid+ticker.ask)/2
+      : ticker.last;
+    if(krakenPrice==null || !Number.isFinite(krakenPrice) || krakenPrice<=0) {
+      return {symbol:state.symbol,state:"KRAKEN_IDENTITY_UNVERIFIED",instrument:state.instrument,reason:"kraken_price_missing"};
+    }
+    const gapPct=Math.abs(krakenPrice-referencePrice)/referencePrice;
+    if(gapPct>maxGapPct) {
+      return {symbol:state.symbol,state:"KRAKEN_ASSET_MISMATCH",instrument:state.instrument,referencePrice,krakenPrice,gapPct};
+    }
+    return state;
+  });
 }
