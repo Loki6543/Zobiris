@@ -1,4 +1,3 @@
-import express from "express";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "../shared/config.js";
@@ -6,6 +5,7 @@ import { openDatabase } from "../db/client.js";
 import { migrate } from "../db/migrate.js";
 import { createApp } from "./app.js";
 import { EngineRuntime } from "../engine/runtime.js";
+import { mountProductionUi } from "./static.js";
 
 const config = loadConfig();
 const db = openDatabase(config.ZOBIRIS_DB_PATH);
@@ -31,8 +31,7 @@ refreshTimer.unref();
 if (config.NODE_ENV === "production") {
   const here = fileURLToPath(new URL(".", import.meta.url));
   const staticDir = join(here, "../../../dist");
-  app.use(express.static(staticDir));
-  app.get("/{*splat}", (_req, res) => res.sendFile(join(staticDir, "index.html")));
+  mountProductionUi(app, staticDir);
 }
 
 const server = app.listen(config.PORT, "0.0.0.0", () => {
