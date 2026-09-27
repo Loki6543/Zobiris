@@ -1,7 +1,8 @@
 import express from "express";
 import type Database from "better-sqlite3";
+import type { EngineRuntime } from "../engine/runtime.js";
 
-export function createApp(db: Database.Database) {
+export function createApp(db: Database.Database, engine?: EngineRuntime) {
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json({ limit: "256kb" }));
@@ -14,6 +15,12 @@ export function createApp(db: Database.Database) {
       schemaVersion: migration.id ?? 0,
       now: new Date().toISOString(),
     });
+  });
+
+  app.get("/api/engine", (_req, res) => {
+    const snapshot=engine?.current() ?? null;
+    if(!snapshot) return res.status(503).json({ ok:false, state:"WARMUP", message:"Engine snapshot not ready" });
+    return res.json({ ok:true, snapshot });
   });
 
   return app;
