@@ -64,7 +64,8 @@ export function evaluateBuyLimitFill(candles:KrakenCandle[],args:{startAt:string
   const start=Date.parse(args.startAt),end=Date.parse(args.expiresAt);
   const eligible=candles.filter(c=>{
     const at=Date.parse(c.openTime);
-    return at>=start && at<=end;
+    const closeAt=at+c.intervalMinutes*60_000;
+    return at>=start && closeAt<=end;
   }).sort((a,b)=>Date.parse(a.openTime)-Date.parse(b.openTime));
   const touched=eligible.find(c=>c.low<=args.limitPrice);
   if(!touched) return {filled:false,filledAt:null,assumedFillPrice:null,evidence:"NO_TOUCH"};
@@ -81,7 +82,8 @@ export function favorableAdverseExcursion(candles:KrakenCandle[],entryPrice:numb
   const start=Date.parse(args.startAt),end=Date.parse(args.endAt);
   const eligible=candles.filter(c=>{
     const at=Date.parse(c.openTime);
-    return at>=start && at<=end;
+    const closeAt=at+c.intervalMinutes*60_000;
+    return at>=start && closeAt<=end;
   });
   if(!eligible.length || !(entryPrice>0)) return {mfePct:null as number|null,maePct:null as number|null};
   const high=Math.max(...eligible.map(c=>c.high));
