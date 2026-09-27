@@ -55,6 +55,9 @@ export interface PersonalExecutionResult {
   positionSell: BookWalk | null;
   stress: Record<"500"|"2500"|"50000"|"250000", { buy: BookWalk; sell: BookWalk }>;
   marketDepthGrade: MarketDepthGrade;
+  minimumOrderUsd: number | null;
+  proposedOrderMeetsMinimum: boolean;
+  positionExitMeetsMinimum: boolean | null;
   reasonCodes: string[];
 }
 
@@ -69,6 +72,8 @@ export function evaluatePersonalExecution(book: NormalizedBook, args: {
   standardUsd?: number;
   maxImpactBps?: number;
   maxAgeMs?: number;
+  costMinUsd?: number | null;
+  orderMinBase?: number | null;
 }): PersonalExecutionResult {
   const standardUsd=args.standardUsd ?? 100;
   const maxImpactBps=args.maxImpactBps ?? 100;
@@ -80,10 +85,19 @@ export function evaluatePersonalExecution(book: NormalizedBook, args: {
   const standardSell=walkBook(book,"sell",standardUsd);
   const proposedBuy=walkBook(book,"buy",args.proposedOrderUsd);
   const positionSell=args.currentPositionUsd && args.currentPositionUsd>0 ? walkBook(book,"sell",args.currentPositionUsd) : null;
+  const minimumCandidates=[
+    args.costMinUsd != null && Number.isFinite(args.costMinUsd) && args.costMinUsd>0 ? args.costMinUsd : null,
+    args.orderMinBase != null && Number.isFinite(args.orderMinBase) && args.orderMinBase>0 && standardBuy.midpoint != null
+      ? args.orderMinBase*standardBuy.midpoint : null,
+  ].filter((value): value is number => value != null);
+  const minimumOrderUsd=minimumCandidates.length ? Math.max(...minimumCandidates) : null;
+  const proposedOrderMeetsMinimum=minimumOrderUsd==null || args.proposedOrderUsd+1e-9>=minimumOrderUsd;
+  const positionExitMeetsMinimum=positionSell==null ? null : minimumOrderUsd==null || args.currentPositionUsd!+1e-9>=minimumOrderUsd;
   const stressSizes=[500,2500,50000,250000] as const;
   const stress=Object.fromEntries(stressSizes.map(size => [String(size), { buy: walkBook(book,"buy",size), sell: walkBook(book,"sell",size) }])) as PersonalExecutionResult["stress"];
 
-  const hardPass=fresh && walkPass(standardBuy,maxImpactBps) && walkPass(standardSell,maxImpactBps)
+  const hardPass=fresh && proposedOrderMeetsMinimum && positionExitMeetsMinimum!==false
+    && walkPass(standardBuy,maxImpactBps) && walkPass(standardSell,maxImpactBps)
     && walkPass(proposedBuy,maxImpactBps)
     && (!positionSell || walkPass(positionSell,maxImpactBps));
 
@@ -98,8 +112,11 @@ export function evaluatePersonalExecution(book: NormalizedBook, args: {
   if(!fresh) reasonCodes.push("stale_book");
   if(!walkPass(standardBuy,maxImpactBps)) reasonCodes.push("standard_buy_execution_fail");
   if(!walkPass(standardSell,maxImpactBps)) reasonCodes.push("standard_sell_execution_fail");
+  if(!proposedOrderMeetsMinimum) reasonCodes.push("below_kraken_minimum_order");
+  if(positionExitMeetsMinimum===false) reasonCodes.push("position_below_kraken_minimum_order");
   if(!walkPass(proposedBuy,maxImpactBps)) reasonCodes.push("proposed_buy_execution_fail");
   if(positionSell && !walkPass(positionSell,maxImpactBps)) reasonCodes.push("position_exit_execution_fail");
 
-  return { fresh, hardPass, maxImpactBps, standardBuy, standardSell, proposedBuy, positionSell, stress, marketDepthGrade, reasonCodes };
+  return { fresh, hardPass, maxImpactBps, standardBuy, standardSell, proposedBuy, positionSell, stress, marketDepthGrade,
+    minimumOrderUsd, proposedOrderMeetsMinimum, positionExitMeetsMinimum, reasonCodes };
 }
