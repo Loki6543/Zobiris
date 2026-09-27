@@ -1,7 +1,7 @@
 import type { CmcMarketQuote } from "../market/cmc/client.js";
 import type { AssetClassification } from "../market/classification/classify.js";
 import type { PersonalExecutionResult } from "../market/kraken/execution.js";
-import type { WatchlistInstrumentState } from "../market/kraken/instruments.js";
+import { snapBuyLimitToTick, type WatchlistInstrumentState } from "../market/kraken/instruments.js";
 import { evaluateDelayedRotation, type RotationMarketContext } from "../strategies/delayedRotation/evaluate.js";
 import type { WatchlistAsset } from "../shared/watchlist.js";
 import type { EngineRow, EngineSnapshot, EngineState } from "./types.js";
@@ -124,9 +124,10 @@ export function buildEngineSnapshot(input:BuildEngineInput):EngineSnapshot {
       change30dPct:quote.change30dPct,change90dPct:quote.change90dPct,classification:cls,execution:execution??null,riskPass
     },{maneuverNavUsd:input.maneuverNavUsd,availableCashUsd:input.availableCashUsd});
     const entryQuality=d.recommendedPullbackPct==null?0:Math.round((100-d.recommendedPullbackPct*6)*100)/100;
+    const intendedLimitPrice=snapBuyLimitToTick(d.intendedLimitPrice,instrument.instrument?.tickSize ?? null);
     return {
       symbol,name:asset.name,cmcRank:input.cmcRanks?.get(symbol)??null,state:d.state,
-      priceUsd:quote.priceUsd,intendedLimitPrice:d.intendedLimitPrice,change7dPct:quote.change7dPct,
+      priceUsd:quote.priceUsd,intendedLimitPrice,change7dPct:quote.change7dPct,
       change30dPct:quote.change30dPct,change90dPct:quote.change90dPct,
       relative30dVsBtcPct:d.relative30dVsBtcPct,relative90dVsBtcPct:d.relative90dVsBtcPct,
       catchUpQuality:d.catchUpQuality,entryQuality,marketDepthGrade:execution?.marketDepthGrade??null,
