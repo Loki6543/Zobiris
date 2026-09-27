@@ -6,6 +6,8 @@ export type EngineState =
   | "BENCHMARK"
   | "NO_KRAKEN_USD_MARKET"
   | "KRAKEN_MARKET_NOT_ONLINE"
+  | "KRAKEN_IDENTITY_UNVERIFIED"
+  | "KRAKEN_ASSET_MISMATCH"
   | "EXECUTION_WARMUP";
 
 export interface EngineRow {
