@@ -1,0 +1,62 @@
+name: Export sanitized effective Zobiris source
+
+on:
+  push:
+    branches:
+      - docs-export-20260926
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout export branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Reconstruct effective deployed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/zobiris-effective /tmp/zobiris.txz /tmp/Zobiris_v0.7.6_Railway_Staging
+          cat deploy/v076/*.b64 | base64 -d > /tmp/zobiris.txz
+          tar -xJf /tmp/zobiris.txz -C /tmp
+          mkdir -p /tmp/zobiris-effective
+          cp -a /tmp/Zobiris_v0.7.6_Railway_Staging/. /tmp/zobiris-effective/
+          cp -a deploy/v076/overrides/. /tmp/zobiris-effective/
+          (
+            cd /tmp/zobiris-effective
+            node scripts/v076_patch_production.mjs
+            cp -a audit-fixes/. .
+            rm -rf audit-fixes
+          )
+          cp -a deploy/prediction/overrides/. /tmp/zobiris-effective/
+          cp railway_hosted_gate.mjs /tmp/zobiris-effective/scripts/railway_hosted_gate.mjs
+
+      - name: Build sanitized Markdown source snapshot
+        shell: bash
+        env:
+          SOURCE_COMMIT: c20451d7db0473188bfa415e0e9d9e07ea6f0c5d
+        run: |
+          set -euo pipefail
+          python3 tools/export_sanitized_source.py
+
+      - name: Verify no obvious secrets remain
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=export/Zobiris_Current_Code_Sanitized.md
+          ! grep -E -n 'AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' "$FILE"
+          ! grep -E -n 'https?://[^/@[:space:]]+:[^/@[:space:]]+@' "$FILE"
+          test -s "$FILE"
+
+      - name: Upload sanitized source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zobiris-current-code-sanitized
+          path: export/
+          if-no-files-found: error
+          retention-days: 7
