@@ -15,6 +15,12 @@ export const ZOBIRIS_POLICY = {
     tag: "DELAYED_ROTATION_PILOT_V2",
     version: "2.1.0",
   },
+  governance: {
+    status: "PILOT_UNCALIBRATED",
+    allowAutomaticParameterMutation: false,
+    requireChronologicalValidationForPromotion: true,
+    requireCostModelForPromotion: true,
+  },
   market: {
     btc30dMinPct: 0,
     btc90dMinPct: 0,
