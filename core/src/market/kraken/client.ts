@@ -1,5 +1,6 @@
 import { buildUsdInstrumentRegistry, type KrakenPairRaw } from "./instruments.js";
 import type { NormalizedBook } from "./execution.js";
+import { parseCommittedOhlcRows, type KrakenCandle } from "./ohlc.js";
 
 export interface KrakenTicker {
   pairKey: string;
@@ -80,4 +81,22 @@ export async function fetchOrderBook(pair: string, fetchImpl: FetchLike = fetch)
     bids:normalize(row.bids),
     asks:normalize(row.asks),
   };
+}
+
+
+export async function fetchOhlc(
+  symbol:string,
+  pair:string,
+  intervalMinutes:number,
+  sinceSeconds:number,
+  fetchImpl:FetchLike=fetch,
+):Promise<KrakenCandle[]> {
+  const url=new URL("https://api.kraken.com/0/public/OHLC");
+  url.searchParams.set("pair",pair);
+  url.searchParams.set("interval",String(intervalMinutes));
+  url.searchParams.set("since",String(Math.max(0,Math.floor(sinceSeconds))));
+  const result=await krakenJson(url,fetchImpl);
+  const entry=Object.entries(result).find(([key])=>key!=="last");
+  if(!entry || !Array.isArray(entry[1])) throw new Error("Kraken OHLC missing");
+  return parseCommittedOhlcRows(symbol,intervalMinutes,entry[1] as unknown[][]);
 }
