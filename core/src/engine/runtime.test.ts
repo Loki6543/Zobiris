@@ -49,7 +49,7 @@ describe("EngineRuntime execution rotation",()=>{
     });
     const quotes:any[]=[
       {...mk("BTC","1",10,40),priceUsd:85000,change7dPct:4},
-      mk("AAVE","2",-20,-40),mk("LINK","3",-15,-30),mk("COMP","4",-10,-20),
+      mk("AAVE","2",-20,-40),mk("LINK","3",1,-30),mk("COMP","4",2,-20),
     ];
     let nowMs=Date.parse("2026-09-27T01:00:00Z");
     const calls:string[]=[];
