@@ -257,9 +257,10 @@ export class EngineRuntime {
         tags:meta?.tags ?? [],
       })] as const;
     }));
+    const metadataAuthoritative=!["STALE","ERROR","MISSING"].includes(metadataResolved.health.status);
     const riskPass=new Map(watchlist.map(asset=>{
       const c=classifications.get(asset.symbol)!;
-      return [asset.symbol,c.assetClass!=="UNKNOWN"&&!c.recommendationExcluded] as const;
+      return [asset.symbol,metadataAuthoritative&&c.assetClass!=="UNKNOWN"&&!c.recommendationExcluded] as const;
     }));
 
     const clockBeforeExecution=assessClock({
@@ -454,7 +455,7 @@ export class EngineRuntime {
 
   private pairForSymbol(symbol:string,instrumentMap:Map<string,WatchlistInstrumentState>) {
     const current=instrumentMap.get(symbol);
-    if(current?.state==="ACTIVE" && current.instrument) return current.instrument.pairKey;
+    if(current) return current.state==="ACTIVE"&&current.instrument ? current.instrument.pairKey : null;
     const stored=this.db.prepare("SELECT pair_key,status,online FROM kraken_instruments WHERE symbol=?").get(symbol) as
       {pair_key:string;status:string;online:number}|undefined;
     return stored?.online===1&&stored.status==="online"?stored.pair_key:null;
