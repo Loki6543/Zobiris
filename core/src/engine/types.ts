@@ -148,4 +148,31 @@ export const HealthResponseSchema=z.object({
     version:z.string(),
     hash:z.string().regex(/^[a-f0-9]{64}$/),
   }),
+  engine:z.object({
+    authorityEnabled:z.boolean(),
+    lastRefreshSuccessAt:z.string().nullable(),
+    providers:z.object({
+      cmcQuotes:ProviderHealthSchema,
+      cmcMetadata:ProviderHealthSchema,
+      krakenInstruments:ProviderHealthSchema,
+      krakenTicker:ProviderHealthSchema,
+    }),
+    clock:ClockHealthSchema,
+  }).nullable(),
+});
+
+export const MetricsResponseSchema=z.object({
+  ok:z.literal(true),
+  now:z.string(),
+  refreshes24h:z.object({
+    total:z.number().int().min(0),
+    failed:z.number().int().min(0),
+  }),
+  openEpisodes:z.number().int().min(0),
+  overdueOutcomes:z.number().int().min(0),
+  databaseBytes:z.number().min(0),
+  authorityEnabled:z.boolean(),
+  providerStatuses:z.record(z.string(),ProviderStatusSchema),
+  clockState:z.enum(["HEALTHY","DEGRADED"]),
+  policy:z.object({version:z.string(),hash:z.string().regex(/^[a-f0-9]{64}$/)}),
 });
