@@ -1,5 +1,5 @@
 import { describe,expect,it } from "vitest";
-import { parseCmcQuotes } from "./client.js";
+import { parseCmcMetadata, parseCmcQuotes } from "./client.js";
 
 describe("CMC quote parsing",()=>{
   it("parses object keyed response shapes",()=>{
@@ -10,5 +10,13 @@ describe("CMC quote parsing",()=>{
   it("parses array-oriented v3 quote forms too",()=>{
     const rows=parseCmcQuotes({data:[{id:7278,name:"Aave",symbol:"AAVE",quote:[{symbol:"USD",price:145,percent_change_7d:5,percent_change_30d:-10,percent_change_90d:-28}]}]});
     expect(rows[0]).toMatchObject({cmcId:"7278",symbol:"AAVE",priceUsd:145,change7dPct:5,change30dPct:-10,change90dPct:-28});
+  });
+});
+
+
+describe("CMC metadata parsing",()=>{
+  it("retains tags and category for explicit classification",()=>{
+    const rows=parseCmcMetadata({data:{"3408":{id:3408,name:"USDC",symbol:"USDC",category:"token",tags:["stablecoin","usd"]}}});
+    expect(rows[0]).toMatchObject({cmcId:"3408",symbol:"USDC",category:"token",tags:["stablecoin","usd"]});
   });
 });
