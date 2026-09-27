@@ -17,6 +17,12 @@ describe("EngineRuntime",()=>{
       fetchQuotes:async()=>quotes,
       fetchMetadata:async()=>watchlist.map(a=>({cmcId:a.cmcId,symbol:a.symbol,name:a.name,category:"coin",tags:[],logo:null})),
       fetchInstruments:async()=>new Map(watchlist.map(a=>[a.symbol,{symbol:a.symbol,pairKey:`${a.symbol}/USD`,altname:`${a.symbol}USD`,wsname:`${a.symbol}/USD`,status:"online",online:true,orderMin:null,costMinUsd:null,tickSize:null,pairDecimals:null,lotDecimals:null}])),
+      fetchTickers:async(pairs)=>new Map(pairs.map(pair=>{
+        const symbol=pair.split("/")[0]!;
+        const quote=quotes.find(q=>q.symbol===symbol);
+        const p=quote?.priceUsd ?? 100;
+        return [pair,{pairKey:pair,bid:p*0.999,ask:p*1.001,last:p,volumeTodayBase:1,volume24hBase:10,volume24hUsd:p*10}];
+      })),
       fetchBook:async(pair)=>{bookCalls++;return {pair,observedAt:"2026-09-27T01:00:00Z",bids:[{price:99.9,qty:100}],asks:[{price:100.1,qty:100}]};},
       now:()=>new Date("2026-09-27T01:00:00Z"),
       sleep:async()=>{},
@@ -57,6 +63,12 @@ describe("EngineRuntime execution rotation",()=>{
       fetchQuotes:async()=>quotes,
       fetchMetadata:async()=>watchlist.map(a=>({cmcId:a.cmcId,symbol:a.symbol,name:a.name,category:"coin",tags:[],logo:null})),
       fetchInstruments:async()=>new Map(watchlist.map(a=>[a.symbol,{symbol:a.symbol,pairKey:`${a.symbol}/USD`,altname:`${a.symbol}USD`,wsname:`${a.symbol}/USD`,status:"online",online:true,orderMin:null,costMinUsd:null,tickSize:null,pairDecimals:null,lotDecimals:null}])),
+      fetchTickers:async(pairs)=>new Map(pairs.map(pair=>{
+        const symbol=pair.split("/")[0]!;
+        const quote=quotes.find(q=>q.symbol===symbol);
+        const p=quote?.priceUsd ?? 100;
+        return [pair,{pairKey:pair,bid:p*0.999,ask:p*1.001,last:p,volumeTodayBase:1,volume24hBase:10,volume24hUsd:p*10}];
+      })),
       fetchBook:async(pair)=>{calls.push(pair);return {pair,observedAt:new Date(nowMs).toISOString(),bids:[{price:99.9,qty:100}],asks:[{price:100.1,qty:100}]};},
       now:()=>new Date(nowMs),
       sleep:async()=>{},
