@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildUsdInstrumentRegistry, resolveWatchlistInstruments, snapBuyLimitToTick } from "./instruments.js";
+import { buildUsdInstrumentRegistry, resolveWatchlistInstruments, snapBuyLimitToTick, verifyKrakenInstrumentPrices } from "./instruments.js";
 
 describe("Kraken instrument registry", () => {
   it("resolves legacy BTC/ETH/XRP/DOGE names through pair metadata", () => {
@@ -43,5 +43,33 @@ describe("Kraken tick-size limits", () => {
   it("rounds buy limits down to the nearest valid tick", () => {
     expect(snapBuyLimitToTick(138.437,0.1)).toBe(138.4);
     expect(snapBuyLimitToTick(0.123456,0.0001)).toBe(0.1234);
+  });
+});
+
+
+describe("Kraken identity price checks", () => {
+  it("blocks a same-ticker Kraken market when its price is more than 10% away from the reference asset", () => {
+    const registry=buildUsdInstrumentRegistry({
+      "LIT/USD": {altname:"LITUSD",wsname:"LIT/USD",base:"LIT",quote:"USD",status:"online"}
+    });
+    const states=resolveWatchlistInstruments(["LIT"],registry);
+    const checked=verifyKrakenInstrumentPrices(
+      states,
+      new Map([["LIT",1]]),
+      new Map([["LIT/USD",{pairKey:"LIT/USD",bid:4.9,ask:5.1,last:5}]])
+    );
+    expect(checked[0]?.state).toBe("KRAKEN_ASSET_MISMATCH");
+  });
+
+  it("fails closed when Kraken ticker identity evidence is missing", () => {
+    const registry=buildUsdInstrumentRegistry({
+      "AAVE/USD": {altname:"AAVEUSD",wsname:"AAVE/USD",base:"AAVE",quote:"USD",status:"online"}
+    });
+    const checked=verifyKrakenInstrumentPrices(
+      resolveWatchlistInstruments(["AAVE"],registry),
+      new Map([["AAVE",145]]),
+      new Map()
+    );
+    expect(checked[0]?.state).toBe("KRAKEN_IDENTITY_UNVERIFIED");
   });
 });
