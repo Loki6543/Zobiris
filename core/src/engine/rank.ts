@@ -115,7 +115,11 @@ export function buildEngineSnapshot(input:BuildEngineInput):EngineSnapshot {
         change30dPct:quote.change30dPct,change90dPct:quote.change90dPct,classification:cls,execution:null,riskPass
       },{maneuverNavUsd:input.maneuverNavUsd,availableCashUsd:input.availableCashUsd});
       return {
-        ...inert("EXECUTION_WARMUP",["execution_sample_pending",...provisional.reasonCodes]),
+        ...inert(authority.newBuyEnabled?"EXECUTION_WARMUP":"DATA_STALE",[
+          authority.newBuyEnabled?"execution_sample_pending":"global_new_buy_authority_disabled",
+          ...(!authority.newBuyEnabled?authority.reasons:[]),
+          ...provisional.reasonCodes
+        ]),
         relative30dVsBtcPct:provisional.relative30dVsBtcPct,relative90dVsBtcPct:provisional.relative90dVsBtcPct,
         catchUpQuality:provisional.catchUpQuality
       };
