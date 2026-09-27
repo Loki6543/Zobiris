@@ -186,7 +186,7 @@ export class EngineRuntime {
     const ids=watchlist.map(a=>a.cmcId);
     const wallStart=this.deps.now();
     const monoStart=this.deps.monotonicNow();
-    const generatedAt=wallStart.toISOString();
+    const attemptAt=wallStart.toISOString();
     const clock={now:this.deps.now,monotonicNow:this.deps.monotonicNow};
 
     const [quoteStage,metadataStage,instrumentStage]=await Promise.all([
@@ -283,7 +283,7 @@ export class EngineRuntime {
     const authority={newBuyEnabled:authorityReasons.length===0,reasons:[...new Set(authorityReasons)]};
 
     this.persistPolicy();
-    this.persistStatic(watchlist,classifications,instruments,generatedAt);
+    this.persistStatic(watchlist,classifications,instruments,attemptAt);
 
     const market=marketContext(quotesResolved.data,watchlist);
     const candidatePool=authority.newBuyEnabled ? watchlist
@@ -322,7 +322,7 @@ export class EngineRuntime {
       [...this.executionCache.entries()].map(([symbol,cached])=>[symbol,cached.value])
     );
 
-    const executionStage=authority.newBuyEnabled
+    let executionStage=authority.newBuyEnabled
       ? await runStage("executionSampling",clock,async()=>{
           let failures=0;
           for(let i=0;i<candidates.length;i++) {
@@ -349,9 +349,13 @@ export class EngineRuntime {
           return {sampled:candidates.length-failures,failures};
         })
       : skippedStage<{sampled:number;failures:number}>("executionSampling",clock,"global_new_buy_authority_disabled");
+    if(executionStage.status==="SUCCESS" && executionStage.data && executionStage.data.failures>0) {
+      executionStage={...executionStage,status:"DEGRADED",error:`${executionStage.data.failures} candidate execution fetches failed`};
+    }
 
+    const decisionAt=this.deps.now().toISOString();
     const provisional=buildEngineSnapshot({
-      generatedAt,watchlist,quotes:quotesResolved.data,instruments,classifications,executions,riskPass,
+      generatedAt:decisionAt,watchlist,quotes:quotesResolved.data,instruments,classifications,executions,riskPass,
       maneuverNavUsd:this.options.maneuverNavUsd ?? ZOBIRIS_POLICY.capital.defaultManeuverNavUsd,
       availableCashUsd:this.options.availableCashUsd ?? 0,
       authority,
@@ -386,6 +390,7 @@ export class EngineRuntime {
     const failedStages=stages.filter(stage=>stage.status==="FAILED");
     const currentPipelineSuccess=
       quoteStage.status==="SUCCESS" &&
+      metadataStage.status==="SUCCESS" &&
       instrumentStage.status==="SUCCESS" &&
       tickerStage.status==="SUCCESS" &&
       finalClock.state==="HEALTHY";
@@ -396,7 +401,7 @@ export class EngineRuntime {
       krakenInstruments:instrumentsResolved.health.status,
       executionSampled:executions.size,
       watchlistCount:watchlist.length,
-      lastRefreshAttemptAt:generatedAt,
+      lastRefreshAttemptAt:attemptAt,
       lastRefreshSuccessAt:this.lastRefreshSuccessAt,
       refreshDurationMs:Math.max(0,monoEnd-monoStart),
       lastError:failedStages.length
@@ -418,7 +423,7 @@ export class EngineRuntime {
     };
 
     const snapshot=buildEngineSnapshot({
-      generatedAt,watchlist,quotes:quotesResolved.data,instruments,classifications,executions,riskPass,
+      generatedAt:decisionAt,watchlist,quotes:quotesResolved.data,instruments,classifications,executions,riskPass,
       maneuverNavUsd:this.options.maneuverNavUsd ?? ZOBIRIS_POLICY.capital.defaultManeuverNavUsd,
       availableCashUsd:this.options.availableCashUsd ?? 0,
       authority,
@@ -426,7 +431,7 @@ export class EngineRuntime {
     });
 
     this.persistProviderHealth(runtimeHealth.providers);
-    this.persistRefreshRun(snapshot,currentPipelineSuccess);
+    this.persistRefreshRun(snapshot,currentPipelineSuccess,wallEnd.toISOString());
     this.snapshot=snapshot;
     return snapshot;
   }
@@ -481,11 +486,11 @@ export class EngineRuntime {
     })();
   }
 
-  private persistRefreshRun(snapshot:EngineSnapshot,success:boolean) {
+  private persistRefreshRun(snapshot:EngineSnapshot,success:boolean,completedAt:string) {
     this.db.prepare(`INSERT INTO refresh_runs(
       started_at,completed_at,duration_ms,success,clock_state,new_buy_authority,policy_version,policy_hash,error
     ) VALUES (?,?,?,?,?,?,?,?,?)`).run(
-      snapshot.health.lastRefreshAttemptAt,snapshot.generatedAt,snapshot.health.refreshDurationMs,
+      snapshot.health.lastRefreshAttemptAt,completedAt,snapshot.health.refreshDurationMs,
       success?1:0,snapshot.health.clock.state,snapshot.authority.newBuyEnabled?1:0,
       snapshot.policy.version,snapshot.policy.hash,snapshot.health.lastError
     );
