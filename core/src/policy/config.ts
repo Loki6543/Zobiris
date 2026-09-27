@@ -90,6 +90,7 @@ export const ZOBIRIS_POLICY = {
   },
   providerFreshness: {
     cmcQuotesMs: 15 * 60_000,
+    minFreshQuoteCoverage: 0.80,
     cmcMetadataMs: 24 * 60 * 60_000,
     krakenInstrumentsMs: 6 * 60 * 60_000,
     krakenTickerMs: 10 * 60_000,
