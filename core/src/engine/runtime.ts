@@ -129,6 +129,8 @@ export class EngineRuntime {
         const result=evaluatePersonalExecution(book,{
           asOf:this.deps.now().toISOString(),
           proposedOrderUsd:this.options.proposedOrderUsd ?? 37,
+          costMinUsd:instrument.instrument.costMinUsd,
+          orderMinBase:instrument.instrument.orderMin,
         });
         const value={hardPass:result.hardPass,marketDepthGrade:result.marketDepthGrade};
         executions.set(asset.symbol,value);
