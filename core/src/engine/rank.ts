@@ -97,6 +97,13 @@ export function buildEngineSnapshot(input:BuildEngineInput):EngineSnapshot {
       catchUpQuality:0,entryQuality:0,marketDepthGrade:null,personalExecutionPass:null,krakenPair:null,maxNewOrderUsd:0,
       qualifiesForNewCapital:false,reasonCodes:["no_active_kraken_usd_pair"]
     };
+    if(instrument.state==="KRAKEN_IDENTITY_UNVERIFIED" || instrument.state==="KRAKEN_ASSET_MISMATCH") return {
+      symbol,name:asset.name,cmcRank:input.cmcRanks?.get(symbol)??null,state:instrument.state as EngineState,
+      priceUsd:quote.priceUsd,intendedLimitPrice:null,change7dPct:quote.change7dPct,change30dPct:quote.change30dPct,change90dPct:quote.change90dPct,
+      relative30dVsBtcPct:null,relative90dVsBtcPct:null,catchUpQuality:0,entryQuality:0,marketDepthGrade:null,personalExecutionPass:null,
+      krakenPair:instrument.instrument?.pairKey??null,maxNewOrderUsd:0,qualifiesForNewCapital:false,
+      reasonCodes:[instrument.state==="KRAKEN_ASSET_MISMATCH"?"kraken_reference_price_mismatch":instrument.reason]
+    };
     if(instrument.state==="KRAKEN_MARKET_NOT_ONLINE") return {
       symbol,name:asset.name,cmcRank:input.cmcRanks?.get(symbol)??null,state:"KRAKEN_MARKET_NOT_ONLINE" as EngineState,
       priceUsd:quote.priceUsd,intendedLimitPrice:null,change7dPct:quote.change7dPct,change30dPct:quote.change30dPct,change90dPct:quote.change90dPct,
