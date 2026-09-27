@@ -3,6 +3,11 @@ import type { EngineRow, EngineSnapshot } from "../engine/types";
 
 type Nav="ENGINE"|"COMPARE"|"PORTFOLIO"|"LEARNING";
 const money=(n:number|null,digits=2)=>n==null?"—":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:digits,minimumFractionDigits:digits}).format(n);
+const priceMoney=(n:number|null)=>{
+  if(n==null) return "—";
+  const digits=n<0.0001?8:n<0.01?6:n<1?4:2;
+  return money(n,digits);
+};
 const pct=(n:number|null)=>n==null?"—":`${n>=0?"+":""}${n.toFixed(1)}%`;
 const stateLabel=(s:string)=>s.replaceAll("_"," ");
 
@@ -18,8 +23,8 @@ function EngineTable({snapshot,selected,onSelect}:{snapshot:EngineSnapshot;selec
         <td className="rank">{row.rank}</td>
         <td><strong>{row.symbol}</strong><small>{row.name}</small></td>
         <td><span className={`status status-${row.state.toLowerCase()}`}>{stateLabel(row.state)}</span></td>
-        <td className="num">{money(row.priceUsd,row.priceUsd!=null&&row.priceUsd<1?4:2)}</td>
-        <td className="num entry">{money(row.intendedLimitPrice,row.intendedLimitPrice!=null&&row.intendedLimitPrice<1?4:2)}</td>
+        <td className="num">{priceMoney(row.priceUsd)}</td>
+        <td className="num entry">{priceMoney(row.intendedLimitPrice)}</td>
         <td className={`num ${(row.change7dPct??0)>=0?"pos":"neg"}`}>{pct(row.change7dPct)}</td>
         <td className={`num ${(row.change30dPct??0)>=0?"pos":"neg"}`}>{pct(row.change30dPct)}</td>
         <td className={`num ${(row.change90dPct??0)>=0?"pos":"neg"}`}>{pct(row.change90dPct)}</td>
@@ -43,8 +48,8 @@ function Inspector({row}:{row:EngineRow|null}) {
     <section className="inspectorSection">
       <h3>Decision</h3>
       <dl>
-        <div><dt>Current price</dt><dd>{money(row.priceUsd,row.priceUsd!=null&&row.priceUsd<1?4:2)}</dd></div>
-        <div><dt>Zobiris entry</dt><dd className="cyan">{money(row.intendedLimitPrice,row.intendedLimitPrice!=null&&row.intendedLimitPrice<1?4:2)}</dd></div>
+        <div><dt>Current price</dt><dd>{priceMoney(row.priceUsd)}</dd></div>
+        <div><dt>Zobiris entry</dt><dd className="cyan">{priceMoney(row.intendedLimitPrice)}</dd></div>
         <div><dt>Limit gap</dt><dd>{pct(gap)}</dd></div>
         <div><dt>Max new order</dt><dd>{row.maxNewOrderUsd>0?money(row.maxNewOrderUsd):"—"}</dd></div>
       </dl>
