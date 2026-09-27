@@ -104,3 +104,13 @@ export function resolveWatchlistInstruments(symbols: string[], registry: Map<str
     return { symbol, state: "ACTIVE", instrument };
   });
 }
+
+
+export function snapBuyLimitToTick(price:number|null,tickSize:number|null):number|null {
+  if(price==null || !Number.isFinite(price) || price<=0) return null;
+  if(tickSize==null || !Number.isFinite(tickSize) || tickSize<=0) return price;
+  const steps=Math.floor((price+tickSize*1e-9)/tickSize);
+  const snapped=steps*tickSize;
+  const decimals=Math.min(12,Math.max(0,Math.ceil(-Math.log10(tickSize))+2));
+  return Number(snapped.toFixed(decimals));
+}
