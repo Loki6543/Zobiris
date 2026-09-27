@@ -5,10 +5,11 @@ const now="2026-09-27T08:30:00.000Z";
 function book(depthUsdPerSide:number): NormalizedBook {
   const bid=100, ask=100.1;
   const levels=Math.max(1,Math.ceil(depthUsdPerSide/500));
+  const usdPerLevel=depthUsdPerSide/levels;
   return {
     pair:"TEST/USD", observedAt:now,
-    bids:Array.from({length:levels},(_,i)=>({price:bid-i*0.01,qty:500/(bid-i*0.01)})),
-    asks:Array.from({length:levels},(_,i)=>({price:ask+i*0.01,qty:500/(ask+i*0.01)})),
+    bids:Array.from({length:levels},(_,i)=>({price:bid-i*0.01,qty:usdPerLevel/(bid-i*0.01)})),
+    asks:Array.from({length:levels},(_,i)=>({price:ask+i*0.01,qty:usdPerLevel/(ask+i*0.01)})),
   };
 }
 
