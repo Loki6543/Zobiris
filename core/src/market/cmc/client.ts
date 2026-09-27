@@ -70,3 +70,47 @@ export async function fetchCmcQuotes(ids:string[],args:{apiKey?:string;fetchImpl
   if(status?.error_code && Number(status.error_code)!==0) throw new Error(`CMC: ${status.error_message ?? status.error_code}`);
   return parseCmcQuotes(raw);
 }
+
+
+export interface CmcMetadata {
+  cmcId:string;
+  symbol:string;
+  name:string;
+  category:string|null;
+  tags:string[];
+  logo:string|null;
+}
+
+export function parseCmcMetadata(raw:any):CmcMetadata[] {
+  return records(raw?.data).flatMap(entry=>{
+    const symbol=String(entry?.symbol ?? "").toUpperCase();
+    const id=String(entry?.id ?? "");
+    if(!symbol||!id) return [];
+    const tags=Array.isArray(entry?.tags)
+      ? entry.tags.map((tag:any)=>typeof tag==="string"?tag:String(tag?.name ?? tag?.slug ?? "")).filter(Boolean)
+      : [];
+    return [{
+      cmcId:id,symbol,name:String(entry?.name ?? symbol),
+      category:typeof entry?.category==="string"?entry.category:null,
+      tags,
+      logo:typeof entry?.logo==="string"?entry.logo:null,
+    }];
+  });
+}
+
+export async function fetchCmcMetadata(ids:string[],args:{apiKey?:string;fetchImpl?:FetchLike}={}):Promise<CmcMetadata[]> {
+  const fetchImpl=args.fetchImpl ?? fetch;
+  const unique=[...new Set(ids.filter(Boolean))];
+  if(!unique.length) return [];
+  const base=args.apiKey
+    ? "https://pro-api.coinmarketcap.com/v2/cryptocurrency/info"
+    : "https://pro-api.coinmarketcap.com/public-api/v2/cryptocurrency/info";
+  const url=new URL(base);
+  url.searchParams.set("id",unique.join(","));
+  const response=await fetchImpl(url,{headers:args.apiKey?{"X-CMC_PRO_API_KEY":args.apiKey,Accept:"application/json"}:{Accept:"application/json"},signal:AbortSignal.timeout(12_000)});
+  if(!response.ok) throw new Error(`CMC metadata HTTP ${response.status}`);
+  const raw=await response.json();
+  const status=(raw as any)?.status;
+  if(status?.error_code && Number(status.error_code)!==0) throw new Error(`CMC metadata: ${status.error_message ?? status.error_code}`);
+  return parseCmcMetadata(raw);
+}
