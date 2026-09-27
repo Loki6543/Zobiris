@@ -12,7 +12,7 @@ describe("health endpoint", () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.service).toBe("zobiris-core");
-    expect(res.body.schemaVersion).toBe(1);
+    expect(res.body.schemaVersion).toBe(2);
     db.close();
   });
 });
