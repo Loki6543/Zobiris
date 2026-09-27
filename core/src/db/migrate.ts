@@ -115,6 +115,26 @@ const MIGRATIONS = [
       );
     `,
   },
+  {
+    id: 3,
+    sql: `
+      CREATE TABLE IF NOT EXISTS market_candles (
+        symbol TEXT NOT NULL REFERENCES assets(symbol) ON DELETE CASCADE,
+        interval_minutes INTEGER NOT NULL,
+        open_time TEXT NOT NULL,
+        open REAL NOT NULL,
+        high REAL NOT NULL,
+        low REAL NOT NULL,
+        close REAL NOT NULL,
+        volume REAL,
+        committed INTEGER NOT NULL DEFAULT 1 CHECK(committed IN (0,1)),
+        PRIMARY KEY(symbol, interval_minutes, open_time)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_market_candles_lookup
+        ON market_candles(symbol, interval_minutes, open_time);
+    `,
+  },
 ] as const;
 
 export function migrate(db: Database.Database) {
