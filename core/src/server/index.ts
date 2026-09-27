@@ -13,14 +13,27 @@ const engine=new EngineRuntime(db,config.CMC_API_KEY,{
   maneuverNavUsd:config.PILOT_MANEUVER_NAV_USD,
   availableCashUsd:config.PILOT_AVAILABLE_CASH_USD,
 });
-const app = createApp(db,engine);
+const app = createApp(db,engine,{sessionSecret:config.AUTH_SESSION_SECRET});
 
 async function refreshEngine() {
   try {
     const snapshot=await engine.refresh();
-    console.log(`Engine refresh: ${snapshot.rows.length} coins, ${snapshot.qualifiedCount} qualified, ${snapshot.health.executionSampled} execution sampled`);
+    console.log(JSON.stringify({
+      event:"engine_refresh",
+      generatedAt:snapshot.generatedAt,
+      rows:snapshot.rows.length,
+      qualified:snapshot.qualifiedCount,
+      executionSampled:snapshot.health.executionSampled,
+      authority:snapshot.authority.newBuyEnabled,
+      providers:snapshot.health.providers,
+      durationMs:snapshot.health.refreshDurationMs,
+    }));
   } catch (error) {
-    console.error("Engine refresh failed:", error instanceof Error ? error.message : String(error));
+    console.error(JSON.stringify({
+      event:"engine_refresh_crash",
+      error:error instanceof Error ? error.message : String(error),
+      at:new Date().toISOString(),
+    }));
   }
 }
 void refreshEngine();
