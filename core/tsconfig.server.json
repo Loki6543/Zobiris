@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist-server",
+    "rootDir": "src",
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": ["src/server/**/*.ts", "src/db/**/*.ts", "src/shared/**/*.ts", "src/market/**/*.ts", "src/strategies/**/*.ts", "src/learning/**/*.ts", "src/account/**/*.ts", "src/risk/**/*.ts", "src/portfolio/**/*.ts", "src/prediction/**/*.ts", "src/compare/**/*.ts"]
+}
