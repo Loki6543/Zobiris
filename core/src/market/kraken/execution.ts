@@ -1,3 +1,5 @@
+import { ZOBIRIS_POLICY } from "../../policy/config.js";
+
 export interface BookLevel { price: number; qty: number }
 export interface NormalizedBook {
   pair: string;
@@ -75,9 +77,9 @@ export function evaluatePersonalExecution(book: NormalizedBook, args: {
   costMinUsd?: number | null;
   orderMinBase?: number | null;
 }): PersonalExecutionResult {
-  const standardUsd=args.standardUsd ?? 100;
-  const maxImpactBps=args.maxImpactBps ?? 100;
-  const maxAgeMs=args.maxAgeMs ?? 15_000;
+  const standardUsd=args.standardUsd ?? ZOBIRIS_POLICY.execution.standardTestUsd;
+  const maxImpactBps=args.maxImpactBps ?? ZOBIRIS_POLICY.execution.maxImpactBps;
+  const maxAgeMs=args.maxAgeMs ?? ZOBIRIS_POLICY.execution.maxBookAgeMs;
   const age=Date.parse(args.asOf)-Date.parse(book.observedAt);
   const fresh=Number.isFinite(age) && age >= 0 && age <= maxAgeMs;
 
@@ -93,7 +95,12 @@ export function evaluatePersonalExecution(book: NormalizedBook, args: {
   const minimumOrderUsd=minimumCandidates.length ? Math.max(...minimumCandidates) : null;
   const proposedOrderMeetsMinimum=minimumOrderUsd==null || args.proposedOrderUsd+1e-9>=minimumOrderUsd;
   const positionExitMeetsMinimum=positionSell==null ? null : minimumOrderUsd==null || args.currentPositionUsd!+1e-9>=minimumOrderUsd;
-  const stressSizes=[500,2500,50000,250000] as const;
+  const stressSizes=[
+    ZOBIRIS_POLICY.execution.stress.smallUsd,
+    ZOBIRIS_POLICY.execution.stress.normalUsd,
+    ZOBIRIS_POLICY.execution.stress.deepUsd,
+    ZOBIRIS_POLICY.execution.stress.institutionalUsd,
+  ] as const;
   const stress=Object.fromEntries(stressSizes.map(size => [String(size), { buy: walkBook(book,"buy",size), sell: walkBook(book,"sell",size) }])) as PersonalExecutionResult["stress"];
 
   const hardPass=fresh && proposedOrderMeetsMinimum && positionExitMeetsMinimum!==false
@@ -103,10 +110,10 @@ export function evaluatePersonalExecution(book: NormalizedBook, args: {
 
   const stressPairPass=(size:keyof typeof stress,bps:number) => walkPass(stress[size].buy,bps) && walkPass(stress[size].sell,bps);
   const marketDepthGrade: MarketDepthGrade =
-    stressPairPass("250000",400) ? "INSTITUTIONAL" :
-    stressPairPass("50000",150) ? "DEEP" :
-    stressPairPass("2500",100) ? "NORMAL" :
-    stressPairPass("500",100) ? "SMALL_SIZE_ONLY" : "VERY_THIN";
+    stressPairPass(String(ZOBIRIS_POLICY.execution.stress.institutionalUsd) as keyof typeof stress,ZOBIRIS_POLICY.execution.stress.institutionalMaxBps) ? "INSTITUTIONAL" :
+    stressPairPass(String(ZOBIRIS_POLICY.execution.stress.deepUsd) as keyof typeof stress,ZOBIRIS_POLICY.execution.stress.deepMaxBps) ? "DEEP" :
+    stressPairPass(String(ZOBIRIS_POLICY.execution.stress.normalUsd) as keyof typeof stress,ZOBIRIS_POLICY.execution.stress.normalMaxBps) ? "NORMAL" :
+    stressPairPass(String(ZOBIRIS_POLICY.execution.stress.smallUsd) as keyof typeof stress,ZOBIRIS_POLICY.execution.stress.smallMaxBps) ? "SMALL_SIZE_ONLY" : "VERY_THIN";
 
   const reasonCodes:string[]=[];
   if(!fresh) reasonCodes.push("stale_book");
