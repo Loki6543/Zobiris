@@ -43,7 +43,11 @@ export function marketContext(quotes:CmcMarketQuote[],watchlist:WatchlistAsset[]
 
 export function needsExecutionSample(quote:CmcMarketQuote|undefined,market:RotationMarketContext) {
   if(!quote||!present(quote.change7dPct)||!present(quote.change30dPct)||!present(quote.change90dPct)) return false;
-  const marketPotential=present(market.btc30dPct)&&present(market.btc90dPct)&&market.btc30dPct>0&&market.btc90dPct>0;
+  const marketPotential=
+    present(market.btc30dPct)&&present(market.btc90dPct)&&
+    present(market.breadth7dPositive)&&present(market.breadth30dPositive)&&
+    market.btc30dPct>0&&market.btc90dPct>0&&
+    market.breadth7dPositive>=0.55&&market.breadth30dPositive>=0.45;
   if(!marketPotential) return false;
   const recovering=quote.change7dPct>0&&quote.change7dPct<=14;
   const lagging=quote.change30dPct<=3 || quote.change90dPct<=3
