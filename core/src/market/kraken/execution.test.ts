@@ -33,6 +33,13 @@ describe("personal-size execution", () => {
     expect(result.hardPass).toBe(false);
   });
 
+  it("fails when the proposed order is below Kraken's actual minimum", () => {
+    const result=evaluatePersonalExecution(book(10_000),{asOf:now,proposedOrderUsd:37,costMinUsd:50});
+    expect(result.hardPass).toBe(false);
+    expect(result.minimumOrderUsd).toBe(50);
+    expect(result.reasonCodes).toContain("below_kraken_minimum_order");
+  });
+
   it("tests the actual holding exit without using a $50k veto", () => {
     const result=evaluatePersonalExecution(book(1_000),{asOf:now,proposedOrderUsd:50,currentPositionUsd:2_000});
     expect(result.standardSell.complete).toBe(true);
