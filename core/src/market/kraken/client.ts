@@ -47,13 +47,20 @@ export function parseTicker(pairKey: string, row: any): KrakenTicker {
   };
 }
 
-export async function fetchTicker(pair: string, fetchImpl: FetchLike = fetch): Promise<KrakenTicker> {
+export async function fetchTickers(pairs: string[], fetchImpl: FetchLike = fetch): Promise<Map<string,KrakenTicker>> {
+  const unique=[...new Set(pairs.filter(Boolean))];
+  if(!unique.length) return new Map();
   const url=new URL("https://api.kraken.com/0/public/Ticker");
-  url.searchParams.set("pair",pair);
+  url.searchParams.set("pair",unique.join(","));
   const result=await krakenJson(url,fetchImpl);
-  const entry=Object.entries(result)[0];
-  if(!entry) throw new Error("Kraken ticker missing");
-  return parseTicker(entry[0],entry[1]);
+  return new Map(Object.entries(result).map(([pairKey,row])=>[pairKey,parseTicker(pairKey,row)]));
+}
+
+export async function fetchTicker(pair: string, fetchImpl: FetchLike = fetch): Promise<KrakenTicker> {
+  const result=await fetchTickers([pair],fetchImpl);
+  const first=result.values().next().value as KrakenTicker|undefined;
+  if(!first) throw new Error("Kraken ticker missing");
+  return first;
 }
 
 export async function fetchOrderBook(pair: string, fetchImpl: FetchLike = fetch): Promise<NormalizedBook> {
