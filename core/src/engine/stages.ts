@@ -1,4 +1,4 @@
-export type StageStatus = "SUCCESS" | "FAILED" | "SKIPPED";
+export type StageStatus = "SUCCESS" | "DEGRADED" | "FAILED" | "SKIPPED";
 
 export interface StageResult<T> {
   name: string;
