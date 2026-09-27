@@ -82,12 +82,36 @@ function validIso(value:string|null|undefined) {
   return Number.isFinite(ms)?new Date(ms).toISOString():null;
 }
 
-function oldestQuoteAsOf(quotes:CmcMarketQuote[],fallback:string) {
+function medianQuoteAsOf(quotes:CmcMarketQuote[],fallback:string) {
   const times=quotes.flatMap(q=>{
     const value=validIso(q.lastUpdated);
     return value?[Date.parse(value)]:[];
-  });
-  return times.length?new Date(Math.min(...times)).toISOString():fallback;
+  }).sort((a,b)=>a-b);
+  if(!times.length) return fallback;
+  const mid=Math.floor(times.length/2);
+  const median=times.length%2 ? times[mid]! : (times[mid-1]!+times[mid]!)/2;
+  return new Date(median).toISOString();
+}
+
+function quoteFreshness(quotes:CmcMarketQuote[],nowMs:number) {
+  const fresh=new Set<string>();
+  const stale=new Set<string>();
+  for(const quote of quotes) {
+    const at=validIso(quote.lastUpdated);
+    if(!at) {
+      stale.add(quote.symbol.toUpperCase());
+      continue;
+    }
+    const age=nowMs-Date.parse(at);
+    if(age>=0 && age<=ZOBIRIS_POLICY.providerFreshness.cmcQuotesMs) fresh.add(quote.symbol.toUpperCase());
+    else stale.add(quote.symbol.toUpperCase());
+  }
+  return {
+    fresh,
+    stale,
+    coverage:quotes.length?fresh.size/quotes.length:0,
+    btcFresh:fresh.has("BTC"),
+  };
 }
 
 function resolveProvider<T>(args:{
@@ -200,7 +224,7 @@ export class EngineRuntime {
       stage:quoteStage,prior:this.quotesCache,fallback:[],
       ttlMs:ZOBIRIS_POLICY.providerFreshness.cmcQuotesMs,nowMs:providerNowMs,
       mode:this.cmcApiKey?"keyed":"keyless",
-      dataAsOf:(data,completedAt)=>oldestQuoteAsOf(data,completedAt),
+      dataAsOf:(data,completedAt)=>medianQuoteAsOf(data,completedAt),
     });
     this.quotesCache=quotesResolved.cache;
 
@@ -235,6 +259,8 @@ export class EngineRuntime {
     });
     this.tickerCache=tickerResolved.cache;
 
+    const freshness=quoteFreshness(quotesResolved.data,this.deps.now().getTime());
+    const marketQuotes=quotesResolved.data.filter(q=>freshness.fresh.has(q.symbol.toUpperCase()));
     const referencePrices=new Map(
       [...quoteMap.entries()].flatMap(([symbol,quote])=>
         quote.priceUsd!=null&&Number.isFinite(quote.priceUsd)&&quote.priceUsd>0
@@ -279,13 +305,15 @@ export class EngineRuntime {
     ] as const) {
       if(["STALE","ERROR","MISSING"].includes(health.status)) authorityReasons.push(`${name}_not_fresh`);
     }
+    if(!freshness.btcFresh) authorityReasons.push("btc_quote_not_fresh");
+    if(freshness.coverage<ZOBIRIS_POLICY.providerFreshness.minFreshQuoteCoverage) authorityReasons.push("fresh_quote_coverage_too_low");
     if(clockBeforeExecution.state!=="HEALTHY") authorityReasons.push(...clockBeforeExecution.reasons);
     const authority={newBuyEnabled:authorityReasons.length===0,reasons:[...new Set(authorityReasons)]};
 
     this.persistPolicy();
     this.persistStatic(watchlist,classifications,instruments,attemptAt,metadataAuthoritative);
 
-    const market=marketContext(quotesResolved.data,watchlist);
+    const market=marketContext(marketQuotes,watchlist);
     const candidatePool=authority.newBuyEnabled ? watchlist
       .filter(a=>a.symbol!=="BTC")
       .filter(a=>!classifications.get(a.symbol)?.recommendationExcluded)
@@ -355,7 +383,7 @@ export class EngineRuntime {
 
     const decisionAt=this.deps.now().toISOString();
     const provisional=buildEngineSnapshot({
-      generatedAt:decisionAt,watchlist,quotes:quotesResolved.data,instruments,classifications,executions,riskPass,
+      generatedAt:decisionAt,watchlist,quotes:quotesResolved.data,marketQuotes,staleQuoteSymbols:freshness.stale,instruments,classifications,executions,riskPass,
       maneuverNavUsd:this.options.maneuverNavUsd ?? ZOBIRIS_POLICY.capital.defaultManeuverNavUsd,
       availableCashUsd:this.options.availableCashUsd ?? 0,
       authority,
@@ -423,7 +451,7 @@ export class EngineRuntime {
     };
 
     const snapshot=buildEngineSnapshot({
-      generatedAt:decisionAt,watchlist,quotes:quotesResolved.data,instruments,classifications,executions,riskPass,
+      generatedAt:decisionAt,watchlist,quotes:quotesResolved.data,marketQuotes,staleQuoteSymbols:freshness.stale,instruments,classifications,executions,riskPass,
       maneuverNavUsd:this.options.maneuverNavUsd ?? ZOBIRIS_POLICY.capital.defaultManeuverNavUsd,
       availableCashUsd:this.options.availableCashUsd ?? 0,
       authority,
