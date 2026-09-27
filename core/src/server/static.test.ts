@@ -6,9 +6,13 @@ import { join } from "node:path";
 import { openDatabase } from "../db/client.js";
 import { migrate } from "../db/migrate.js";
 import { createApp } from "./app.js";
-import { mountProductionUi } from "./static.js";
+import { mountProductionUi, productionStaticDir } from "./static.js";
 
 describe("production UI routing", () => {
+  it("resolves core/dist from the compiled core/dist-server/server directory", () => {
+    expect(productionStaticDir("/repo/core/dist-server/server")).toBe("/repo/core/dist");
+  });
+
   it("serves root and nested SPA routes under Express 5 without swallowing unknown API routes", async () => {
     const db=openDatabase(":memory:");
     migrate(db);
