@@ -23,5 +23,7 @@ export function createApp(db: Database.Database, engine?: EngineRuntime) {
     return res.json({ ok:true, snapshot });
   });
 
+  app.use("/api", (_req, res) => res.status(404).json({ ok:false, error:"API_NOT_FOUND" }));
+
   return app;
 }
