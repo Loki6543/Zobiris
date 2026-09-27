@@ -75,7 +75,7 @@ export const ClockHealthSchema=z.object({
 
 export const StageHealthSchema=z.object({
   name:z.string(),
-  status:z.enum(["SUCCESS","FAILED","SKIPPED"]),
+  status:z.enum(["SUCCESS","DEGRADED","FAILED","SKIPPED"]),
   durationMs:z.number().min(0),
   error:z.string().nullable(),
 });
