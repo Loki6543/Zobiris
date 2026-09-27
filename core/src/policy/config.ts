@@ -88,6 +88,18 @@ export const ZOBIRIS_POLICY = {
   identity: {
     maxKrakenReferenceGapPct: 0.10,
   },
+  executionSampling: {
+    absoluteLagBufferPct: 3,
+    sampleLimit: 12,
+    delayMs: 300,
+    cacheTtlMultiplier: 3,
+  },
+  outcomes: {
+    resolveLimitPerRefresh: 3,
+  },
+  display: {
+    entryQualityPenaltyPerPullbackPct: 6,
+  },
   providerFreshness: {
     cmcQuotesMs: 15 * 60_000,
     minFreshQuoteCoverage: 0.80,
