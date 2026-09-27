@@ -19,6 +19,18 @@ describe("health and metrics endpoints", () => {
     db.close();
   });
 
+  it("exposes the shared minimum-evidence gate without inventing confidence", async () => {
+    const db = openDatabase(":memory:");
+    migrate(db);
+    const res = await request(createApp(db)).get("/api/learning/evidence/7D");
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.evidence.horizon).toBe("7D");
+    expect(res.body.evidence.promotable).toBe(false);
+    expect(res.body.evidence.qualifiedEpisodes).toBe(0);
+    db.close();
+  });
+
   it("exposes non-sensitive operational metrics", async () => {
     const db = openDatabase(":memory:");
     migrate(db);
