@@ -1,0 +1,25 @@
+name: Zobiris Core CI
+
+on:
+  push:
+    branches:
+      - zobiris-core-rebuild
+  pull_request:
+    paths:
+      - "core/**"
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --no-audit --no-fund
+      - name: Typecheck, tests and production build
+        run: npm run build
