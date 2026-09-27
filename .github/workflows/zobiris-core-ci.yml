@@ -8,6 +8,10 @@ on:
     paths:
       - "core/**"
 
+concurrency:
+  group: zobiris-core-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   core:
     runs-on: ubuntu-latest
