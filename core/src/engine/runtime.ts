@@ -283,7 +283,7 @@ export class EngineRuntime {
     const authority={newBuyEnabled:authorityReasons.length===0,reasons:[...new Set(authorityReasons)]};
 
     this.persistPolicy();
-    this.persistStatic(watchlist,classifications,instruments,attemptAt);
+    this.persistStatic(watchlist,classifications,instruments,attemptAt,metadataAuthoritative);
 
     const market=marketContext(quotesResolved.data,watchlist);
     const candidatePool=authority.newBuyEnabled ? watchlist
@@ -501,9 +501,11 @@ export class EngineRuntime {
     classifications:Map<string,ReturnType<typeof classifyAsset>>,
     instruments:WatchlistInstrumentState[],
     at:string,
+    classificationAuthoritative:boolean,
   ) {
     const assetStmt=this.db.prepare(`INSERT INTO assets(symbol,asset_class,classification_reason,updated_at) VALUES (?,?,?,?)
       ON CONFLICT(symbol) DO UPDATE SET asset_class=excluded.asset_class,classification_reason=excluded.classification_reason,updated_at=excluded.updated_at`);
+    const assetInsertOnly=this.db.prepare(`INSERT OR IGNORE INTO assets(symbol,asset_class,classification_reason,updated_at) VALUES (?,?,?,?)`);
     const watchStmt=this.db.prepare(`INSERT INTO watchlist(symbol,enabled,added_at) VALUES (?,1,?)
       ON CONFLICT(symbol) DO UPDATE SET enabled=1`);
     const instrumentStmt=this.db.prepare(`INSERT INTO kraken_instruments(symbol,pair_key,altname,wsname,status,online,order_min,cost_min_usd,tick_size,pair_decimals,lot_decimals,observed_at)
@@ -513,7 +515,8 @@ export class EngineRuntime {
     this.db.transaction(()=>{
       for(const asset of watchlist) {
         const classification=classifications.get(asset.symbol)!;
-        assetStmt.run(asset.symbol,classification.assetClass,classification.reason,at);
+        if(classificationAuthoritative) assetStmt.run(asset.symbol,classification.assetClass,classification.reason,at);
+        else assetInsertOnly.run(asset.symbol,classification.assetClass,classification.reason,at);
         watchStmt.run(asset.symbol,at);
       }
       for(const row of instruments) {
