@@ -1,0 +1,196 @@
+name: Zobiris Core Desktop Preview
+
+on:
+  push:
+    branches:
+      - zobiris-core-rebuild
+    paths:
+      - ".github/workflows/zobiris-core-preview.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install app dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build desktop UI
+        run: npm run build:ui
+
+      - name: Install Playwright for preview capture
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start built UI
+        shell: bash
+        run: |
+          nohup npx vite preview --host 127.0.0.1 --port 4173 > /tmp/zobiris-preview-server.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173 >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/zobiris-preview-server.log
+          exit 1
+
+      - name: Capture real React desktop preview
+        shell: bash
+        run: |
+          cat > /tmp/capture-zobiris.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const snapshot = {
+            version: "1.0",
+            generatedAt: "2026-09-27T09:15:00.000Z",
+            market: {
+              state: "BULLISH",
+              btcPriceUsd: 84420,
+              btc7dPct: 4.2,
+              btc30dPct: 10.6,
+              btc90dPct: 39.4,
+              breadth7dPositive: 0.66,
+              breadth30dPositive: 0.54
+            },
+            health: {
+              cmc: "LIVE",
+              krakenInstruments: "LIVE",
+              executionSampled: 12,
+              watchlistCount: 59
+            },
+            qualifiedCount: 3,
+            nearRotationCount: 7,
+            rows: [
+              {
+                rank:1,symbol:"AAVE",name:"Aave",cmcRank:47,state:"WAIT_FOR_PULLBACK",
+                priceUsd:145.20,intendedLimitPrice:138.40,change7dPct:6.2,change30dPct:-8.1,change90dPct:-21.4,
+                relative30dVsBtcPct:-18.7,relative90dVsBtcPct:-60.8,catchUpQuality:88,entryQuality:78,
+                marketDepthGrade:"NORMAL",personalExecutionPass:true,krakenPair:"AAVE/USD",maxNewOrderUsd:37,
+                qualifiesForNewCapital:true,
+                reasonCodes:["market_bullish","30d_and_90d_laggard","7d_recovery_confirmed","personal_execution_passed","pullback_entry_required"]
+              },
+              {
+                rank:2,symbol:"LINK",name:"Chainlink",cmcRank:13,state:"WAIT_FOR_PULLBACK",
+                priceUsd:18.42,intendedLimitPrice:17.51,change7dPct:4.8,change30dPct:-5.3,change90dPct:-14.8,
+                relative30dVsBtcPct:-15.9,relative90dVsBtcPct:-54.2,catchUpQuality:84,entryQuality:81,
+                marketDepthGrade:"DEEP",personalExecutionPass:true,krakenPair:"LINK/USD",maxNewOrderUsd:37,
+                qualifiesForNewCapital:true,
+                reasonCodes:["market_bullish","30d_and_90d_laggard","7d_recovery_confirmed","personal_execution_passed","pullback_entry_required"]
+              },
+              {
+                rank:3,symbol:"HBAR",name:"Hedera",cmcRank:24,state:"NEAR_ROTATION",
+                priceUsd:0.1834,intendedLimitPrice:null,change7dPct:3.6,change30dPct:-2.1,change90dPct:-18.2,
+                relative30dVsBtcPct:-12.7,relative90dVsBtcPct:-57.6,catchUpQuality:76,entryQuality:0,
+                marketDepthGrade:"NORMAL",personalExecutionPass:true,krakenPair:"HBAR/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["lagging_btc_but_not_strict_30d_90d_loser"]
+              },
+              {
+                rank:4,symbol:"COMP",name:"Compound",cmcRank:167,state:"TOO_EARLY",
+                priceUsd:42.14,intendedLimitPrice:null,change7dPct:-0.8,change30dPct:-14.0,change90dPct:-31.0,
+                relative30dVsBtcPct:-24.6,relative90dVsBtcPct:-70.4,catchUpQuality:69,entryQuality:0,
+                marketDepthGrade:"SMALL_SIZE_ONLY",personalExecutionPass:true,krakenPair:"COMP/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["seven_day_recovery_not_positive"]
+              },
+              {
+                rank:5,symbol:"ATOM",name:"Cosmos",cmcRank:83,state:"NEAR_ROTATION",
+                priceUsd:4.86,intendedLimitPrice:null,change7dPct:2.7,change30dPct:1.2,change90dPct:-12.5,
+                relative30dVsBtcPct:-9.4,relative90dVsBtcPct:-51.9,catchUpQuality:67,entryQuality:0,
+                marketDepthGrade:"SMALL_SIZE_ONLY",personalExecutionPass:true,krakenPair:"ATOM/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["lagging_btc_but_not_strict_30d_90d_loser"]
+              },
+              {
+                rank:6,symbol:"XLM",name:"Stellar",cmcRank:18,state:"EXECUTION_WARMUP",
+                priceUsd:0.2741,intendedLimitPrice:null,change7dPct:4.1,change30dPct:-3.8,change90dPct:-11.7,
+                relative30dVsBtcPct:-14.4,relative90dVsBtcPct:-51.1,catchUpQuality:65,entryQuality:0,
+                marketDepthGrade:null,personalExecutionPass:null,krakenPair:"XLM/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["execution_sample_pending","30d_and_90d_laggard"]
+              },
+              {
+                rank:7,symbol:"ONDO",name:"Ondo",cmcRank:39,state:"NEAR_ROTATION",
+                priceUsd:0.8123,intendedLimitPrice:null,change7dPct:3.2,change30dPct:2.4,change90dPct:-16.1,
+                relative30dVsBtcPct:-8.2,relative90dVsBtcPct:-55.5,catchUpQuality:63,entryQuality:0,
+                marketDepthGrade:"NORMAL",personalExecutionPass:true,krakenPair:"ONDO/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["lagging_btc_but_not_strict_30d_90d_loser"]
+              },
+              {
+                rank:8,symbol:"SOL",name:"Solana",cmcRank:5,state:"ALREADY_EXTENDED",
+                priceUsd:121.40,intendedLimitPrice:null,change7dPct:16.0,change30dPct:12.0,change90dPct:28.0,
+                relative30dVsBtcPct:1.4,relative90dVsBtcPct:-11.4,catchUpQuality:58,entryQuality:0,
+                marketDepthGrade:"INSTITUTIONAL",personalExecutionPass:true,krakenPair:"SOL/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["recovery_already_too_extended_to_chase"]
+              },
+              {
+                rank:9,symbol:"XRP",name:"XRP",cmcRank:4,state:"ALREADY_EXTENDED",
+                priceUsd:1.50,intendedLimitPrice:null,change7dPct:16.2,change30dPct:9.6,change90dPct:21.3,
+                relative30dVsBtcPct:-1.0,relative90dVsBtcPct:-18.1,catchUpQuality:54,entryQuality:0,
+                marketDepthGrade:"DEEP",personalExecutionPass:true,krakenPair:"XRP/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["recovery_already_too_extended_to_chase"]
+              },
+              {
+                rank:10,symbol:"BTC",name:"Bitcoin",cmcRank:1,state:"BENCHMARK",
+                priceUsd:84420,intendedLimitPrice:null,change7dPct:4.2,change30dPct:10.6,change90dPct:39.4,
+                relative30dVsBtcPct:0,relative90dVsBtcPct:0,catchUpQuality:0,entryQuality:0,
+                marketDepthGrade:"INSTITUTIONAL",personalExecutionPass:true,krakenPair:"XBT/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["btc_is_strategy_benchmark"]
+              },
+              {
+                rank:11,symbol:"SHIB",name:"Shiba Inu",cmcRank:20,state:"TOO_EARLY",
+                priceUsd:0.00001234,intendedLimitPrice:null,change7dPct:-1.2,change30dPct:-9.8,change90dPct:-26.4,
+                relative30dVsBtcPct:-20.4,relative90dVsBtcPct:-65.8,catchUpQuality:49,entryQuality:0,
+                marketDepthGrade:"NORMAL",personalExecutionPass:true,krakenPair:"SHIB/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["seven_day_recovery_not_positive"]
+              },
+              {
+                rank:12,symbol:"KAS",name:"Kaspa",cmcRank:29,state:"NO_KRAKEN_USD_MARKET",
+                priceUsd:0.0831,intendedLimitPrice:null,change7dPct:5.1,change30dPct:-13.1,change90dPct:-24.9,
+                relative30dVsBtcPct:-23.7,relative90dVsBtcPct:-64.3,catchUpQuality:0,entryQuality:0,
+                marketDepthGrade:null,personalExecutionPass:null,krakenPair:null,maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["no_active_kraken_usd_pair"]
+              },
+              {
+                rank:13,symbol:"QNT",name:"Quant",cmcRank:37,state:"KRAKEN_IDENTITY_UNVERIFIED",
+                priceUsd:98.7,intendedLimitPrice:null,change7dPct:2.1,change30dPct:-6.7,change90dPct:-19.2,
+                relative30dVsBtcPct:null,relative90dVsBtcPct:null,catchUpQuality:0,entryQuality:0,
+                marketDepthGrade:null,personalExecutionPass:null,krakenPair:"QNT/USD",maxNewOrderUsd:0,
+                qualifiesForNewCapital:false,reasonCodes:["kraken_ticker_missing"]
+              }
+            ]
+          };
+
+          const browser = await chromium.launch({ headless: true });
+          const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+          const page = await context.newPage();
+
+          await page.route('**/api/engine', async route => {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({ ok: true, snapshot })
+            });
+          });
+
+          await page.goto('http://127.0.0.1:4173', { waitUntil: 'networkidle' });
+          await page.getByText('Watchlist Rankings').waitFor();
+          await page.screenshot({ path: '../zobiris-engine-preview-1920x1080.png', fullPage: false, animations: 'disabled' });
+          await browser.close();
+          EOF
+          node /tmp/capture-zobiris.mjs
+
+      - name: Upload preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: zobiris-engine-desktop-preview
+          path: zobiris-engine-preview-1920x1080.png
+          if-no-files-found: error
+          retention-days: 7
