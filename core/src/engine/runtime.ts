@@ -330,7 +330,8 @@ export class EngineRuntime {
 
     const cacheTtlMs=Math.max(
       ZOBIRIS_POLICY.providerFreshness.executionCacheMinMs,
-      (this.options.executionSampleDelayMs ?? 300)*candidatePool.length*3,
+      (this.options.executionSampleDelayMs ?? ZOBIRIS_POLICY.executionSampling.delayMs)*
+        candidatePool.length*ZOBIRIS_POLICY.executionSampling.cacheTtlMultiplier,
     );
     const nowMs=this.deps.now().getTime();
     for(const [symbol,cached] of this.executionCache) {
@@ -338,7 +339,7 @@ export class EngineRuntime {
       if(!Number.isFinite(age)||age<0||age>cacheTtlMs) this.executionCache.delete(symbol);
     }
 
-    const sampleLimit=Math.max(1,this.options.executionSampleLimit ?? 12);
+    const sampleLimit=Math.max(1,this.options.executionSampleLimit ?? ZOBIRIS_POLICY.executionSampling.sampleLimit);
     const candidates=[] as WatchlistAsset[];
     if(candidatePool.length) {
       const start=this.executionCursor % candidatePool.length;
@@ -374,7 +375,7 @@ export class EngineRuntime {
             } catch {
               failures++;
             }
-            if(i<candidates.length-1) await this.deps.sleep(this.options.executionSampleDelayMs ?? 300);
+            if(i<candidates.length-1) await this.deps.sleep(this.options.executionSampleDelayMs ?? ZOBIRIS_POLICY.executionSampling.delayMs);
           }
           return {sampled:candidates.length-failures,failures};
         })
@@ -399,7 +400,7 @@ export class EngineRuntime {
           pairForSymbol:(symbol)=>this.pairForSymbol(symbol,instrumentMap),
           fetchCandles:this.deps.fetchCandles,
           now:this.deps.now,
-        },this.options.outcomeResolveLimit ?? 3))
+        },this.options.outcomeResolveLimit ?? ZOBIRIS_POLICY.outcomes.resolveLimitPerRefresh))
       : skippedStage("outcomeResolution",clock,"clock_or_kraken_instruments_not_authoritative");
 
     const wallEnd=this.deps.now();
