@@ -172,6 +172,21 @@ const MIGRATIONS = [
       );
     `,
   },
+  {
+    id: 5,
+    sql: `
+      CREATE TABLE IF NOT EXISTS archive_exports (
+        archive_id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        cutoff_at TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        sha256 TEXT NOT NULL,
+        execution_rows INTEGER NOT NULL,
+        book_rows INTEGER NOT NULL,
+        bytes INTEGER NOT NULL
+      );
+    `,
+  },
 ] as const;
 
 export function migrate(db: Database.Database) {
