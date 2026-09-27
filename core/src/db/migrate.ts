@@ -187,6 +187,17 @@ const MIGRATIONS = [
       );
     `,
   },
+  {
+    id: 6,
+    sql: `
+      ALTER TABLE strategy_episodes ADD COLUMN episode_kind TEXT NOT NULL DEFAULT 'QUALIFIED';
+      ALTER TABLE strategy_episodes ADD COLUMN entry_state TEXT;
+      ALTER TABLE strategy_episodes ADD COLUMN exit_state TEXT;
+      UPDATE strategy_episodes SET entry_state=COALESCE(entry_state,to_state);
+      CREATE INDEX IF NOT EXISTS idx_strategy_episodes_kind_policy
+        ON strategy_episodes(episode_kind,policy_hash,signal_at);
+    `,
+  },
 ] as const;
 
 export function migrate(db: Database.Database) {
