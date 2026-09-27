@@ -31,6 +31,19 @@ describe("strategy episodes",()=>{
     db.close();
   });
 
+  it("creates one deduplicated control episode for a non-qualified state transition",()=>{
+    const db=seededDb();
+    const control={...base,fromState:null,toState:"NEAR_ROTATION",signalAt:"2026-09-27T00:30:00Z",recommendedSizeUsd:0,intendedLimit:null};
+    const first=applyStrategyTransition(db,control);
+    const second=applyStrategyTransition(db,{...control,fromState:"NEAR_ROTATION",signalAt:"2026-09-27T00:35:00Z"});
+    expect(first.controlEpisodeId).toBeTruthy();
+    expect(first.created).toBe(true);
+    expect(second.created).toBe(false);
+    expect((db.prepare("SELECT COUNT(*) n FROM strategy_episodes WHERE episode_kind='CONTROL'").get() as any).n).toBe(1);
+    expect((db.prepare("SELECT COUNT(*) n FROM episode_outcomes WHERE episode_id=?").get(first.controlEpisodeId) as any).n).toBe(OUTCOME_HORIZONS.length);
+    db.close();
+  });
+
   it("closes the episode without deleting its future outcomes when the coin drops from qualification",()=>{
     const db=seededDb();
     const first=applyStrategyTransition(db,base);
