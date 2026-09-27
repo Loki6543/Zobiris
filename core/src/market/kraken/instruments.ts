@@ -32,6 +32,8 @@ const ALIASES: Record<string, string> = {
   XXBT: "BTC",
   XDG: "DOGE",
   XXDG: "DOGE",
+  ZUSD: "USD",
+  USD: "USD",
 };
 
 function finite(value: unknown): number | null {
