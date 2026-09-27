@@ -270,20 +270,49 @@ The rebuild preserves and formalizes current order-book work:
 - depth changes;
 - spread distribution.
 
-### 6.2 Execution-cost simulation
+### 6.2 Personal execution gate
 
-For each sampled book, walk the Kraken book and estimate entry and exit impact for:
+Liquidity authority must be sized to the user's actual trade, not to an institutional liquidation.
 
-- $25
-- $50
-- $100
-- $500
-- $2,500
-- $50,000 stress reference
+The hard execution gate should walk both sides of the live Kraken book at:
 
-The $25-$500 tiers are primary for the user's current portfolio. Larger tiers are market-quality stress references, not direct order-size recommendations.
+- $100 standardized safety test;
+- the proposed Zobiris order size;
+- the current position size when evaluating an existing holding.
 
-Persist:
+Initial prior:
+
+- the standardized $100 buy and sell simulations must both fully complete;
+- estimated impact must remain within 100 bps;
+- the Kraken USD pair must be online;
+- the order book must be fresh and valid.
+
+The 100-bps value is a conservative starting prior, not a permanent constant. It must be calibrated from observed fills, adverse excursion and non-fill outcomes.
+
+A coin must never be rejected merely because it cannot absorb an institutional-size liquidation when the user's actual position is small.
+
+### 6.3 Market-depth stress grades
+
+For each sampled book, also walk the Kraken book at:
+
+- $500;
+- $2,500;
+- $50,000;
+- $250,000 when the available book can support the calculation.
+
+These larger simulations are **market-quality diagnostics**, not ordinary hard buy gates.
+
+They should produce a descriptive grade such as:
+
+- INSTITUTIONAL;
+- DEEP;
+- NORMAL;
+- SMALL_SIZE_ONLY;
+- VERY_THIN.
+
+A failed $50,000 or $250,000 stress simulation may reduce confidence, cap future scaling or mark an asset SMALL_SIZE_ONLY, but it must not automatically prohibit a $37-$100 recommendation whose personal execution tests are excellent.
+
+Persist for every simulated size:
 
 - impact bps;
 - weighted average execution price;
@@ -292,18 +321,27 @@ Persist:
 - spread component;
 - timestamp.
 
-### 6.3 Historical liquidity
+### 6.4 Kraken volume and turnover
+
+Kraken 24h USD volume remains useful context but is **not** a universal hard floor such as $500,000.
+
+For established high-ranking assets, especially top-100 coins, excellent actual book execution should outweigh an arbitrary venue-volume cutoff. For lower-ranked or unstable markets, weak venue activity may reduce sizing, confidence or market-depth grade.
+
+Global turnover as a percentage of market cap is retained as market-activity / structural-risk context, not as a Kraken execution veto.
+
+### 6.5 Historical liquidity
 
 Persist time series for:
 
 - spread p50/p95;
 - depth 50/100 bps;
-- impact at each test notional;
+- impact at each personal and stress notional;
 - active-minute coverage;
 - one-minute notional;
+- Kraken 24h volume;
 - liquidity deterioration / acceleration.
 
-Zobiris should compare current liquidity with 7d and 30d historical baselines.
+Zobiris should compare current liquidity with 7d and 30d historical baselines. Deterioration matters independently of absolute depth: a market that is still tradeable for the user's size but rapidly losing depth should receive caution before it becomes untradeable.
 
 ---
 
@@ -515,26 +553,73 @@ The current small pilot sizing behavior remains conservative until enough outcom
 
 ## 12. Outcome memory and experiment ledger
 
-### 12.1 Decision outcomes
+### 12.1 Decision episodes and outcomes
 
-Every recommendation stores:
+Outcome accounting must not count every refresh as a new sample.
 
+Create a stable strategy episode only on a meaningful state transition, for example:
+
+- NEAR_ROTATION -> QUALIFIED;
+- QUALIFIED -> WAIT_FOR_PULLBACK;
+- WAIT_FOR_PULLBACK -> READY.
+
+Subsequent refreshes update the same episode instead of creating dozens of duplicate observations.
+
+Every episode stores:
+
+- episode ID;
 - strategy tag;
 - strategy version;
-- candidate state;
+- candidate state transition;
 - signal time;
 - signal price;
 - intended limit;
 - actual fill if observed;
 - recommended size;
-- 1H / 4H / 1D / 3D / 7D outcomes;
+- BTC benchmark price from the same signal timestamp;
+- same-time control / leader candidate where available;
+- exact-horizon 1H / 4H / 1D / 3D / 7D outcomes;
 - later 14D / 30D outcomes where available;
+- excess return versus BTC;
+- return versus the shadow leader/control;
 - MFE;
 - MAE;
 - fill delay;
 - non-fill regret.
 
-### 12.2 Experiment ledger
+A coin continues to resolve all open episodes even after it leaves the ranked watchlist. Dropping from the current snapshot must never make a losing episode disappear.
+
+The live 5,000-record cap must not silently delete matured evidence. Older records should be archived durably rather than discarded.
+
+### 12.2 Exact-horizon and fill evaluation
+
+Outcome evaluation must not depend on the next application refresh.
+
+At each horizon, resolve the observation from historical Kraken market data corresponding to the intended timestamp. The system should record evaluation delay and reject or flag any result that cannot be reconstructed accurately.
+
+Limit-fill analysis must use real Kraken OHLC/trade/order-book data between recommendation time and expiration. A refresh snapshot alone is insufficient to determine whether a pullback limit filled.
+
+This allows accurate measurement of:
+
+- fill rate;
+- fill time;
+- achieved entry improvement;
+- post-fill MAE;
+- post-fill MFE;
+- missed-order runaway / non-fill regret.
+
+### 12.3 Pilot scorecard
+
+The pilot scorecard must compare qualified Delayed Rotation episodes against:
+
+1. BTC over the identical time window; and
+2. same-time non-qualified / shadow-leader opportunities.
+
+It must report both coin episodes and independent market/regime episodes so a broad altcoin rally cannot masquerade as many independent successes.
+
+No strategy verdict should be issued before a minimum evidence threshold is reached. The initial prior is at least 30 qualified and 30 comparison episodes for the evaluated horizon, with market-episode concentration reported separately.
+
+### 12.4 Experiment ledger
 
 Every strategy / threshold test records:
 
@@ -553,7 +638,7 @@ Every strategy / threshold test records:
 
 Failed experiments are permanent records.
 
-### 12.3 Calibration
+### 12.5 Calibration
 
 Initial thresholds are versioned priors.
 
@@ -1071,9 +1156,12 @@ Production promotion requires all of the following.
 
 - spread computed correctly;
 - depth 50/100 bps computed correctly;
-- book-walk execution impact tested;
+- $100 standardized and actual-position book-walk execution impact tested;
+- $50k/$250k stress tests cannot independently veto a small qualified position;
+- no universal $500k Kraken-volume floor is used as buy authority;
+- global turnover is risk context rather than an execution veto;
 - current and historical liquidity available;
-- non-qualifying liquidity produces zero new-buy authority.
+- non-qualifying personal execution produces zero new-buy authority.
 
 ### 20.4 Strategy
 
@@ -1087,8 +1175,13 @@ Production promotion requires all of the following.
 
 ### 20.5 Learning
 
-- recommendation outcomes persist;
-- strategy tags persist;
+- strategy episodes persist without refresh-count duplication;
+- BTC benchmark outcomes persist from the same signal timestamp;
+- same-time control / shadow-leader comparisons persist;
+- coins continue resolving outcomes after leaving the current ranking;
+- exact-horizon evaluations use historical Kraken data rather than the next refresh;
+- limit fills use real Kraken interval data rather than sparse refresh snapshots;
+- archived outcomes are retained instead of silently deleted at the live-record cap;
 - non-fill regret is measurable;
 - MFE and MAE are measurable;
 - failed experiments persist;
