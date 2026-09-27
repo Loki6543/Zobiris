@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildUsdInstrumentRegistry, resolveWatchlistInstruments } from "./instruments.js";
+import { buildUsdInstrumentRegistry, resolveWatchlistInstruments, snapBuyLimitToTick } from "./instruments.js";
 
 describe("Kraken instrument registry", () => {
   it("resolves legacy BTC/ETH/XRP/DOGE names through pair metadata", () => {
@@ -35,5 +35,13 @@ describe("Kraken instrument registry", () => {
     });
     expect(resolveWatchlistInstruments(["ATOM", "FAKE"], registry).map(x => x.state))
       .toEqual(["KRAKEN_MARKET_NOT_ONLINE", "NO_KRAKEN_USD_MARKET"]);
+  });
+});
+
+
+describe("Kraken tick-size limits", () => {
+  it("rounds buy limits down to the nearest valid tick", () => {
+    expect(snapBuyLimitToTick(138.437,0.1)).toBe(138.4);
+    expect(snapBuyLimitToTick(0.123456,0.0001)).toBe(0.1234);
   });
 });
