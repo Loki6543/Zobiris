@@ -15,7 +15,8 @@
     "build:ui": "vite build",
     "build": "npm run typecheck && npm test && npm run build:server && npm run build:ui",
     "start": "node dist-server/server/index.js",
-    "db:backup": "tsx src/db/backupCli.ts"
+    "db:backup": "tsx src/db/maintenanceCli.ts backup",
+    "db:archive": "tsx src/db/maintenanceCli.ts archive"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",
