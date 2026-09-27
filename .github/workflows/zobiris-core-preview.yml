@@ -6,6 +6,7 @@ on:
       - zobiris-core-rebuild
     paths:
       - ".github/workflows/zobiris-core-preview.yml"
+      - "core/src/app/**"
 
 permissions:
   contents: read
