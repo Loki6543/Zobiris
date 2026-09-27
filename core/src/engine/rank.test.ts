@@ -10,7 +10,7 @@ const watchlist=[
 const quotes=[
   {cmcId:"1",symbol:"BTC",name:"Bitcoin",priceUsd:85000,change1hPct:0,change24hPct:1,change7dPct:4,change30dPct:10,change60dPct:20,change90dPct:40,marketCapUsd:1,volume24hUsd:1,volumeChange24hPct:0,lastUpdated:null},
   {cmcId:"7278",symbol:"AAVE",name:"Aave",priceUsd:145,change1hPct:0,change24hPct:-1,change7dPct:5,change30dPct:-10,change60dPct:-15,change90dPct:-28,marketCapUsd:1,volume24hUsd:1,volumeChange24hPct:0,lastUpdated:null},
-  {cmcId:"999",symbol:"FAKE",name:"Fake",priceUsd:2,change1hPct:0,change24hPct:1,change7dPct:2,change30dPct:-2,change60dPct:-3,change90dPct:-5,marketCapUsd:1,volume24hUsd:1,volumeChange24hPct:0,lastUpdated:null},
+  {cmcId:"999",symbol:"FAKE",name:"Fake",priceUsd:2,change1hPct:0,change24hPct:1,change7dPct:2,change30dPct:2,change60dPct:3,change90dPct:5,marketCapUsd:1,volume24hUsd:1,volumeChange24hPct:0,lastUpdated:null},
 ];
 const instruments:any[]=[
   {symbol:"BTC",state:"ACTIVE",instrument:{pairKey:"BTC/USD",online:true}},
