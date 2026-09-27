@@ -16,6 +16,8 @@ export interface EpisodeTransitionInput {
   symbol:string;
   strategyTag:string;
   strategyVersion:string;
+  policyVersion:string;
+  policyHash:string;
   fromState:string|null;
   toState:string;
   signalAt:string;
@@ -48,23 +50,29 @@ export function applyStrategyTransition(db:Database.Database,input:EpisodeTransi
   }
 
   if(open) {
-    db.prepare("UPDATE strategy_episodes SET to_state=?,updated_at=?,intended_limit=COALESCE(?,intended_limit),recommended_size_usd=COALESCE(?,recommended_size_usd) WHERE episode_id=?")
+    db.prepare(`UPDATE strategy_episodes
+      SET to_state=?,updated_at=?,intended_limit=COALESCE(?,intended_limit),
+          recommended_size_usd=COALESCE(?,recommended_size_usd)
+      WHERE episode_id=?`)
       .run(input.toState,input.signalAt,input.intendedLimit ?? null,input.recommendedSizeUsd ?? null,open.episode_id);
     return {episodeId:open.episode_id,created:false,closed:false};
   }
 
   const episodeId=`${input.strategyTag}:${input.symbol}:${input.signalAt}`;
   const insertEpisode=db.prepare(`INSERT INTO strategy_episodes (
-    episode_id,symbol,strategy_tag,strategy_version,from_state,to_state,signal_at,signal_price,
-    btc_signal_price,control_symbol,control_signal_price,intended_limit,recommended_size_usd,status,created_at,updated_at
-  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'OPEN',?,?)`);
+    episode_id,symbol,strategy_tag,strategy_version,policy_version,policy_hash,
+    from_state,to_state,signal_at,signal_price,
+    btc_signal_price,control_symbol,control_signal_price,intended_limit,recommended_size_usd,
+    status,created_at,updated_at
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'OPEN',?,?)`);
   const insertOutcome=db.prepare("INSERT INTO episode_outcomes (episode_id,horizon,due_at) VALUES (?,?,?)");
 
   db.transaction(()=>{
     insertEpisode.run(
-      episodeId,input.symbol,input.strategyTag,input.strategyVersion,input.fromState,input.toState,input.signalAt,input.signalPrice,
-      input.btcSignalPrice ?? null,input.controlSymbol ?? null,input.controlSignalPrice ?? null,input.intendedLimit ?? null,input.recommendedSizeUsd ?? null,
-      input.signalAt,input.signalAt
+      episodeId,input.symbol,input.strategyTag,input.strategyVersion,input.policyVersion,input.policyHash,
+      input.fromState,input.toState,input.signalAt,input.signalPrice,
+      input.btcSignalPrice ?? null,input.controlSymbol ?? null,input.controlSignalPrice ?? null,
+      input.intendedLimit ?? null,input.recommendedSizeUsd ?? null,input.signalAt,input.signalAt
     );
     const start=Date.parse(input.signalAt);
     if(!Number.isFinite(start)) throw new Error("invalid signalAt");
