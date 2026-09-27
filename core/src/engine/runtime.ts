@@ -93,23 +93,25 @@ function medianQuoteAsOf(quotes:CmcMarketQuote[],fallback:string) {
   return new Date(median).toISOString();
 }
 
-function quoteFreshness(quotes:CmcMarketQuote[],nowMs:number) {
+function quoteFreshness(quotes:CmcMarketQuote[],expectedSymbols:string[],nowMs:number) {
   const fresh=new Set<string>();
   const stale=new Set<string>();
-  for(const quote of quotes) {
-    const at=validIso(quote.lastUpdated);
-    if(!at) {
-      stale.add(quote.symbol.toUpperCase());
+  const bySymbol=new Map(quotes.map(q=>[q.symbol.toUpperCase(),q]));
+  for(const symbol of expectedSymbols.map(s=>s.toUpperCase())) {
+    const quote=bySymbol.get(symbol);
+    const at=validIso(quote?.lastUpdated);
+    if(!quote || !at) {
+      stale.add(symbol);
       continue;
     }
     const age=nowMs-Date.parse(at);
-    if(age>=0 && age<=ZOBIRIS_POLICY.providerFreshness.cmcQuotesMs) fresh.add(quote.symbol.toUpperCase());
-    else stale.add(quote.symbol.toUpperCase());
+    if(age>=0 && age<=ZOBIRIS_POLICY.providerFreshness.cmcQuotesMs) fresh.add(symbol);
+    else stale.add(symbol);
   }
   return {
     fresh,
     stale,
-    coverage:quotes.length?fresh.size/quotes.length:0,
+    coverage:expectedSymbols.length?fresh.size/expectedSymbols.length:0,
     btcFresh:fresh.has("BTC"),
   };
 }
@@ -259,7 +261,7 @@ export class EngineRuntime {
     });
     this.tickerCache=tickerResolved.cache;
 
-    const freshness=quoteFreshness(quotesResolved.data,this.deps.now().getTime());
+    const freshness=quoteFreshness(quotesResolved.data,watchlist.map(a=>a.symbol),this.deps.now().getTime());
     const marketQuotes=quotesResolved.data.filter(q=>freshness.fresh.has(q.symbol.toUpperCase()));
     const referencePrices=new Map(
       [...quoteMap.entries()].flatMap(([symbol,quote])=>
