@@ -27,21 +27,25 @@ export function assessMinimumEvidence(
     SELECT COUNT(DISTINCT se.episode_id) AS n
     FROM strategy_episodes se
     JOIN episode_outcomes eo ON eo.episode_id=se.episode_id
-    WHERE se.policy_hash=? AND eo.horizon=? AND eo.evaluated_at IS NOT NULL
+    WHERE se.policy_hash=? AND se.episode_kind='QUALIFIED' AND eo.horizon=? AND eo.evaluated_at IS NOT NULL
   `).get(ZOBIRIS_POLICY_HASH,horizon) as {n:number}).n;
 
   const placeholders=controlStates.map(()=>"?").join(",");
   const controls=controlStates.length ? (db.prepare(`
-    SELECT signal_at,to_state FROM strategy_episodes
-    WHERE policy_hash=? AND status='CLOSED' AND to_state IN (${placeholders})
-  `).all(ZOBIRIS_POLICY_HASH,...controlStates) as Array<{signal_at:string;to_state:string}>) : [];
+    SELECT DISTINCT se.episode_id,se.signal_at,se.to_state
+    FROM strategy_episodes se
+    JOIN episode_outcomes eo ON eo.episode_id=se.episode_id
+    WHERE se.policy_hash=? AND se.episode_kind='CONTROL'
+      AND se.to_state IN (${placeholders})
+      AND eo.horizon=? AND eo.evaluated_at IS NOT NULL
+  `).all(ZOBIRIS_POLICY_HASH,...controlStates,horizon) as Array<{episode_id:string;signal_at:string;to_state:string}>) : [];
 
   const controlEpisodes=controls.length;
   const qualifiedMarkets=(db.prepare(`
     SELECT DISTINCT substr(se.signal_at,1,10) AS d
     FROM strategy_episodes se
     JOIN episode_outcomes eo ON eo.episode_id=se.episode_id
-    WHERE se.policy_hash=? AND eo.horizon=? AND eo.evaluated_at IS NOT NULL
+    WHERE se.policy_hash=? AND se.episode_kind='QUALIFIED' AND eo.horizon=? AND eo.evaluated_at IS NOT NULL
   `).all(ZOBIRIS_POLICY_HASH,horizon) as Array<{d:string}>).map(x=>x.d);
   const controlMarkets=controls.map(x=>dayKey(x.signal_at));
   const independentMarketEpisodes=new Set([...qualifiedMarkets,...controlMarkets]).size;
