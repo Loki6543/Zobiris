@@ -11,6 +11,8 @@ export interface BuildEngineInput {
   generatedAt:string;
   watchlist:WatchlistAsset[];
   quotes:CmcMarketQuote[];
+  marketQuotes?:CmcMarketQuote[];
+  staleQuoteSymbols?:Set<string>;
   cmcRanks?:Map<string,number>;
   instruments:WatchlistInstrumentState[];
   classifications:Map<string,AssetClassification>;
@@ -65,7 +67,7 @@ export function needsExecutionSample(quote:CmcMarketQuote|undefined,market:Rotat
 
 export function buildEngineSnapshot(input:BuildEngineInput):EngineSnapshot {
   const quotes=qmap(input.quotes), instruments=imap(input.instruments);
-  const market=marketContext(input.quotes,input.watchlist);
+  const market=marketContext(input.marketQuotes ?? input.quotes,input.watchlist);
   const btc=quotes.get("BTC");
   const p=ZOBIRIS_POLICY;
   const authority=input.authority ?? {newBuyEnabled:true,reasons:[]};
@@ -93,6 +95,7 @@ export function buildEngineSnapshot(input:BuildEngineInput):EngineSnapshot {
       qualifiesForNewCapital:false,reasonCodes:reasons
     });
 
+    if(input.staleQuoteSymbols?.has(symbol)) return inert("DATA_STALE",["asset_market_quote_stale"]);
     if(symbol==="BTC") return {...inert("BENCHMARK",["btc_is_strategy_benchmark"]),relative30dVsBtcPct:0,relative90dVsBtcPct:0};
     if(!quote) return inert("DATA_INCOMPLETE",["cmc_market_context_missing"],null);
     if(!instrument||instrument.state==="NO_KRAKEN_USD_MARKET") {
