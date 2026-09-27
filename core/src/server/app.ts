@@ -3,7 +3,8 @@ import type Database from "better-sqlite3";
 import type { EngineRuntime } from "../engine/runtime.js";
 import { databaseIntegrity } from "../db/maintenance.js";
 import { ZOBIRIS_POLICY,ZOBIRIS_POLICY_HASH } from "../policy/config.js";
-import { EngineApiSuccessSchema,HealthResponseSchema,MetricsResponseSchema } from "../engine/types.js";
+import { EngineApiSuccessSchema,HealthResponseSchema,MetricsResponseSchema,MinimumEvidenceResponseSchema } from "../engine/types.js";
+import { assessMinimumEvidence } from "../policy/minimumEvidence.js";
 import { createSessionGuard, securityHeaders } from "./auth.js";
 import { registerRoutes } from "./routes.js";
 
@@ -69,6 +70,15 @@ export function createApp(db: Database.Database, engine?: EngineRuntime, options
           policy:{version:ZOBIRIS_POLICY.version,hash:ZOBIRIS_POLICY_HASH},
         });
         res.json(body);
+      },
+    },
+    {
+      method:"get",
+      path:"/api/learning/evidence/7D",
+      access:"public",
+      handler:(_req,res)=>{
+        const evidence=assessMinimumEvidence(db,"7D");
+        return res.json(MinimumEvidenceResponseSchema.parse({ok:true,evidence}));
       },
     },
     {
