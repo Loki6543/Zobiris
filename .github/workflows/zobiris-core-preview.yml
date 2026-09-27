@@ -48,7 +48,7 @@ jobs:
       - name: Capture real React desktop preview
         shell: bash
         run: |
-          cat > /tmp/capture-zobiris.mjs <<'EOF'
+          cat > preview-capture.mjs <<'EOF'
           import { chromium } from 'playwright';
 
           const snapshot = {
@@ -185,7 +185,7 @@ jobs:
           await page.screenshot({ path: '../zobiris-engine-preview-1920x1080.png', fullPage: false, animations: 'disabled' });
           await browser.close();
           EOF
-          node /tmp/capture-zobiris.mjs
+          node preview-capture.mjs
 
       - name: Upload preview
         uses: actions/upload-artifact@v4
