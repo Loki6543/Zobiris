@@ -2,8 +2,8 @@ import type Database from "better-sqlite3";
 import { classifyAsset } from "../market/classification/classify.js";
 import { fetchCmcMetadata, fetchCmcQuotes, type CmcMarketQuote, type CmcMetadata } from "../market/cmc/client.js";
 import { evaluatePersonalExecution, type PersonalExecutionResult } from "../market/kraken/execution.js";
-import { fetchOrderBook, fetchUsdInstrumentRegistry } from "../market/kraken/client.js";
-import { resolveWatchlistInstruments, type WatchlistInstrumentState } from "../market/kraken/instruments.js";
+import { fetchOrderBook, fetchTickers, fetchUsdInstrumentRegistry, type KrakenTicker } from "../market/kraken/client.js";
+import { resolveWatchlistInstruments, verifyKrakenInstrumentPrices, type WatchlistInstrumentState } from "../market/kraken/instruments.js";
 import { CURRENT_WATCHLIST, type WatchlistAsset } from "../shared/watchlist.js";
 import { buildEngineSnapshot, marketContext, needsExecutionSample } from "./rank.js";
 import type { EngineSnapshot } from "./types.js";
@@ -12,6 +12,7 @@ export interface EngineRuntimeDeps {
   fetchQuotes:(ids:string[])=>Promise<CmcMarketQuote[]>;
   fetchMetadata:(ids:string[])=>Promise<CmcMetadata[]>;
   fetchInstruments:()=>Promise<Map<string,any>>;
+  fetchTickers:(pairs:string[])=>Promise<Map<string,KrakenTicker>>;
   fetchBook:(pair:string)=>Promise<any>;
   now:()=>Date;
   sleep:(ms:number)=>Promise<void>;
@@ -31,6 +32,7 @@ function defaultDeps(cmcApiKey?:string):EngineRuntimeDeps {
     fetchQuotes:(ids)=>fetchCmcQuotes(ids,{apiKey:cmcApiKey}),
     fetchMetadata:(ids)=>fetchCmcMetadata(ids,{apiKey:cmcApiKey}),
     fetchInstruments:()=>fetchUsdInstrumentRegistry(),
+    fetchTickers:(pairs)=>fetchTickers(pairs),
     fetchBook:(pair)=>fetchOrderBook(pair),
     now:()=>new Date(),
     sleep:(ms)=>new Promise(resolve=>setTimeout(resolve,ms)),
@@ -68,9 +70,20 @@ export class EngineRuntime {
       this.deps.fetchMetadata(ids),
       this.deps.fetchInstruments(),
     ]);
-    const instruments=resolveWatchlistInstruments(watchlist.map(a=>a.symbol),registry);
-    const instrumentMap=new Map(instruments.map(row=>[row.symbol,row]));
+    const rawInstruments=resolveWatchlistInstruments(watchlist.map(a=>a.symbol),registry);
     const quoteMap=new Map(quotes.map(row=>[row.symbol.toUpperCase(),row]));
+    let tickerHealth:"LIVE"|"ERROR"="LIVE";
+    let tickers=new Map<string,KrakenTicker>();
+    try {
+      tickers=await this.deps.fetchTickers(rawInstruments.flatMap(row=>row.instrument?[row.instrument.pairKey]:[]));
+    } catch {
+      tickerHealth="ERROR";
+    }
+    const referencePrices=new Map(
+      [...quoteMap.entries()].flatMap(([symbol,quote])=>quote.priceUsd!=null&&Number.isFinite(quote.priceUsd)&&quote.priceUsd>0?[[symbol,quote.priceUsd] as const]:[])
+    );
+    const instruments=verifyKrakenInstrumentPrices(rawInstruments,referencePrices,tickers,0.10);
+    const instrumentMap=new Map(instruments.map(row=>[row.symbol,row]));
     const metaMap=new Map(metadata.map(row=>[row.symbol.toUpperCase(),row]));
     const classifications=new Map(watchlist.map(asset=>{
       const meta=metaMap.get(asset.symbol);
@@ -146,7 +159,7 @@ export class EngineRuntime {
       generatedAt,watchlist,quotes,instruments,classifications,executions,riskPass,
       maneuverNavUsd:this.options.maneuverNavUsd ?? 1850,
       availableCashUsd:this.options.availableCashUsd ?? 0,
-      cmcHealth:"LIVE",krakenHealth:"LIVE",
+      cmcHealth:"LIVE",krakenHealth:tickerHealth==="LIVE"?"LIVE":"ERROR",
     });
     this.snapshot=snapshot;
     return snapshot;
