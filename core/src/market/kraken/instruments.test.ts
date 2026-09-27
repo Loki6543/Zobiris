@@ -15,6 +15,13 @@ describe("Kraken instrument registry", () => {
     expect(registry.get("DOGE")?.pairKey).toBe("XDGUSD");
   });
 
+  it("resolves legacy base/quote codes even when wsname is absent", () => {
+    const registry = buildUsdInstrumentRegistry({
+      XXBTZUSD: { altname: "XBTUSD", base: "XXBT", quote: "ZUSD", status: "online" },
+    });
+    expect(registry.get("BTC")?.pairKey).toBe("XXBTZUSD");
+  });
+
   it("also accepts Kraken display-name responses", () => {
     const registry = buildUsdInstrumentRegistry({
       "BTC/USD": { altname: "XBTUSD", wsname: "XBT/USD", base: "BTC", quote: "USD", status: "online", ordermin: "0.0001", costmin: "0.5", tick_size: "0.1" },
