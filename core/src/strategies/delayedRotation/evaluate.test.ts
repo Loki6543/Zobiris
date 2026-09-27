@@ -1,10 +1,11 @@
+import type { MarketDepthGrade } from "../../market/kraken/execution.js";
 import { describe, expect, it } from "vitest";
 import { classifyAsset } from "../../market/classification/classify.js";
 import { evaluateDelayedRotation } from "./evaluate.js";
 
 const market={btc7dPct:4,btc30dPct:10,btc90dPct:40,breadth7dPositive:.65,breadth30dPositive:.55};
 const capital={maneuverNavUsd:1850,availableCashUsd:600};
-const execution=(hardPass=true,marketDepthGrade:"NORMAL"|"SMALL_SIZE_ONLY"="NORMAL")=>({hardPass,marketDepthGrade});
+const execution=(hardPass=true,marketDepthGrade:MarketDepthGrade="NORMAL")=>({hardPass,marketDepthGrade});
 const asset=(overrides:Record<string,unknown>={})=>({
   symbol:"AAVE",priceUsd:145,change24hPct:-1,change7dPct:5,change30dPct:-10,change90dPct:-28,
   classification:classifyAsset({symbol:"AAVE",categories:["DeFi"]}),execution:execution(),riskPass:true,...overrides
