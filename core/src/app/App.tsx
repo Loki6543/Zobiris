@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { EngineRow, EngineSnapshot } from "../engine/types";
+import { EngineApiSuccessSchema, type EngineRow, type EngineSnapshot } from "../engine/types";
 
 type Nav="ENGINE"|"COMPARE"|"PORTFOLIO"|"LEARNING";
 const money=(n:number|null,digits=2)=>n==null?"—":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:digits,minimumFractionDigits:digits}).format(n);
@@ -10,6 +10,12 @@ const priceMoney=(n:number|null)=>{
 };
 const pct=(n:number|null)=>n==null?"—":`${n>=0?"+":""}${n.toFixed(1)}%`;
 const stateLabel=(s:string)=>s.replaceAll("_"," ");
+const ageLabel=(ms:number|null|undefined)=>{
+  if(ms==null) return "—";
+  if(ms<60_000) return `${Math.max(0,Math.round(ms/1000))}s`;
+  if(ms<3_600_000) return `${Math.round(ms/60_000)}m`;
+  return `${(ms/3_600_000).toFixed(1)}h`;
+};
 
 function EngineTable({snapshot,selected,onSelect}:{snapshot:EngineSnapshot;selected:string|null;onSelect:(symbol:string)=>void}) {
   return <div className="tableWrap">
@@ -32,7 +38,7 @@ function EngineTable({snapshot,selected,onSelect}:{snapshot:EngineSnapshot;selec
         <td className="num score">{row.catchUpQuality?row.catchUpQuality.toFixed(0):"—"}</td>
         <td className="num score">{row.entryQuality?row.entryQuality.toFixed(0):"—"}</td>
         <td>{row.marketDepthGrade??(row.krakenPair?"WARMUP":"—")}</td>
-        <td>{row.reasonCodes.some(x=>x.includes("risk"))?"BLOCKED":row.personalExecutionPass===false?"EXECUTION":"—"}</td>
+        <td>{row.state==="DATA_STALE"?"STALE":row.reasonCodes.some(x=>x.includes("risk"))?"BLOCKED":row.personalExecutionPass===false?"EXECUTION":"—"}</td>
       </tr>)}</tbody>
     </table>
   </div>;
@@ -92,7 +98,7 @@ export function App() {
         const response=await fetch("/api/engine",{cache:"no-store"});
         if(response.status===503){ if(active)setError("ENGINE WARMUP"); return; }
         if(!response.ok) throw new Error(`HTTP ${response.status}`);
-        const body=await response.json() as {ok:boolean;snapshot:EngineSnapshot};
+        const body=EngineApiSuccessSchema.parse(await response.json());
         if(active){setSnapshot(body.snapshot);setError(null);setSelected(s=>s??body.snapshot.rows[0]?.symbol??null);}
       }catch(e){if(active)setError(e instanceof Error?e.message:String(e));}
     };
@@ -102,6 +108,15 @@ export function App() {
   },[]);
 
   const selectedRow=useMemo(()=>snapshot?.rows.find(r=>r.symbol===selected)??null,[snapshot,selected]);
+  const dataAge=useMemo(()=>{
+    if(!snapshot) return null;
+    const values=[
+      snapshot.health.providers.cmcQuotes.ageMs,
+      snapshot.health.providers.krakenInstruments.ageMs,
+      snapshot.health.providers.krakenTicker.ageMs,
+    ].filter((x):x is number=>x!=null);
+    return values.length?Math.max(...values):null;
+  },[snapshot]);
 
   return <div className="shell">
     <header className="topbar">
@@ -113,13 +128,16 @@ export function App() {
         <span>WATCHLIST <b>{snapshot?.health.watchlistCount??"—"}</b></span>
         <span>QUALIFIED <b>{snapshot?.qualifiedCount??"—"}</b></span>
         <span>KRAKEN <b>{snapshot?.health.krakenInstruments??"WARMUP"}</b></span>
+        <span>AUTH <b>{snapshot?snapshot.authority.newBuyEnabled?"ON":"BLOCKED":"—"}</b></span>
       </div>
     </header>
     {nav==="ENGINE"?<main className="workspace">
       <section className="rankings">
         <div className="sectionHead">
           <div><h2>Watchlist Rankings</h2><p>Every tracked coin stays visible. Ranked by current opportunity; personal-size Kraken execution controls new-buy authority.</p></div>
-          <div className="refreshState">{error??(snapshot?`UPDATED ${new Date(snapshot.generatedAt).toLocaleTimeString()}`:"ENGINE WARMUP")}</div>
+          <div className="refreshState">{error??(snapshot
+            ? `${snapshot.authority.newBuyEnabled?"LIVE":"AUTH BLOCKED"} · DATA ${ageLabel(dataAge)} · UPDATED ${new Date(snapshot.generatedAt).toLocaleTimeString()}`
+            : "ENGINE WARMUP")}</div>
         </div>
         {snapshot?<EngineTable snapshot={snapshot} selected={selected} onSelect={setSelected}/>:<div className="emptyState">Collecting market context and Kraken execution data…</div>}
       </section>
