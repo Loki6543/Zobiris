@@ -176,3 +176,18 @@ export const MetricsResponseSchema=z.object({
   clockState:z.enum(["HEALTHY","DEGRADED"]),
   policy:z.object({version:z.string(),hash:z.string().regex(/^[a-f0-9]{64}$/)}),
 });
+
+
+export const MinimumEvidenceResponseSchema=z.object({
+  ok:z.literal(true),
+  evidence:z.object({
+    policyVersion:z.string(),
+    policyHash:z.string().regex(/^[a-f0-9]{64}$/),
+    horizon:z.string(),
+    qualifiedEpisodes:z.number().int().min(0),
+    controlEpisodes:z.number().int().min(0),
+    independentMarketEpisodes:z.number().int().min(0),
+    promotable:z.boolean(),
+    reasons:z.array(z.string()),
+  }),
+});
