@@ -14,7 +14,8 @@
     "build:server": "tsc -p tsconfig.server.json",
     "build:ui": "vite build",
     "build": "npm run typecheck && npm test && npm run build:server && npm run build:ui",
-    "start": "node dist-server/server/index.js"
+    "start": "node dist-server/server/index.js",
+    "db:backup": "tsx src/db/backupCli.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",
