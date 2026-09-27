@@ -135,6 +135,43 @@ const MIGRATIONS = [
         ON market_candles(symbol, interval_minutes, open_time);
     `,
   },
+  {
+    id: 4,
+    sql: `
+      ALTER TABLE strategy_episodes ADD COLUMN policy_version TEXT;
+      ALTER TABLE strategy_episodes ADD COLUMN policy_hash TEXT;
+
+      CREATE TABLE IF NOT EXISTS policy_versions (
+        policy_hash TEXT PRIMARY KEY,
+        policy_version TEXT NOT NULL,
+        canonical_json TEXT NOT NULL,
+        first_seen_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS provider_health (
+        provider TEXT PRIMARY KEY,
+        status TEXT NOT NULL,
+        last_attempt_at TEXT NOT NULL,
+        last_success_at TEXT,
+        data_as_of TEXT,
+        error TEXT,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS refresh_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at TEXT NOT NULL,
+        completed_at TEXT NOT NULL,
+        duration_ms REAL NOT NULL,
+        success INTEGER NOT NULL CHECK(success IN (0,1)),
+        clock_state TEXT NOT NULL,
+        new_buy_authority INTEGER NOT NULL CHECK(new_buy_authority IN (0,1)),
+        policy_version TEXT NOT NULL,
+        policy_hash TEXT NOT NULL,
+        error TEXT
+      );
+    `,
+  },
 ] as const;
 
 export function migrate(db: Database.Database) {
