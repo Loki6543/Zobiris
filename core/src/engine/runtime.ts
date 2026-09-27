@@ -40,6 +40,8 @@ function defaultDeps(cmcApiKey?:string):EngineRuntimeDeps {
 export class EngineRuntime {
   private snapshot:EngineSnapshot|null=null;
   private inflight:Promise<EngineSnapshot>|null=null;
+  private executionCursor=0;
+  private executionCache=new Map<string,{observedAt:string;value:Pick<PersonalExecutionResult,"hardPass"|"marketDepthGrade">}>();
 
   constructor(
     private readonly db:Database.Database,
@@ -86,8 +88,9 @@ export class EngineRuntime {
     this.persistStatic(watchlist,classifications,instruments,generatedAt);
 
     const market=marketContext(quotes,watchlist);
-    const candidates=watchlist
+    const candidatePool=watchlist
       .filter(a=>a.symbol!=="BTC")
+      .filter(a=>!classifications.get(a.symbol)?.recommendationExcluded)
       .filter(a=>needsExecutionSample(quoteMap.get(a.symbol),market))
       .filter(a=>instrumentMap.get(a.symbol)?.state==="ACTIVE")
       .sort((a,b)=>{
@@ -95,10 +98,28 @@ export class EngineRuntime {
         const ra=(qa?.change30dPct??0)-(market.btc30dPct??0)+(qa?.change90dPct??0)-(market.btc90dPct??0);
         const rb=(qb?.change30dPct??0)-(market.btc30dPct??0)+(qb?.change90dPct??0)-(market.btc90dPct??0);
         return ra-rb;
-      })
-      .slice(0,this.options.executionSampleLimit ?? 12);
+      });
 
-    const executions=new Map<string,Pick<PersonalExecutionResult,"hardPass"|"marketDepthGrade">>();
+    const cacheTtlMs=Math.max(15*60_000,(this.options.executionSampleDelayMs ?? 300)*candidatePool.length*3);
+    const nowMs=this.deps.now().getTime();
+    for(const [symbol,cached] of this.executionCache) {
+      const age=nowMs-Date.parse(cached.observedAt);
+      if(!Number.isFinite(age)||age<0||age>cacheTtlMs) this.executionCache.delete(symbol);
+    }
+
+    const sampleLimit=Math.max(1,this.options.executionSampleLimit ?? 12);
+    const candidates=[] as WatchlistAsset[];
+    if(candidatePool.length) {
+      const start=this.executionCursor % candidatePool.length;
+      for(let i=0;i<Math.min(sampleLimit,candidatePool.length);i++) {
+        candidates.push(candidatePool[(start+i)%candidatePool.length]!);
+      }
+      this.executionCursor=(start+candidates.length)%candidatePool.length;
+    }
+
+    const executions=new Map<string,Pick<PersonalExecutionResult,"hardPass"|"marketDepthGrade">>(
+      [...this.executionCache.entries()].map(([symbol,cached])=>[symbol,cached.value])
+    );
     for(let i=0;i<candidates.length;i++) {
       const asset=candidates[i]!;
       const instrument=instrumentMap.get(asset.symbol);
@@ -109,7 +130,9 @@ export class EngineRuntime {
           asOf:this.deps.now().toISOString(),
           proposedOrderUsd:this.options.proposedOrderUsd ?? 37,
         });
-        executions.set(asset.symbol,{hardPass:result.hardPass,marketDepthGrade:result.marketDepthGrade});
+        const value={hardPass:result.hardPass,marketDepthGrade:result.marketDepthGrade};
+        executions.set(asset.symbol,value);
+        this.executionCache.set(asset.symbol,{observedAt:book.observedAt,value});
         this.persistExecution(asset.symbol,result,book.observedAt);
       } catch {
         // Missing execution evidence stays missing; ranking will show warmup/incomplete instead of passing.
