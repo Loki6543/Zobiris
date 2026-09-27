@@ -59,7 +59,7 @@ export function needsExecutionSample(quote:CmcMarketQuote|undefined,market:Rotat
     market.breadth30dPositive>=p.market.breadth30dPositiveMin;
   if(!marketPotential) return false;
   const recovering=quote.change7dPct>0&&quote.change7dPct<=p.candidate.maxRecovery7dPct+2;
-  const lagging=quote.change30dPct<=3 || quote.change90dPct<=3
+  const lagging=quote.change30dPct<=p.executionSampling.absoluteLagBufferPct || quote.change90dPct<=p.executionSampling.absoluteLagBufferPct
     || quote.change30dPct-market.btc30dPct!<=p.candidate.relative30dNearRotationPct
     || quote.change90dPct-market.btc90dPct!<=p.candidate.relative90dNearRotationPct;
   return recovering&&lagging;
@@ -133,7 +133,8 @@ export function buildEngineSnapshot(input:BuildEngineInput):EngineSnapshot {
       change30dPct:quote.change30dPct,change90dPct:quote.change90dPct,classification:cls,execution:execution??null,riskPass
     },{maneuverNavUsd:input.maneuverNavUsd,availableCashUsd:input.availableCashUsd});
     const intendedLimitPrice=snapBuyLimitToTick(d.intendedLimitPrice,instrument.instrument?.tickSize ?? null);
-    const entryQuality=d.recommendedPullbackPct==null?0:Math.round((100-d.recommendedPullbackPct*6)*100)/100;
+    const entryQuality=d.recommendedPullbackPct==null?0:
+      Math.round((100-d.recommendedPullbackPct*p.display.entryQualityPenaltyPerPullbackPct)*100)/100;
     const authorityBlocked=d.setupQualified&&!authority.newBuyEnabled;
     return {
       symbol,name:asset.name,cmcRank:input.cmcRanks?.get(symbol)??null,
