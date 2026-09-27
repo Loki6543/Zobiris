@@ -24,7 +24,6 @@ async function krakenJson(url: URL, fetchImpl: FetchLike) {
 
 export async function fetchUsdInstrumentRegistry(fetchImpl: FetchLike = fetch) {
   const url = new URL("https://api.kraken.com/0/public/AssetPairs");
-  url.searchParams.set("assetVersion", "1");
   const result = await krakenJson(url, fetchImpl);
   return buildUsdInstrumentRegistry(result as Record<string, KrakenPairRaw>);
 }
@@ -51,7 +50,6 @@ export function parseTicker(pairKey: string, row: any): KrakenTicker {
 export async function fetchTicker(pair: string, fetchImpl: FetchLike = fetch): Promise<KrakenTicker> {
   const url=new URL("https://api.kraken.com/0/public/Ticker");
   url.searchParams.set("pair",pair);
-  url.searchParams.set("assetVersion","1");
   const result=await krakenJson(url,fetchImpl);
   const entry=Object.entries(result)[0];
   if(!entry) throw new Error("Kraken ticker missing");
@@ -62,7 +60,6 @@ export async function fetchOrderBook(pair: string, fetchImpl: FetchLike = fetch)
   const url=new URL("https://api.kraken.com/0/public/Depth");
   url.searchParams.set("pair",pair);
   url.searchParams.set("count","500");
-  url.searchParams.set("assetVersion","1");
   const result=await krakenJson(url,fetchImpl);
   const entry=Object.entries(result)[0];
   if(!entry) throw new Error("Kraken order book missing");
