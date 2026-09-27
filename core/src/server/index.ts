@@ -30,7 +30,7 @@ refreshTimer.unref();
 
 if (config.NODE_ENV === "production") {
   const here = fileURLToPath(new URL(".", import.meta.url));
-  const staticDir = join(here, "../../../dist");
+  const staticDir = join(here, "../../dist");
   mountProductionUi(app, staticDir);
 }
 
