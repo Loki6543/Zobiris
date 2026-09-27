@@ -22,6 +22,14 @@ describe("Kraken OHLC utilities",()=>{
     expect(Math.abs(price?.delayMs ?? 999999)).toBe(30_000);
   });
 
+  it("does not count a candle whose interval extends beyond the limit expiry",()=>{
+    const candles=[
+      {symbol:"AAVE",intervalMinutes:5,openTime:"2026-09-27T01:55:00.000Z",open:145,high:146,low:137,close:142,volume:1,committed:true as const}
+    ];
+    const fill=evaluateBuyLimitFill(candles,{startAt:"2026-09-27T01:00:00.000Z",expiresAt:"2026-09-27T01:56:00.000Z",limitPrice:138});
+    expect(fill.filled).toBe(false);
+  });
+
   it("uses real candle low to prove a limit touch but never assumes price improvement",()=>{
     const candles=[
       {symbol:"AAVE",intervalMinutes:5,openTime:"2026-09-27T01:05:00.000Z",open:145,high:146,low:137.5,close:142,volume:1,committed:true as const}
