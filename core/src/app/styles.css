@@ -64,6 +64,7 @@ button { font:inherit; }
 .status-already_extended { color:#f3bf75; border-color:#71582f; background:#2e2517; }
 .status-structurally_weak,.status-liquidity_fail,.status-risk_blocked { color:#ef9299; border-color:#74404a; background:#311a23; }
 .status-no_kraken_usd_market,.status-kraken_market_not_online,.status-data_incomplete { color:#8297ac; border-color:#35495d; background:#111e2c; }
+.status-data_stale { color:#f3bf75; border-color:#71582f; background:#2e2517; }
 .status-benchmark { color:#8fb9ff; border-color:#3c5f96; background:#142447; }
 .inspector { overflow:auto; padding:18px; scrollbar-color:#1c5289 #071833; }
 .assetTitle { display:flex; align-items:baseline; gap:9px; margin-top:3px; }
