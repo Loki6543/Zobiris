@@ -8,7 +8,7 @@ describe("migrations", () => {
     expect(migrate(db)).toBe(3);
     expect(migrate(db)).toBe(3);
     const rows = db.prepare("SELECT id FROM schema_migrations ORDER BY id").all();
-    expect(rows).toEqual([{ id: 1 }]);
+    expect(rows).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
     db.close();
   });
 });
