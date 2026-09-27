@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { openDatabase } from "../db/client.js";
 import { migrate } from "../db/migrate.js";
+import { ZOBIRIS_POLICY, ZOBIRIS_POLICY_HASH } from "../policy/config.js";
 import { applyStrategyTransition, OUTCOME_HORIZONS } from "./episodes.js";
 
 function seededDb(){
@@ -8,7 +9,7 @@ function seededDb(){
   db.prepare("INSERT INTO assets(symbol,asset_class,updated_at) VALUES ('AAVE','NORMAL_CRYPTO',?)").run("2026-09-27T00:00:00Z");
   return db;
 }
-const base={symbol:"AAVE",strategyTag:"DELAYED_ROTATION_PILOT_V2",strategyVersion:"2.0.0",fromState:"NEAR_ROTATION",toState:"WAIT_FOR_PULLBACK",signalAt:"2026-09-27T01:00:00Z",signalPrice:145,btcSignalPrice:84400,intendedLimit:138,recommendedSizeUsd:37};
+const base={symbol:"AAVE",strategyTag:"DELAYED_ROTATION_PILOT_V2",strategyVersion:ZOBIRIS_POLICY.strategy.version,policyVersion:ZOBIRIS_POLICY.version,policyHash:ZOBIRIS_POLICY_HASH,fromState:"NEAR_ROTATION",toState:"WAIT_FOR_PULLBACK",signalAt:"2026-09-27T01:00:00Z",signalPrice:145,btcSignalPrice:84400,intendedLimit:138,recommendedSizeUsd:37};
 
 describe("strategy episodes",()=>{
   it("creates one episode and horizon schedule when the setup becomes actionable",()=>{
