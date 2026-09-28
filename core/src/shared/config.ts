@@ -6,6 +6,7 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   CMC_API_KEY: z.string().min(1).optional(),
   AUTH_SESSION_SECRET: z.string().min(32).optional(),
+  AUTH_SESSION_SECRETS: z.string().optional(),
   ZOBIRIS_BACKUP_DIR: z.string().default("./backups"),
   ENGINE_REFRESH_MS: z.coerce.number().int().min(60_000).default(300_000),
   PILOT_MANEUVER_NAV_USD: z.coerce.number().min(0).default(1850),
