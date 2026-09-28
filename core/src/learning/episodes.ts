@@ -1,4 +1,3 @@
-import { DELAYED_ROTATION_POLICY, DELAYED_ROTATION_POLICY_HASH } from "../policy/delayedRotationPolicy.js";
 import type Database from "better-sqlite3";
 
 export const OUTCOME_HORIZONS = [
