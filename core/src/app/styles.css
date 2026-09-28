@@ -83,3 +83,13 @@ dt { color:#7c9abb; font-size:11px; } dd { margin:0; font-size:12px; font-weight
 .emptyState { display:grid; place-items:center; flex:1; color:#6485a9; font-size:13px; letter-spacing:.04em; }
 .placeholder { margin-top:12px; height:calc(100vh - 128px); display:grid; place-items:center; text-align:center; }
 .placeholder h2 { margin:7px 0 0; font-size:23px; }
+
+
+.authorityOn { color:#68d3a8 !important; }
+.authorityOff { color:#ef9299 !important; }
+.refreshWarning {
+  color:#efaa76;
+  max-width:520px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
