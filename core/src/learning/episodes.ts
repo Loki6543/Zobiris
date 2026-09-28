@@ -28,6 +28,7 @@ export interface EpisodeTransitionInput {
   controlSignalPrice?:number|null;
   intendedLimit?:number|null;
   recommendedSizeUsd?:number|null;
+  decisionContext?:unknown;
 }
 
 export interface EpisodeTransitionResult {
@@ -52,13 +53,15 @@ function insertEpisode(
   db.prepare(`INSERT INTO strategy_episodes (
     episode_id,symbol,strategy_tag,strategy_version,policy_version,policy_hash,episode_kind,entry_state,exit_state,
     from_state,to_state,signal_at,signal_price,
-    btc_signal_price,control_symbol,control_signal_price,intended_limit,recommended_size_usd,
+    btc_signal_price,control_symbol,control_signal_price,intended_limit,recommended_size_usd,decision_context_json,
     status,created_at,updated_at
-  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?,?)`).run(
+  ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, ?,?)`).run(
     args.episodeId,input.symbol,input.strategyTag,input.strategyVersion,input.policyVersion,input.policyHash,
     args.kind,input.toState,null,input.fromState,input.toState,input.signalAt,input.signalPrice,
     input.btcSignalPrice ?? null,input.controlSymbol ?? null,input.controlSignalPrice ?? null,
-    input.intendedLimit ?? null,input.recommendedSizeUsd ?? null,args.status,input.signalAt,input.signalAt
+    input.intendedLimit ?? null,input.recommendedSizeUsd ?? null,
+    input.decisionContext===undefined?null:JSON.stringify(input.decisionContext),
+    args.status,input.signalAt,input.signalAt
   );
   scheduleOutcomes(db,args.episodeId,input.signalAt);
 }
