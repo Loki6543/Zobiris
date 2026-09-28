@@ -12,7 +12,7 @@ import {
 } from "../engine/types.js";
 import { assessMinimumEvidence } from "../policy/minimumEvidence.js";
 import { ZOBIRIS_POLICY, ZOBIRIS_POLICY_HASH } from "../policy/config.js";
-import { createSessionGuard, securityHeaders } from "./auth.js";
+import { createSessionGuard, securityHeaders, type SessionSecretInput } from "./auth.js";
 import { registerRoutes } from "./routes.js";
 
 function operationalMetrics(db:Database.Database,engine?:EngineRuntime) {
@@ -52,7 +52,7 @@ function operationalMetrics(db:Database.Database,engine?:EngineRuntime) {
 export function createApp(
   db: Database.Database,
   engine?: EngineRuntime,
-  options: { sessionSecret?: string } = {},
+  options: { sessionSecret?: SessionSecretInput } = {},
 ) {
   const app = express();
   app.disable("x-powered-by");
