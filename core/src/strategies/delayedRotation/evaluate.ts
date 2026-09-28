@@ -1,6 +1,5 @@
 import type { AssetClassification } from "../../market/classification/classify.js";
 import type { MarketDepthGrade, PersonalExecutionResult } from "../../market/kraken/execution.js";
-import { DELAYED_ROTATION_POLICY, DELAYED_ROTATION_POLICY_HASH } from "../../policy/delayedRotationPolicy.js";
 import { ZOBIRIS_POLICY, ZOBIRIS_POLICY_HASH } from "../../policy/config.js";
 
 export const DELAYED_ROTATION_TAG = ZOBIRIS_POLICY.strategy.tag;
@@ -79,7 +78,7 @@ export function evaluateDelayedRotation(
   const base=(state:RotationState,reasons:string[],score=0):RotationDecision=>({
     strategyTag:DELAYED_ROTATION_TAG,
     strategyVersion:DELAYED_ROTATION_VERSION,
-    policyHash:DELAYED_ROTATION_POLICY_HASH,
+    policyHash:ZOBIRIS_POLICY_HASH,
     policyVersion:p.version,
     policyHash:ZOBIRIS_POLICY_HASH,
     symbol:asset.symbol.toUpperCase(),
