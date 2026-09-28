@@ -10,15 +10,6 @@ const priceMoney=(n:number|null)=>{
 };
 const pct=(n:number|null)=>n==null?"—":`${n>=0?"+":""}${n.toFixed(1)}%`;
 const stateLabel=(s:string)=>s.replaceAll("_"," ");
-const ageLabel=(ms:number|null)=>{
-  if(ms==null) return "—";
-  const seconds=Math.floor(ms/1000);
-  if(seconds<60) return `${seconds}s`;
-  const minutes=Math.floor(seconds/60);
-  if(minutes<60) return `${minutes}m`;
-  const hours=Math.floor(minutes/60);
-  return `${hours}h`;
-};
 const ageLabel=(ms:number|null|undefined)=>{
   if(ms==null) return "—";
   if(ms<60_000) return `${Math.max(0,Math.round(ms/1000))}s`;
