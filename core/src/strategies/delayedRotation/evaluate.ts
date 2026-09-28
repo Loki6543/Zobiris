@@ -48,7 +48,6 @@ export interface RotationCapital {
 export interface RotationDecision {
   strategyTag: typeof DELAYED_ROTATION_TAG;
   strategyVersion: typeof DELAYED_ROTATION_VERSION;
-  policyHash: string;
   policyVersion: string;
   policyHash: string;
   symbol: string;
@@ -78,7 +77,6 @@ export function evaluateDelayedRotation(
   const base=(state:RotationState,reasons:string[],score=0):RotationDecision=>({
     strategyTag:DELAYED_ROTATION_TAG,
     strategyVersion:DELAYED_ROTATION_VERSION,
-    policyHash:ZOBIRIS_POLICY_HASH,
     policyVersion:p.version,
     policyHash:ZOBIRIS_POLICY_HASH,
     symbol:asset.symbol.toUpperCase(),
