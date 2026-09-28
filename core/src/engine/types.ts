@@ -187,6 +187,7 @@ export const MinimumEvidenceResponseSchema=z.object({
     qualifiedEpisodes:z.number().int().min(0),
     controlEpisodes:z.number().int().min(0),
     independentMarketEpisodes:z.number().int().min(0),
+    maxMarketEpisodeShare:z.number().min(0).max(1).nullable(),
     promotable:z.boolean(),
     reasons:z.array(z.string()),
   }),
