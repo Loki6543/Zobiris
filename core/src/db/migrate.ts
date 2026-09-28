@@ -198,6 +198,12 @@ const MIGRATIONS = [
         ON strategy_episodes(episode_kind,policy_hash,signal_at);
     `,
   },
+  {
+    id: 7,
+    sql: `
+      ALTER TABLE strategy_episodes ADD COLUMN decision_context_json TEXT;
+    `,
+  },
 ] as const;
 
 export function migrate(db: Database.Database) {
