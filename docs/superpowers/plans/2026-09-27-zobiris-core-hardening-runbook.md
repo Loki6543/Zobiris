@@ -55,7 +55,8 @@ Current Core contains no private Kraken/account read routes.
 
 Before adding any:
 
-- configure `AUTH_SESSION_SECRET` with at least 32 characters;
+- configure `AUTH_SESSION_SECRET` with at least 32 characters, or `AUTH_SESSION_SECRETS` as a comma-separated list ordered newest first;
+- rotate by adding the new secret first, retaining the previous secret during the transition window, then removing the old secret after sessions expire;
 - register the route as `private` or `mutating`;
 - route registration must include the session guard or application startup fails;
 - use only the `__Host-zobiris-session` cookie;
