@@ -6,8 +6,9 @@ import { ZOBIRIS_POLICY, ZOBIRIS_POLICY_CANONICAL_JSON, ZOBIRIS_POLICY_HASH } fr
 
 describe("Zobiris policy registry", () => {
   it("has a stable versioned sha256 identity", () => {
-    expect(ZOBIRIS_POLICY.version).toBe("2.1.0");
+    expect(ZOBIRIS_POLICY.version).toBe("2.2.0");
     expect(ZOBIRIS_POLICY_HASH).toMatch(/^[a-f0-9]{64}$/);
+    expect(ZOBIRIS_POLICY.evidence.maxSingleMarketEpisodeShare).toBe(0.35);
     expect(ZOBIRIS_POLICY_CANONICAL_JSON).toContain('"standardTestUsd":100');
     expect(ZOBIRIS_POLICY_CANONICAL_JSON).toContain('"maxKrakenReferenceGapPct":0.1');
   });
