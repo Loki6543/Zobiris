@@ -154,7 +154,15 @@ export function buildEngineSnapshot(input:BuildEngineInput):EngineSnapshot {
   const statePriority=(row:Omit<EngineRow,"rank">)=>row.qualifiesForNewCapital?6:
     row.state==="EXECUTION_WARMUP"?5:row.state==="NEAR_ROTATION"?4:row.state==="TOO_EARLY"?3:
     row.state==="ALREADY_EXTENDED"?2:row.state==="BENCHMARK"?1:0;
-  const rows=unsorted.sort((a,b)=>statePriority(b)-statePriority(a)
+  const governed=(input.newCapitalAuthorityEnabled===false
+    ? unsorted.map(row=>row.symbol==="BTC"?row:{
+        ...row,
+        qualifiesForNewCapital:false,
+        maxNewOrderUsd:0,
+        reasonCodes:[...new Set([...row.reasonCodes,"provider_or_clock_authority_disabled"])],
+      })
+    : unsorted);
+  const rows=governed.sort((a,b)=>statePriority(b)-statePriority(a)
     || b.catchUpQuality-a.catchUpQuality
     || (a.cmcRank??999999)-(b.cmcRank??999999)
     || a.symbol.localeCompare(b.symbol))
@@ -180,7 +188,8 @@ export function buildEngineSnapshot(input:BuildEngineInput):EngineSnapshot {
   };
 
   return {
-    version:"1.0",generatedAt:input.generatedAt,
+    version:"1.1",generatedAt:input.generatedAt,
+    policy:{version:DELAYED_ROTATION_POLICY.version,hash:DELAYED_ROTATION_POLICY_HASH},
     policy:{version:p.version,hash:ZOBIRIS_POLICY_HASH},
     authority,
     market:{state:marketState,btcPriceUsd:btc?.priceUsd??null,btc7dPct:market.btc7dPct,btc30dPct:market.btc30dPct,btc90dPct:market.btc90dPct,
