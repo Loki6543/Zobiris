@@ -183,6 +183,22 @@ jobs:
             ]
           };
 
+          snapshot.policy = { version: "2.1.0", hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" };
+          snapshot.authority = { newBuyEnabled: true, reasons: [] };
+          snapshot.health.lastRefreshAttemptAt = snapshot.generatedAt;
+          snapshot.health.lastRefreshSuccessAt = snapshot.generatedAt;
+          snapshot.health.refreshDurationMs = 742;
+          snapshot.health.lastError = null;
+          snapshot.health.providers = {
+            cmcQuotes: { status: "LIVE", lastAttemptAt: snapshot.generatedAt, lastSuccessAt: snapshot.generatedAt, dataAsOf: snapshot.generatedAt, ageMs: 0, error: null, mode: "keyless" },
+            cmcMetadata: { status: "LIVE", lastAttemptAt: snapshot.generatedAt, lastSuccessAt: snapshot.generatedAt, dataAsOf: snapshot.generatedAt, ageMs: 0, error: null, mode: "keyless" },
+            krakenInstruments: { status: "LIVE", lastAttemptAt: snapshot.generatedAt, lastSuccessAt: snapshot.generatedAt, dataAsOf: snapshot.generatedAt, ageMs: 0, error: null, mode: "public-rest" },
+            krakenTicker: { status: "LIVE", lastAttemptAt: snapshot.generatedAt, lastSuccessAt: snapshot.generatedAt, dataAsOf: snapshot.generatedAt, ageMs: 0, error: null, mode: "public-rest" }
+          };
+          snapshot.health.clock = { state: "HEALTHY", wallMonotonicDriftMs: 0, futureProviderTimestampCount: 0, reasons: [] };
+          snapshot.health.stages = [];
+          snapshot.rows = snapshot.rows.map(row => ({ ...row, setupQualified: row.qualifiesForNewCapital || row.state === "WAIT_FOR_PULLBACK" }));
+
           const browser = await chromium.launch({ headless: true });
           const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
           const page = await context.newPage();
