@@ -35,4 +35,37 @@ describe("minimum evidence policy",()=>{
     expect(status.reasons.some(x=>x.startsWith("control_episodes_"))).toBe(true);
     db.close();
   });
+
+  it("blocks promotion when one market date dominates otherwise sufficient evidence",()=>{
+    const db=openDatabase(":memory:");migrate(db);
+    db.prepare("INSERT INTO assets(symbol,asset_class,updated_at) VALUES ('AAVE','NORMAL_CRYPTO',?)").run("2026-09-01T00:00:00Z");
+    const insert=db.prepare(`INSERT INTO strategy_episodes(
+      episode_id,symbol,strategy_tag,strategy_version,policy_version,policy_hash,episode_kind,from_state,to_state,
+      signal_at,signal_price,status,created_at,updated_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,'CLOSED',?,?)`);
+    const insertOutcome=db.prepare("INSERT INTO episode_outcomes(episode_id,horizon,due_at,evaluated_at) VALUES (?,?,?,?)");
+
+    for(let i=0;i<60;i++){
+      const kind=i<30?"QUALIFIED":"CONTROL";
+      const toState=kind==="QUALIFIED"?"WAIT_FOR_PULLBACK":"NEAR_ROTATION";
+      const day=i<24 ? "01" : String(((i-24)%12)+2).padStart(2,"0");
+      const at=`2026-09-${day}T00:00:00Z`;
+      const id=`episode-${i}`;
+      insert.run(
+        id,"AAVE",ZOBIRIS_POLICY.strategy.tag,ZOBIRIS_POLICY.strategy.version,
+        ZOBIRIS_POLICY.version,ZOBIRIS_POLICY_HASH,kind,
+        kind==="QUALIFIED"?"NEAR_ROTATION":"TOO_EARLY",toState,at,100,at,at
+      );
+      insertOutcome.run(id,"7D",at,at);
+    }
+
+    const status=assessMinimumEvidence(db,"7D");
+    expect(status.qualifiedEpisodes).toBe(30);
+    expect(status.controlEpisodes).toBe(30);
+    expect(status.independentMarketEpisodes).toBeGreaterThanOrEqual(10);
+    expect(status.maxMarketEpisodeShare).toBeGreaterThan(0.35);
+    expect(status.promotable).toBe(false);
+    expect(status.reasons.some(x=>x.startsWith("market_episode_share_"))).toBe(true);
+    db.close();
+  });
 });
