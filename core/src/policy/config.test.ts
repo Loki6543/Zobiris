@@ -1,3 +1,6 @@
+import { readFileSync,readdirSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { ZOBIRIS_POLICY, ZOBIRIS_POLICY_CANONICAL_JSON, ZOBIRIS_POLICY_HASH } from "./config.js";
 
@@ -15,5 +18,30 @@ describe("Zobiris policy registry", () => {
     expect(ZOBIRIS_POLICY.execution.standardTestUsd).toBeLessThan(
       ZOBIRIS_POLICY.execution.stress.institutionalUsd,
     );
+  });
+});
+
+
+describe("canonical policy source",()=>{
+  it("forbids duplicate policy registries and stale imports",()=>{
+    const here=fileURLToPath(new URL(".",import.meta.url));
+    const src=join(here,"..");
+    const files:string[]=[];
+    const walk=(dir:string)=>{
+      for(const entry of readdirSync(dir,{withFileTypes:true})) {
+        const p=join(dir,entry.name);
+        if(entry.isDirectory()) walk(p);
+        else if(/\.(ts|tsx)$/.test(entry.name)) files.push(p);
+      }
+    };
+    walk(src);
+    const forbidden=["policy/policy.js","policy/delayedRotationPolicy.js","DELAYED_ROTATION_POLICY"];
+    const hits:string[]=[];
+    for(const file of files) {
+      if(file.endsWith("config.test.ts")) continue;
+      const text=readFileSync(file,"utf8");
+      for(const token of forbidden) if(text.includes(token)) hits.push(`${file}:${token}`);
+    }
+    expect(hits).toEqual([]);
   });
 });
