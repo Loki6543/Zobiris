@@ -10,6 +10,15 @@ const priceMoney=(n:number|null)=>{
 };
 const pct=(n:number|null)=>n==null?"—":`${n>=0?"+":""}${n.toFixed(1)}%`;
 const stateLabel=(s:string)=>s.replaceAll("_"," ");
+const ageLabel=(ms:number|null)=>{
+  if(ms==null) return "—";
+  const seconds=Math.floor(ms/1000);
+  if(seconds<60) return `${seconds}s`;
+  const minutes=Math.floor(seconds/60);
+  if(minutes<60) return `${minutes}m`;
+  const hours=Math.floor(minutes/60);
+  return `${hours}h`;
+};
 const ageLabel=(ms:number|null|undefined)=>{
   if(ms==null) return "—";
   if(ms<60_000) return `${Math.max(0,Math.round(ms/1000))}s`;
@@ -127,6 +136,8 @@ export function App() {
         <span>BTC <b>{money(snapshot?.market.btcPriceUsd??null,0)}</b></span>
         <span>WATCHLIST <b>{snapshot?.health.watchlistCount??"—"}</b></span>
         <span>QUALIFIED <b>{snapshot?.qualifiedCount??"—"}</b></span>
+        <span>AUTHORITY <b className={snapshot?.authority.newBuyEnabled?"authorityOn":"authorityOff"}>{snapshot?snapshot.authority.newBuyEnabled?"ENABLED":"DISABLED":"WARMUP"}</b></span>
+        <span>DATA AGE <b>{ageLabel(snapshot?.health.providers.cmcQuotes.ageMs??null)}</b></span>
         <span>KRAKEN <b>{snapshot?.health.krakenInstruments??"WARMUP"}</b></span>
         <span>AUTH <b>{snapshot?snapshot.authority.newBuyEnabled?"ON":"BLOCKED":"—"}</b></span>
       </div>
