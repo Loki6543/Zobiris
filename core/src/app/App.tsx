@@ -128,7 +128,7 @@ export function App() {
         <span>WATCHLIST <b>{snapshot?.health.watchlistCount??"—"}</b></span>
         <span>QUALIFIED <b>{snapshot?.qualifiedCount??"—"}</b></span>
         <span>AUTHORITY <b className={snapshot?.authority.newBuyEnabled?"authorityOn":"authorityOff"}>{snapshot?snapshot.authority.newBuyEnabled?"ENABLED":"DISABLED":"WARMUP"}</b></span>
-        <span>DATA AGE <b>{ageLabel(snapshot?.health.providers.cmcQuotes.ageMs??null)}</b></span>
+        <span>DATA AGE <b>{ageLabel(dataAge)}</b></span>
         <span>KRAKEN <b>{snapshot?.health.krakenInstruments??"WARMUP"}</b></span>
       </div>
     </header>
