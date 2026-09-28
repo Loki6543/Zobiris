@@ -485,6 +485,27 @@ export class EngineRuntime {
         btcSignalPrice:snapshot.market.btcPriceUsd,
         intendedLimit:row.intendedLimitPrice,
         recommendedSizeUsd:row.maxNewOrderUsd,
+        decisionContext:{
+          market:snapshot.market,
+          authority:snapshot.authority,
+          row:{
+            state:row.state,
+            priceUsd:row.priceUsd,
+            intendedLimitPrice:row.intendedLimitPrice,
+            change7dPct:row.change7dPct,
+            change30dPct:row.change30dPct,
+            change90dPct:row.change90dPct,
+            relative30dVsBtcPct:row.relative30dVsBtcPct,
+            relative90dVsBtcPct:row.relative90dVsBtcPct,
+            catchUpQuality:row.catchUpQuality,
+            entryQuality:row.entryQuality,
+            marketDepthGrade:row.marketDepthGrade,
+            personalExecutionPass:row.personalExecutionPass,
+            setupQualified:row.setupQualified,
+            maxNewOrderUsd:row.maxNewOrderUsd,
+            reasonCodes:row.reasonCodes,
+          },
+        },
       });
     }
   }
