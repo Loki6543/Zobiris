@@ -204,15 +204,6 @@ const MIGRATIONS = [
       ALTER TABLE strategy_episodes ADD COLUMN decision_context_json TEXT;
     `,
   },
-  {
-    id: 4,
-    sql: `
-      ALTER TABLE strategy_episodes ADD COLUMN policy_version TEXT;
-      ALTER TABLE strategy_episodes ADD COLUMN policy_hash TEXT;
-      CREATE INDEX IF NOT EXISTS idx_strategy_episodes_policy
-        ON strategy_episodes(strategy_tag, policy_version, policy_hash);
-    `,
-  },
 ] as const;
 
 export function migrate(db: Database.Database) {
