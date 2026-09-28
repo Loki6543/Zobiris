@@ -12,7 +12,7 @@ describe("health and metrics endpoints", () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.service).toBe("zobiris-core");
-    expect(res.body.schemaVersion).toBe(6);
+    expect(res.body.schemaVersion).toBe(7);
     expect(res.body.database.ok).toBe(true);
     expect(res.body.policy.hash).toMatch(/^[a-f0-9]{64}$/);
     expect(res.body.engine).toBeNull();
