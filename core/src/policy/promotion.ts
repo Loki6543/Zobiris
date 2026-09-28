@@ -1,5 +1,24 @@
-import { evaluateMinimumEvidence, type EvidenceCounts } from "../learning/minimumEvidence.js";
 import { ZOBIRIS_POLICY } from "./config.js";
+
+export interface EvidenceCounts {
+  qualifiedEpisodes:number;
+  controlEpisodes:number;
+  marketEpisodes:number;
+}
+
+function evidenceReasons(counts:EvidenceCounts) {
+  const reasons:string[]=[];
+  if(counts.qualifiedEpisodes<ZOBIRIS_POLICY.evidence.minimumQualifiedEpisodes) {
+    reasons.push("insufficient_qualified_episodes");
+  }
+  if(counts.controlEpisodes<ZOBIRIS_POLICY.evidence.minimumControlEpisodes) {
+    reasons.push("insufficient_control_episodes");
+  }
+  if(counts.marketEpisodes<ZOBIRIS_POLICY.evidence.minimumMarketEpisodes) {
+    reasons.push("insufficient_independent_market_episodes");
+  }
+  return reasons;
+}
 
 export interface PolicyPromotionInput {
   evidence:EvidenceCounts;
@@ -14,8 +33,7 @@ export interface PolicyPromotionStatus {
 }
 
 export function evaluatePolicyPromotion(input:PolicyPromotionInput):PolicyPromotionStatus {
-  const evidence=evaluateMinimumEvidence(input.evidence);
-  const reasons=[...evidence.reasons];
+  const reasons=evidenceReasons(input.evidence);
   if(ZOBIRIS_POLICY.governance.allowAutomaticParameterMutation) {
     reasons.push("automatic_parameter_mutation_must_remain_disabled");
   }
