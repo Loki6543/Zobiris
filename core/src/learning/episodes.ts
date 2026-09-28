@@ -1,4 +1,3 @@
-import { ZOBIRIS_POLICY, ZOBIRIS_POLICY_HASH } from "../policy/policy.js";
 import type Database from "better-sqlite3";
 
 export const OUTCOME_HORIZONS = [
