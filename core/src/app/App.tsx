@@ -130,7 +130,6 @@ export function App() {
         <span>AUTHORITY <b className={snapshot?.authority.newBuyEnabled?"authorityOn":"authorityOff"}>{snapshot?snapshot.authority.newBuyEnabled?"ENABLED":"DISABLED":"WARMUP"}</b></span>
         <span>DATA AGE <b>{ageLabel(snapshot?.health.providers.cmcQuotes.ageMs??null)}</b></span>
         <span>KRAKEN <b>{snapshot?.health.krakenInstruments??"WARMUP"}</b></span>
-        <span>AUTH <b>{snapshot?snapshot.authority.newBuyEnabled?"ON":"BLOCKED":"—"}</b></span>
       </div>
     </header>
     {nav==="ENGINE"?<main className="workspace">
