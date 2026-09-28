@@ -3,6 +3,7 @@ import type { RequestHandler } from "express";
 import { z } from "zod";
 
 export type RouteAccess = "public" | "private" | "mutating";
+export type SessionSecretInput = string | readonly string[] | undefined;
 
 const ClaimsSchema=z.object({
   sid:z.string().min(8),
@@ -10,6 +11,11 @@ const ClaimsSchema=z.object({
 });
 
 export type SessionClaims=z.infer<typeof ClaimsSchema>;
+
+function normalizeSecrets(input:SessionSecretInput):string[] {
+  const values=typeof input==="string" ? [input] : [...(input ?? [])];
+  return values.map(value=>value.trim()).filter(Boolean);
+}
 
 function b64url(input:string) {
   return Buffer.from(input,"utf8").toString("base64url");
@@ -19,19 +25,27 @@ function hmac(secret:string,payload:string) {
   return createHmac("sha256",secret).update(payload).digest("base64url");
 }
 
-export function signSessionToken(secret:string,claims:SessionClaims) {
+export function signSessionToken(secrets:SessionSecretInput,claims:SessionClaims) {
+  const [primary]=normalizeSecrets(secrets);
+  if(!primary) throw new Error("session signing secret is not configured");
   const parsed=ClaimsSchema.parse(claims);
   const payload=b64url(JSON.stringify(parsed));
-  return `${payload}.${hmac(secret,payload)}`;
+  return `${payload}.${hmac(primary,payload)}`;
 }
 
-export function verifySessionToken(secret:string,token:string,nowMs=Date.now()):SessionClaims|null {
+export function verifySessionToken(secrets:SessionSecretInput,token:string,nowMs=Date.now()):SessionClaims|null {
+  const candidates=normalizeSecrets(secrets);
+  if(!candidates.length) return null;
   const [payload,signature,...rest]=token.split(".");
   if(!payload||!signature||rest.length) return null;
-  const expected=hmac(secret,payload);
-  const a=Buffer.from(signature);
-  const b=Buffer.from(expected);
-  if(a.length!==b.length || !timingSafeEqual(a,b)) return null;
+
+  const supplied=Buffer.from(signature);
+  const signatureValid=candidates.some(secret=>{
+    const expected=Buffer.from(hmac(secret,payload));
+    return supplied.length===expected.length && timingSafeEqual(supplied,expected);
+  });
+  if(!signatureValid) return null;
+
   try {
     const claims=ClaimsSchema.parse(JSON.parse(Buffer.from(payload,"base64url").toString("utf8")));
     if(claims.exp*1000<=nowMs) return null;
@@ -55,11 +69,11 @@ function cookieValue(header:string|undefined,name:string):string|null {
   return null;
 }
 
-export function createSessionGuard(secret:string|undefined):RequestHandler {
+export function createSessionGuard(secrets:SessionSecretInput):RequestHandler {
   return (req,res,next)=>{
-    if(!secret) return res.status(503).json({ok:false,error:"PRIVATE_AUTH_NOT_CONFIGURED"});
+    if(!normalizeSecrets(secrets).length) return res.status(503).json({ok:false,error:"PRIVATE_AUTH_NOT_CONFIGURED"});
     const token=cookieValue(req.headers.cookie,"__Host-zobiris-session");
-    if(!token || !verifySessionToken(secret,token)) {
+    if(!token || !verifySessionToken(secrets,token)) {
       return res.status(401).json({ok:false,error:"UNAUTHORIZED"});
     }
     res.setHeader("Cache-Control","no-store");
