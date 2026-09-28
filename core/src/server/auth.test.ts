@@ -24,4 +24,23 @@ describe("route authorization",()=>{
     expect((await request(app).get("/private")).status).toBe(401);
     expect((await request(app).get("/private").set("Cookie",header)).status).toBe(200);
   });
+
+  it("accepts a previous signing secret during rotation while signing new sessions with the primary",async()=>{
+    const previous="previous-secret-at-least-32-bytes-long";
+    const current="current-secret-at-least-32-bytes-long--";
+    const claims={sid:"session-rotate",exp:Math.floor(Date.now()/1000)+60};
+    const previousToken=signSessionToken(previous,claims);
+    const currentToken=signSessionToken([current,previous],claims);
+
+    const app=express();
+    registerRoutes(
+      app,
+      [{method:"get",path:"/private",access:"private",handler:(_req,res)=>res.json({ok:true})}],
+      createSessionGuard([current,previous]),
+    );
+
+    expect((await request(app).get("/private").set("Cookie",sessionCookieHeader(previousToken))).status).toBe(200);
+    expect((await request(app).get("/private").set("Cookie",sessionCookieHeader(currentToken))).status).toBe(200);
+    expect(currentToken).not.toBe(previousToken);
+  });
 });
