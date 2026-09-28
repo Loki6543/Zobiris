@@ -10,7 +10,7 @@ function canonicalize(value: unknown): string {
 }
 
 export const ZOBIRIS_POLICY = {
-  version: "2.1.0",
+  version: "2.2.0",
   strategy: {
     tag: "DELAYED_ROTATION_PILOT_V2",
     version: "2.1.0",
@@ -122,6 +122,7 @@ export const ZOBIRIS_POLICY = {
     minimumQualifiedEpisodes: 30,
     minimumControlEpisodes: 30,
     minimumMarketEpisodes: 10,
+    maxSingleMarketEpisodeShare: 0.35,
   },
   retention: {
     hotExecutionDays: 30,
