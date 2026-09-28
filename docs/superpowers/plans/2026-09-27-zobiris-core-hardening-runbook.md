@@ -14,6 +14,7 @@
   - minimum qualified episodes pass;
   - minimum control episodes pass;
   - minimum independent market episodes pass;
+  - no single market date supplies more than the configured evidence-share cap;
   - chronological validation passes;
   - realistic costs are included;
   - shadow evaluation is complete.
@@ -40,6 +41,7 @@ Before staging cutover:
 3. Enable Railway volume backups:
    - daily;
    - weekly.
+   Railway supports scheduled volume backups for SQLite-bearing volumes, but those backups remain within the same project/environment; keep a portable verified copy outside the active volume for disaster recovery.
 4. Run `npm run db:backup` before schema-changing cutovers or migrations that cannot be trivially reversed.
 5. Verify the generated copy passes SQLite `quick_check`.
 6. Perform a restore drill in staging before production replacement.
