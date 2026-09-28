@@ -13,7 +13,12 @@ const engine=new EngineRuntime(db,config.CMC_API_KEY,{
   maneuverNavUsd:config.PILOT_MANEUVER_NAV_USD,
   availableCashUsd:config.PILOT_AVAILABLE_CASH_USD,
 });
-const app = createApp(db,engine,{sessionSecret:config.AUTH_SESSION_SECRET});
+const rotatedSecrets=config.AUTH_SESSION_SECRETS
+  ?.split(",")
+  .map(value=>value.trim())
+  .filter(Boolean);
+const sessionSecret=rotatedSecrets?.length ? rotatedSecrets : config.AUTH_SESSION_SECRET;
+const app = createApp(db,engine,{sessionSecret});
 
 async function refreshEngine() {
   try {
