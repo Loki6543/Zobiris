@@ -21,6 +21,18 @@ describe("strategy episodes",()=>{
     db.close();
   });
 
+  it("stores the point-in-time decision context with the policy identity",()=>{
+    const db=seededDb();
+    const ctx={market:{state:"BULLISH",btc30dPct:10},row:{change7dPct:5,marketDepthGrade:"NORMAL"}};
+    const first=applyStrategyTransition(db,{...base,decisionContext:ctx});
+    const row=db.prepare("SELECT policy_version,policy_hash,decision_context_json FROM strategy_episodes WHERE episode_id=?")
+      .get(first.episodeId) as any;
+    expect(row.policy_version).toBe(ZOBIRIS_POLICY.version);
+    expect(row.policy_hash).toBe(ZOBIRIS_POLICY_HASH);
+    expect(JSON.parse(row.decision_context_json)).toEqual(ctx);
+    db.close();
+  });
+
   it("does not count repeated refreshes as new episodes",()=>{
     const db=seededDb();
     const first=applyStrategyTransition(db,base);
