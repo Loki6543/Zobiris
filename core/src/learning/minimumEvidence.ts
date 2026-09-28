@@ -4,6 +4,7 @@ export interface EvidenceCounts {
   qualifiedEpisodes: number;
   controlEpisodes: number;
   marketEpisodes: number;
+  largestMarketEpisodeCount?: number;
 }
 
 export interface EvidenceStatus extends EvidenceCounts {
@@ -21,6 +22,13 @@ export function evaluateMinimumEvidence(counts: EvidenceCounts): EvidenceStatus 
   }
   if (counts.marketEpisodes < ZOBIRIS_POLICY.evidence.minimumMarketEpisodes) {
     reasons.push("insufficient_independent_market_episodes");
+  }
+  if (
+    counts.marketEpisodes > 0 &&
+    counts.largestMarketEpisodeCount != null &&
+    counts.largestMarketEpisodeCount / counts.marketEpisodes > ZOBIRIS_POLICY.evidence.maxSingleMarketEpisodeShare
+  ) {
+    reasons.push("market_episode_concentration_too_high");
   }
   return { ...counts, promotable: reasons.length === 0, reasons };
 }
