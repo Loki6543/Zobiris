@@ -13,7 +13,7 @@ it('fails closed on oversized history before parsing, and still loads other asse
   const db = new Database(path);
   const insert = db.prepare('INSERT INTO strategy21_book_snapshots VALUES(?,?,?,?,?,?,?,?)');
   // Invalid JSON padded over the per-symbol budget proves it is rejected before parsing.
-  insert.run('big', 'BIG', 'BIG/USD', Date.now(), 'x'.repeat(17 * 1024 * 1024), '[]', 1, 100);
+  insert.run('big', 'BIG', 'BIG/USD', Date.now(), 'x'.repeat(65 * 1024 * 1024), '[]', 1, 100);
   insert.run('small', 'SMALL', 'SMALL/USD', Date.now(), '[{"price":99,"size":2}]', '[{"price":101,"size":2}]', 1, 100);
   const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const result = loadStrategyLiquidity(path, ['BIG', 'SMALL']);

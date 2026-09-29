@@ -87,7 +87,7 @@ export function loadStrategyLiquidity(dbPath: string | undefined, symbols: strin
     // Raw JSON expands substantially into JS objects, then profiles retain books
     // for every symbol. Bound the whole refresh before materializing any rows.
     // Do not sample/truncate and then present partial history as certification.
-    const perSymbolBytes = 16 * 1024 * 1024;
+    const perSymbolBytes = 64 * 1024 * 1024;
     const totalBytes = 64 * 1024 * 1024;
     let retainedBytes = 0;
     const budgetStmt = storage.sqlite.prepare(`SELECT count(*) AS rows,
