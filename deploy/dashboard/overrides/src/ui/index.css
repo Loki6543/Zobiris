@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { margin: 0; min-width: 320px; min-height: 100vh; }
+  :root {
+    --background: 216 48% 7%;
+    --foreground: 216 33% 97%;
+    --card: 215 43% 10%;
+    --card-foreground: 216 33% 97%;
+    --popover: 215 43% 10%;
+    --popover-foreground: 216 33% 97%;
+    --primary: 252 89% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 31% 16%;
+    --secondary-foreground: 216 33% 97%;
+    --muted: 216 31% 15%;
+    --muted-foreground: 216 15% 67%;
+    --accent: 218 36% 18%;
+    --accent-foreground: 216 33% 97%;
+    --destructive: 0 76% 58%;
+    --border: 216 31% 21%;
+    --input: 216 31% 21%;
+    --ring: 252 89% 67%;
+    --chart-1: 252 89% 67%;
+    --chart-2: 151 67% 53%;
+    --chart-3: 201 90% 60%;
+    --chart-4: 38 95% 58%;
+    --chart-5: 0 76% 58%;
+    --radius: 0.5rem;
+    --sidebar: 216 45% 8%;
+    --sidebar-foreground: 216 33% 97%;
+    --sidebar-primary: 252 89% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 218 36% 18%;
+    --sidebar-accent-foreground: 216 33% 97%;
+    --sidebar-border: 216 31% 21%;
+    --sidebar-ring: 252 89% 67%;
+  }
+  .dark {
+    --background: 216 48% 7%;
+    --foreground: 216 33% 97%;
+    --card: 215 43% 10%;
+    --card-foreground: 216 33% 97%;
+    --popover: 215 43% 10%;
+    --popover-foreground: 216 33% 97%;
+    --primary: 252 89% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 31% 16%;
+    --secondary-foreground: 216 33% 97%;
+    --muted: 216 31% 15%;
+    --muted-foreground: 216 15% 67%;
+    --accent: 218 36% 18%;
+    --accent-foreground: 216 33% 97%;
+    --destructive: 0 76% 58%;
+    --border: 216 31% 21%;
+    --input: 216 31% 21%;
+    --ring: 252 89% 67%;
+    --chart-1: 252 89% 67%;
+    --chart-2: 151 67% 53%;
+    --chart-3: 201 90% 60%;
+    --chart-4: 38 95% 58%;
+    --chart-5: 0 76% 58%;
+    --sidebar: 216 45% 8%;
+    --sidebar-foreground: 216 33% 97%;
+    --sidebar-primary: 252 89% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 218 36% 18%;
+    --sidebar-accent-foreground: 216 33% 97%;
+    --sidebar-border: 216 31% 21%;
+    --sidebar-ring: 252 89% 67%;
+  }
+}
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Zobiris dashboard: shared interaction, layout and financial table styling. */
+.zobiris-dashboard { color-scheme: dark; background-image: radial-gradient(ellipse at 10% 0%, #28235455, transparent 55%); font-variant-numeric: tabular-nums; }
+.zobiris-dashboard button { transition: background-color .15s, border-color .15s, box-shadow .15s; }
+.zobiris-dashboard button:hover:not(:disabled) { filter: brightness(1.16); }
+.zobiris-dashboard button:focus-visible, .zobiris-dashboard input:focus-visible, .zobiris-dashboard select:focus-visible { outline: 2px solid #b5a8ff; outline-offset: 4px; }
+.zobiris-dashboard button:disabled { opacity: .55; cursor: wait !important; }
+.zobiris-dashboard header { min-height: 86px; }
+.brand-mark { display: inline-grid; place-items: center; width: 36px; height: 36px; margin-right: 8px; background: #7661ed; border: 1px solid #a99aff; border-radius: 10px; color: white; font-size: 24px; letter-spacing: 0; }
+.brand-core { color: #a69aff; }
+.zobiris-dashboard nav { padding: 5px; background: #111e36; border: 1px solid #293c5b; border-radius: 12px; }
+.zobiris-dashboard nav button { border-radius: 8px; flex: 1; font-size: 14px; }
+.dashboard-metric { position: relative; overflow: hidden; min-height: 130px; border-top: 3px solid #a699ff !important; box-shadow: 0 6px 24px #03091922; }
+.dashboard-metric:first-child { background: linear-gradient(125deg,#302959,#1d2448) !important; }
+.dashboard-metric:nth-child(2) { border-top-color: #63adff !important; }
+.dashboard-metric:nth-child(3) { border-top-color: #edb75d !important; }
+.dashboard-metric:nth-child(4) { border-top-color: #41d9bd !important; }
+.dashboard-metric:nth-child(5) { border-top-color: #6bc5e9 !important; }
+.dashboard-metric > div:first-child { color: #bac9e0 !important; font-size: 12px !important; font-weight: 650; letter-spacing: .3px; }
+.dashboard-metric:nth-child(4) > div:nth-child(2) { color: #6ce5cf; }
+.zobiris-dashboard table { font-size: 14px; }
+.zobiris-dashboard th { text-align: right; color: #9cb2d3; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .8px; padding: 13px 14px; background: #0e1a30; border-bottom: 1px solid #304565; }
+.zobiris-dashboard td { padding: 14px; text-align: right; border-bottom: 1px solid #243653; }
+.zobiris-dashboard th:first-child, .zobiris-dashboard td:first-child { text-align: left; }
+.zobiris-dashboard tbody tr:last-child > td { border-bottom: 0; }
+.zobiris-dashboard tbody tr:hover > td { background-color: #7d8df008; }
+.asset-identity { display: flex; align-items: center; gap: 12px; }
+.asset-monogram { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #353465; color: #c6bcff; font-weight: 750; border: 1px solid #625794; }
+tr:nth-child(3n+2) .asset-monogram { background: #153e48; color: #6ae4d0; border-color: #286d72; }
+tr:nth-child(3n+3) .asset-monogram { background: #3e3328; color: #ffd28a; border-color: #756044; }
+.asset-name { display: block; }
+.dashboard-columns > div { width: 100%; min-width: 0; }
+.zobiris-dashboard h2 { padding-bottom: 8px; }
+@media (max-width: 640px) {
+ .zobiris-dashboard { padding: 12px !important; }
+ .zobiris-dashboard header { align-items: flex-start !important; gap: 10px !important; }
+ .zobiris-dashboard header > div > div:first-child { font-size: 17px !important; letter-spacing: 1px !important; }
+ .brand-mark { width: 27px; height: 27px; font-size: 19px; margin-right: 3px; }
+ .zobiris-dashboard header button { font-size: 12px; padding: 10px !important; white-space: nowrap; }
+ .zobiris-dashboard nav { gap: 3px !important; }
+ .zobiris-dashboard nav button { flex: 0 0 auto; padding: 10px !important; font-size: 12px; }
+ .dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+ .dashboard-metric { min-height: 120px; padding: 13px !important; }
+ .dashboard-metric:last-child { grid-column: 1 / -1; min-height: auto; }
+ .dashboard-columns { grid-template-columns: minmax(0, 1fr) !important; }
+ .zobiris-dashboard td, .zobiris-dashboard th { padding: 12px 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .zobiris-dashboard button { transition: none; } }
