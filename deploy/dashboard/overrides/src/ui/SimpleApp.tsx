@@ -758,7 +758,7 @@ export function App() {
     <div className="zobiris-dashboard" style={styles.page}>
       <header style={styles.header}>
         <div>
-          <div style={styles.brand}><span className="brand-mark" aria-hidden="true">Z</span> ZOBIRIS <span className="brand-core">CORE</span></div>
+          <div aria-label="ZOBIRIS CORE" style={styles.brand}><span className="brand-mark" aria-hidden="true">Z</span> ZOBIRIS <span className="brand-core">CORE</span></div>
           <div style={styles.subtle}>Portfolio decisions, market limits, and trade memory.</div>
         </div>
         <button style={styles.refreshButton} onClick={() => void refresh()} disabled={refreshing}>
