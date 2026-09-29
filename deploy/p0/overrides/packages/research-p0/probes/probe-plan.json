@@ -1,0 +1,106 @@
+{
+  "version": "1.2.0",
+  "purpose": "R1 byte-frozen custom/synthetic probe corpus for engine/runtime semantics validation",
+  "authority": "Probe results validate engine semantics only. They are not alpha evidence and never create promotion assessments.",
+  "canonical_dataset": {
+    "bar_interval": "1m",
+    "timezone": "UTC",
+    "calendar": "continuous_24x7",
+    "required_columns": ["timestamp", "open", "high", "low", "close", "volume"],
+    "hash_rule": "SHA-256 of exact original input bytes before provider upload",
+    "annualization": "NOT_USED_FOR_PROBE_PASS_FAIL"
+  },
+  "execution_conventions": {
+    "market_buy_on_close_true": "fill on the decision bar close",
+    "market_buy_on_close_false": "fill on the next bar open",
+    "commission": "quote-currency fee charged on executed notional per side",
+    "slippage": "disabled unless a probe explicitly enables it; when enabled it is applied to the execution price, never ambiguously to an unrelated bar close",
+    "limit_orders": "probe-specific; ambiguous OHLC-only intrabar sequencing must be classified rather than silently assumed"
+  },
+  "eligible_validation_conclusions": [
+    "EXACT_MATCH",
+    "MATCH_WITH_REGISTERED_NUMERIC_TOLERANCE"
+  ],
+  "required_evidence": {
+    "dataset_tier": "R1_BYTE_REPRODUCIBLE",
+    "strategy_source_frozen": true,
+    "runtime_fingerprint_frozen": true,
+    "observation_protocol_frozen": true,
+    "primitive_observations_required": ["orders", "fills", "positions", "cash", "mark_prices", "equity_marks"],
+    "promotion_assessment": "FORBIDDEN_FOR_PROBE_CORPUS"
+  },
+  "probes": [
+    {
+      "id": "P01_BUY_HOLD_FRACTIONAL",
+      "goal": "Detect integer/fractional position-sizing failures like the historical BTC benchmark defect.",
+      "assertions": ["first_fill_quantity_exact", "initial_exposure_between_94.99_and_95.01_pct", "no_unexpected_trades", "cash_position_equity_reconstruct"]
+    },
+    {
+      "id": "P02_NEXT_BAR_VS_CLOSE",
+      "goal": "Determine buy_on_close versus next-bar-open execution semantics with hand-computable bars.",
+      "variants": ["buy_on_close=true", "buy_on_close=false"],
+      "assertions": ["fill_timestamp_exact", "fill_price_exact_or_registered_numeric_tolerance"]
+    },
+    {
+      "id": "P03_COMMISSION_GRID",
+      "goal": "Verify commission application and fee rounding.",
+      "variants_bps_per_side": [0, 10, 20, 30],
+      "assertions": ["cash_ledger_reconstructs_from_fills", "equity_reconstructs_from_fills_and_marks"]
+    },
+    {
+      "id": "P04_WARMUP_BOUNDARY",
+      "goal": "Verify indicators do not trade on NaN or insufficient warmup windows.",
+      "assertions": ["no_pre_warmup_fill", "first_eligible_bar_exact"]
+    },
+    {
+      "id": "P05_MULTI_ASSET_ROTATION",
+      "goal": "Verify sell-then-buy state transitions and no accidental simultaneous gross exposure.",
+      "assertions": ["rotation_order_exact", "max_one_active_asset", "cash_position_equity_reconstruct"]
+    },
+    {
+      "id": "P06_MIN_HOLD_HYSTERESIS",
+      "goal": "Verify minimum holding period and entry/exit threshold hysteresis.",
+      "assertions": ["no_exit_before_min_hold", "threshold_boundary_exact"]
+    },
+    {
+      "id": "P07_LIMIT_ORDER_BAR_MODEL",
+      "goal": "Document OHLC-only limit-order fill assumptions and detect ambiguous intrabar sequencing.",
+      "assertions": ["fill_model_artifact_present", "ambiguous_intrabar_case_not_silently_filled"]
+    },
+    {
+      "id": "P08_TIMEZONE_BOUNDARY",
+      "goal": "Verify UTC normalization and day/4h boundary conventions from 1-minute source bars.",
+      "assertions": ["utc_normalization_exact", "resample_boundary_exact"]
+    },
+    {
+      "id": "P09_DATA_QUALITY",
+      "goal": "Verify duplicate, missing-policy, unsorted, malformed, and non-finite bars fail closed before research.",
+      "assertions": ["duplicate_rejected", "unsorted_rejected", "gap_policy_recorded", "nonfinite_rejected"]
+    },
+    {
+      "id": "P10_OPEN_POSITION_AT_END",
+      "goal": "Verify open positions, unrealized P&L, and final valuation treatment.",
+      "assertions": ["open_position_preserved", "final_equity_reconstructs_from_last_marks"]
+    },
+    {
+      "id": "P11_LOOKAHEAD_TRAP",
+      "goal": "Expose whether future-bar access is blocked, permitted, or silently contaminates a result.",
+      "assertions": ["behavior_explicitly_classified", "contaminated_result_integrity_ineligible"]
+    },
+    {
+      "id": "P12_CAPITAL_DEPLOYMENT_INVARIANTS",
+      "goal": "Verify declared strategy behavior independently of performance summaries.",
+      "assertions": ["expected_vs_actual_exposure", "long_only", "leverage_ceiling", "time_in_market", "reconstructed_state_matches_snapshots"]
+    },
+    {
+      "id": "P13_CROSS_FAMILY_LINEAGE_ATTACK",
+      "goal": "Prove family/candidate/split/result identities cannot be mixed to fabricate validation or promotion lineage.",
+      "assertions": ["foreign_family_candidate_rejected", "foreign_family_split_rejected", "foreign_candidate_validation_rejected"]
+    },
+    {
+      "id": "P14_PREREGISTRATION_CHAIN_ATTACK",
+      "goal": "Prove an unrelated or post-result audit event cannot satisfy confirmatory pre-registration.",
+      "assertions": ["unrelated_plan_event_rejected", "post_result_plan_order_rejected", "plan_metric_split_cost_drift_rejected"]
+    }
+  ]
+}

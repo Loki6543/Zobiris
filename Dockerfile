@@ -22,11 +22,14 @@ RUN node scripts/v076_patch_production.mjs \
   && cp -r audit-fixes/. /app/ \
   && rm -rf audit-fixes
 COPY deploy/prediction/overrides/. /app/
+COPY deploy/p0/overrides/. /app/
 # Keep the root hosted gate canonical; prediction overlays must not silently replace release policy.
 COPY railway_hosted_gate.mjs /app/scripts/railway_hosted_gate.mjs
 
 RUN npm ci --no-audit --no-fund
-RUN npm run test:decision-boundary \
+RUN npx tsc -p packages/research-p0/tsconfig.json \
+  && (cd packages/research-p0 && node dist/scripts/selftest.js) \
+  && npm run test:decision-boundary \
   && npm run test:same-origin-refresh \
   && node --experimental-strip-types --test verification/cmcKeylessCurrentShape.node.test.mjs \
   && node --experimental-strip-types --test verification/cmcQuoteShape.node.test.mjs \

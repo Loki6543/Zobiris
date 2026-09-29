@@ -128,6 +128,12 @@ async function verifyCandidate() {
     if (integrity.payload?.policy?.liveProvidersEnabled !== true) throw new Error('candidate live providers are not enabled');
     console.log('PASS candidate integrity policy enables same-origin refresh and live providers');
 
+    const p0 = await jsonCheck(localOrigin, '/api/intelligence/research-integrity', {}, [200], 'candidate P0 evidence boundary');
+    if (p0.payload?.provenance?.source !== 'PERSISTED_P0_EVIDENCE' || p0.payload?.researchEvidence?.version !== '0.3.0') throw new Error('candidate P0 evidence registry is missing');
+    if (p0.payload?.researchIntegrity?.promotable !== false || p0.payload?.researchEvidence?.statisticalEvaluatorsImplemented !== false) throw new Error('P0 cannot claim statistical promotion authority');
+    await jsonCheck(localOrigin, '/api/research/provenance', {}, [401, 403], 'candidate anonymous research diagnostics rejected');
+    console.log('PASS candidate P0 v3 persisted evidence boundary and promotion restrictions');
+
     for (const path of ['/api/refresh', '/api/strategy21/collect', '/api/agents/challenge']) {
       await jsonCheck(localOrigin, path, { method: 'POST' }, [401, 403], `candidate anonymous ${path}`);
       await jsonCheck(localOrigin, path, {
