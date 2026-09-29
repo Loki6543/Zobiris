@@ -24,6 +24,7 @@ RUN node scripts/v076_patch_production.mjs \
 COPY deploy/prediction/overrides/. /app/
 COPY deploy/p0/overrides/. /app/
 COPY deploy/dashboard/overrides/. /app/
+COPY deploy/protection/overrides/. /app/
 # Keep the root hosted gate canonical; prediction overlays must not silently replace release policy.
 COPY railway_hosted_gate.mjs /app/scripts/railway_hosted_gate.mjs
 
