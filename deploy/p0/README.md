@@ -11,3 +11,7 @@ An empty ledger is `AWAITING_EVIDENCE`, with zero disclosed candidates and unkno
 SQL guards validate relations, hash shape, primitive references and lifecycle rules; they do not prove artifact bytes, verifier execution, or external witnessing. Preserve original artifacts and witness audit heads before making cryptographic provenance claims.
 
 Rollback: redeploy the prior GitHub commit. The new research file remains on the persistent volume but old code does not read it. Do not delete the volume or portfolio database.
+
+## Production refresh memory guard
+
+Post-deployment validation exposed a pre-existing full-history materialization problem: production refresh exhausted the Node 2 GiB heap against the ~870 MB persistent database, while the empty candidate DB passed. `loadStrategyLiquidity` now preflights row counts and encoded JSON bytes in the same readonly transaction as materialization. Limits are 12,000 rows / 16 MiB per symbol and 64 MiB across a refresh. A symbol exceeding those bounds is omitted from executable-liquidity evidence and remains WATCH_ONLY; data stays on disk. No sampling is presented as complete history. The guard logs `LIQUIDITY_HISTORY_BUDGET_EXCEEDED` with symbol/count/bytes. Long-history aggregation remains a future optimization; these limits are conservative availability controls, not a certification shortcut.
