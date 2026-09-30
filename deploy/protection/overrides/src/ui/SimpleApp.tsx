@@ -14,6 +14,7 @@ import {
   type TradeMemory,
 } from "./simplePortfolioData";
 
+import { PortfolioVisuals } from "./PortfolioVisuals";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
 
@@ -794,6 +795,7 @@ export function App() {
             <Metric label="Maneuver capital" value={money(MANEUVER_CAPITAL_USD)} note={"Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD)} />
           </section>
 
+          <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
           <ProfitProtection />
           <section style={styles.card}>
             <div style={styles.sectionHead}>
