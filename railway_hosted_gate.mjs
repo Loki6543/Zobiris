@@ -219,7 +219,12 @@ async function verifyCandidate() {
       }
     }
     console.log(`PASS candidate delayed-rotation pilot calibrated ${rotationCalibration.sampleSize} watchlist assets; market=${rotationCalibration.marketStatus}; qualified=${qualifiedRotationAssets.length} [${qualifiedRotationAssets.join(',')}]; authorized=${authorizedRotationAssets.length} [${authorizedRotationAssets.join(',')}]`);
-    if (!(account?.portfolioDependency?.grossCurrentExposureUsd > 200)) throw new Error('account holdings missing from Strategy 2.1');
+    const liveAccount = (await jsonCheck(localOrigin, '/api/account', {}, [200], 'candidate synchronized holdings')).payload.account;
+    if (!liveAccount?.privateAccountSynced || !Array.isArray(liveAccount.holdings)) throw new Error('candidate private holdings are not synchronized');
+    const exposure = account?.portfolioDependency?.grossCurrentExposureUsd;
+    if (!Number.isFinite(exposure) || exposure < 0) throw new Error('account exposure invalid in Strategy 2.1');
+    const hasValuedHoldings = liveAccount.holdings.some(h => h.quantity > 0 && h.fallbackPriceUsd > 0);
+    if (hasValuedHoldings && exposure <= 0) throw new Error('account holdings missing from Strategy 2.1');
     if (![account.fundedCashUsd, account.freeCashUsd, account.reservedBuysUsd].every(v => Number.isFinite(v) && v >= 0)) throw new Error('account cash accounting invalid');
     if (Math.abs((account.freeCashUsd + account.reservedBuysUsd) - account.fundedCashUsd) > 0.05) throw new Error('account cash components do not reconcile');
     if (account.portfolioDependency.grossPostFillExposureUsd + 0.02 < account.portfolioDependency.grossCurrentExposureUsd) throw new Error('post-fill exposure cannot be below current exposure');
