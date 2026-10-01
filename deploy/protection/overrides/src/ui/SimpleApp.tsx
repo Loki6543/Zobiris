@@ -1,3 +1,4 @@
+import { WatchlistPage } from './WatchlistPage';
 import { MarketBrief } from './MarketBrief';
 import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
@@ -19,7 +20,7 @@ import { PortfolioVisuals } from "./PortfolioVisuals";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
 
-type View = "portfolio" | "market" | "history" | "compare";
+type View = "portfolio" | "market" | "watchlist" | "history" | "compare";
 type RankedAsset = Record<string, any>;
 
 const money = (value: number) => new Intl.NumberFormat("en-US", {
@@ -773,6 +774,7 @@ export function App() {
         {([
           ["portfolio", "Portfolio"],
           ["market", "Market Today"],
+          ["watchlist", "Watchlist"],
           ["history", "History / Learning"],
           ["compare", "Compare Lab"],
         ] as Array<[View, string]>).map(([key, label]) => (
@@ -881,6 +883,8 @@ export function App() {
           </section>
         </main>
       ) : null}
+
+      {view === "watchlist" ? <WatchlistPage rows={watchlistRankings} now={nowMs} snapshotFresh={snapshotFresh} onAnalyze={symbol=>{setAnalysisSymbol(symbol);setView("compare");}} /> : null}
 
       {view === "market" ? (
         <main>
