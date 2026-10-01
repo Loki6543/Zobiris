@@ -1,3 +1,4 @@
+import { MarketBrief } from './MarketBrief';
 import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   CASH_INFLOW_USD,
@@ -883,11 +884,12 @@ export function App() {
 
       {view === "market" ? (
         <main>
+          <MarketBrief refreshKey={snapshotMs} />
           <section style={styles.heroCard}>
             <div style={styles.eyebrow}>TODAY</div>
             <h1 style={styles.h1}>{regime}</h1>
             <p style={styles.heroText}>
-              Zobiris is compressing the research engine into one decision: protect cash, use planned limits, and rank only the best next uses of capital.
+              Portfolio execution posture. Entry decisions below remain subject to their separate evidence and liquidity gates.
             </p>
             <div style={styles.heroStats}>
               <span>Regime confidence {regimeConfidence.toFixed(0)}%</span>

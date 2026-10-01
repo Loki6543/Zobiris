@@ -1,3 +1,4 @@
+import { marketBrief } from './marketBrief.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
 import { accountCapital, accountProvenance, accountMappings, buildAccountDependency, getAccountView, refreshAccountContextFromKraken, startAccountContextSync } from "./accountContext.js";
@@ -499,6 +500,10 @@ const API: ApiRouter = {
         dangerousPermissionCount: account.dangerousPermissionsDetected.length,
       },
     });
+  },
+  "GET /api/market-brief": async (_req, res) => {
+    try { jsonResponse(res, 200, await marketBrief()); }
+    catch(e) { errorResponse(res, 503, e); }
   },
   "GET /api/profit-protection": (_req, res) => {
     let db: ReturnType<typeof openProtection> | undefined;
