@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { createHash, randomUUID } from 'node:crypto';
 
 export const protectionPolicy = {
- version:'path-tracking-v1', status:'UNVALIDATED_SCENARIOS', executionEnabled:false,
+ version:'path-tracking-v2-reward-scope', status:'UNVALIDATED_SCENARIOS', executionEnabled:false,
  drawdownReviewPct:[5,8,12,15], recoveryDrawdownPct:10, recoveryPeakFraction:0.9,
  profitGivebackFraction:0.3,
  harvestLadder:[{gainPct:25,originalPositionPct:10},{gainPct:50,originalPositionPct:15},{gainPct:75,originalPositionPct:15},{gainPct:100,originalPositionPct:20},{gainPct:150,originalPositionPct:15},{gainPct:200,originalPositionPct:10}],
@@ -60,13 +60,17 @@ export function sampleProtection(db:Database.Database,account:Account,snapshot:a
  const snapshotFresh=fresh(snapshot?.asOf,now,6*3600000);
  const accountFresh=account.privateAccountSynced&&!account.lastError&&fresh(account.capturedAt,now,5*60000);
  const prior=db.prepare('SELECT body FROM protection_meta WHERE id=1').get() as {body:string}|undefined;
- const metadata:any={checkedAt:new Date(now).toISOString(),accountAt:account.capturedAt,marketAt:snapshot?.asOf??null,status:accountFresh&&snapshotFresh?'TRACKING':'WAITING_FOR_FRESH_DATA',missingPrices:[],activeSymbols:accountFresh?account.holdings.filter(h=>h.quantity>0).map(h=>h.symbol):prior?JSON.parse(prior.body).activeSymbols:[],regime:snapshot?.regime??'Unknown'};
- const holdings=account.holdings.filter(h=>Number.isFinite(h.quantity)&&h.quantity>0).sort((a,b)=>a.symbol.localeCompare(b.symbol));
+ const previousMeta=prior?JSON.parse(prior.body):null;
+ const baby=account.holdings.find(h=>h.symbol==='BABY'&&Number.isFinite(h.quantity)&&h.quantity>0);
+ // User-confirmed reward lot, monotonically reduced after disposals; never classify future buys as rewards.
+ const rewardRemaining=accountFresh?Math.min(previousMeta?.rewardRemaining??0.00523,baby?.quantity??0):(previousMeta?.rewardRemaining??0.00523);
+ const holdings=account.holdings.map(h=>({...h,quantity:h.symbol==='BABY'?Math.max(0,h.quantity-rewardRemaining):h.quantity})).filter(h=>Number.isFinite(h.quantity)&&h.quantity>1e-12).sort((a,b)=>a.symbol.localeCompare(b.symbol));
+ const metadata:any={checkedAt:new Date(now).toISOString(),accountAt:account.capturedAt,marketAt:snapshot?.asOf??null,status:accountFresh&&snapshotFresh?'TRACKING':'WAITING_FOR_FRESH_DATA',missingPrices:[],rewardRemaining,valuationScope:'INTENTIONAL_INVESTMENTS_PLUS_CASH',rewards:rewardRemaining>0?[{symbol:'BABY',quantity:rewardRemaining,source:'User-confirmed Kraken reward',valueUsd:null,valuation:'Excluded from investment performance; account balance preserved'}]:[],activeSymbols:accountFresh?holdings.map(h=>h.symbol):prior?JSON.parse(prior.body).activeSymbols:[],regime:snapshot?.regime??'Unknown'};
  if(accountFresh)db.transaction(()=>{
   // A closed position must not inherit its old peak when later reopened.
   const currentScopes=db.prepare("SELECT scope,body FROM protection_state WHERE scope != 'PORTFOLIO'").all() as {scope:string;body:string}[];
   for(const row of currentScopes){const holding=holdings.find(h=>h.symbol===row.scope);if(!holding||JSON.parse(row.body).signature!==hash([holding.quantity,holding.avgPriceUsd]))db.prepare('DELETE FROM protection_state WHERE scope=?').run(row.scope);}
-  const portfolioSignature=hash([account.cashUsd,holdings.map(h=>[h.symbol,h.quantity])]);
+  const portfolioSignature=hash([protectionPolicy.version,account.cashUsd,holdings.map(h=>[h.symbol,h.quantity])]);
   const priorPortfolio=db.prepare("SELECT body FROM protection_state WHERE scope='PORTFOLIO'").get() as {body:string}|undefined;
   if(priorPortfolio&&JSON.parse(priorPortfolio.body).signature!==portfolioSignature)db.prepare("DELETE FROM protection_state WHERE scope='PORTFOLIO'").run();
  })();
@@ -88,7 +92,7 @@ export function sampleProtection(db:Database.Database,account:Account,snapshot:a
   if(!metadata.missingPrices.length&&marks.length&&Number.isFinite(account.cashUsd)&&account.cashUsd>=0){
    const value=account.cashUsd+marks.reduce((n,m)=>n+m.qty*m.price,0);
    const at=new Date(Math.max(...marks.map(m=>Date.parse(m.at)))).toISOString();
-   const signature=hash([account.cashUsd,holdings.map(h=>[h.symbol,h.quantity])]);
+   const signature=hash([protectionPolicy.version,account.cashUsd,holdings.map(h=>[h.symbol,h.quantity])]);
    writeScope(db,'PORTFOLIO',signature,value,at,null,{cashUsd:account.cashUsd,priceTimes:marks.map(m=>({symbol:m.symbol,at:m.at})),marketRegime:snapshot.regime??null},hash(marks.map(m=>[m.symbol,m.at,m.price])));
   }else metadata.status='PARTIAL_COVERAGE';
   db.prepare('INSERT OR REPLACE INTO protection_meta VALUES(1,?)').run(JSON.stringify(metadata));
@@ -101,6 +105,6 @@ export function readProtection(db:Database.Database,now=Date.now()){
  const rows=db.prepare('SELECT body FROM protection_state ORDER BY scope').all() as {body:string}[];
  const paths=rows.map(r=>JSON.parse(r.body)).map(r=>({symbol:r.scope,segment:r.segment,context:{...r.context,daily:contexts.get(r.scope)??null},...pathMetrics(r.path,r.basis),priceAvailable:!meta.missingPrices.includes(r.scope)&&meta.status!=='WAITING_FOR_FRESH_DATA',stale:!fresh(r.path.updatedAt,now,6*3600000)}));
  return {version:protectionPolicy.version,...meta,status:meta.checkedAt&&!fresh(meta.checkedAt,now,5*60000)?'STALE_TRACKER':meta.status,portfolio:meta.status==='TRACKING'?paths.find(p=>p.symbol==='PORTFOLIO')??null:null,positions:paths.filter(p=>p.symbol!=='PORTFOLIO'&&meta.activeSymbols.includes(p.symbol)),policy:protectionPolicy,
- limitations:['Observed history begins when tracking starts; intraperiod peaks may be missed.','Portfolio segment resets on any cash or holding change. This is not lifetime or cash-flow-adjusted performance.','Reported average costs may be incomplete; P/L is indicative, not audited.','Daily ATR/trend/momentum/volume inputs require supported, complete Kraken candles. SuperTrend and calibrated exit pressure remain unavailable.','Historical backtest and ladder fill reconciliation are pending; thresholds are research scenarios only.']};
+ limitations:['Investment tracking excludes the confirmed BABY reward lot; this is not complete account NAV. Reward value is not assumed to be zero.','Observed history begins when tracking starts; intraperiod peaks may be missed.','Portfolio segment resets on any cash or holding change. This is not lifetime or cash-flow-adjusted performance.','Reported average costs may be incomplete; P/L is indicative, not audited.','Daily ATR/trend/momentum/volume inputs require supported, complete Kraken candles. SuperTrend and calibrated exit pressure remain unavailable.','Historical backtest and ladder fill reconciliation are pending; thresholds are research scenarios only.']};
 }
 export function openProtection(path:string){const db=new Database(path+'.profit-protection.sqlite');db.pragma('journal_mode = WAL');db.pragma('busy_timeout = 3000');initializeProtection(db);return db;}

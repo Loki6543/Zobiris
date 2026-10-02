@@ -1,3 +1,4 @@
+import {entryRules} from './entryRules.js';
 import { marketBrief } from './marketBrief.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
@@ -80,7 +81,7 @@ import { collectStrategy21Kraken } from "../strategy21/collector.js";
 import { loadStrategyLiquidity, saveStrategyMarketState } from "../strategy21/storage.js";
 import { buildIntelligenceOverview } from "../strategy21/intelligenceVNext/index.js";
 import { CAPABILITY_MANIFEST, NARRATIVE_RESEARCH_POLICY } from "../strategy21/research/researchIntegrity.js";
-import { readOutcomeMemory, summarizeOutcomeMemory, updateOutcomeMemory } from "./outcomeMemory.js";
+import { readOutcomeMemory, summarizeOutcomeMemory, updateOutcomeMemory, pilotScorecard } from "./outcomeMemory.js";
 import { startKrakenBookShadow } from "../strategy21/prediction/bookCollector.js";
 import { createShadowFeatureHandler } from "./shadowRuntime.js";
 import { readShadowForecasts } from "./predictionOutcomes.js";
@@ -500,6 +501,9 @@ const API: ApiRouter = {
         dangerousPermissionCount: account.dangerousPermissionsDetected.length,
       },
     });
+  },
+  "GET /api/entry-rules": async (_req,res)=>{
+    try{jsonResponse(res,200,{rules:await entryRules(),executionEnabled:false});}catch(e){errorResponse(res,503,e);}
   },
   "GET /api/market-brief": async (_req, res) => {
     try { jsonResponse(res, 200, await marketBrief()); }
@@ -926,6 +930,9 @@ const API: ApiRouter = {
     } finally {
       storage.close();
     }
+  },
+  "GET /api/pilot-scorecard": async (_req,res)=>{
+    try{jsonResponse(res,200,pilotScorecard(await readOutcomeMemory(OUTCOME_MEMORY_PATH)));}catch(e){errorResponse(res,503,e);}
   },
   "GET /api/outcomes": async (_req, res) => {
     try {

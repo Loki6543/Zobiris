@@ -49,3 +49,12 @@ it('closes segments on fresh account changes even while market prices are stale'
  sampleProtection(db,account(),snap(110),now);
  const r=readProtection(db,now);expect(r.positions[0]?.peak).toBe(110);expect(r.portfolio?.peak).toBe(320);db.close();
 });
+it('separates only the confirmed reward quantity without concealing later BABY purchases',()=>{
+ const db=new Database(':memory:');initializeProtection(db);
+ const a={...account(),holdings:[...account().holdings,{symbol:'BABY',quantity:0.00523,avgPriceUsd:null}]};
+ sampleProtection(db,a,snap(),now);let r=readProtection(db,now);
+ expect(r.status).toBe('TRACKING');expect(r.portfolio?.current).toBe(320);expect(r.rewards[0].quantity).toBe(0.00523);expect(r.valuationScope).toBe('INTENTIONAL_INVESTMENTS_PLUS_CASH');
+ expect(a.holdings[1]?.quantity).toBe(0.00523);
+ a.holdings[1]!.quantity=1.00523;sampleProtection(db,a,snap(),now);r=readProtection(db,now);
+ expect(r.missingPrices).toContain('BABY');expect(r.portfolio).toBeNull();db.close();
+});

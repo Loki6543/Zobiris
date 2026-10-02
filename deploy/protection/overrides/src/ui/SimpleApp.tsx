@@ -1,3 +1,5 @@
+import {PilotScorecard} from './PilotScorecard';
+import {entryReference,validateEntry,type EntryRules} from '../shared/entryPlan';
 import { WatchlistPage } from './WatchlistPage';
 import { MarketBrief } from './MarketBrief';
 import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -28,6 +30,8 @@ const money = (value: number) => new Intl.NumberFormat("en-US", {
   currency: "USD",
   maximumFractionDigits: value < 1 ? 4 : 2,
 }).format(value);
+
+const entryPrice = (value:number) => value>0?new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:0,maximumFractionDigits:12}).format(value):"Unavailable";
 
 const num = (value: number, digits = 4) => new Intl.NumberFormat("en-US", {
   maximumFractionDigits: digits,
@@ -101,17 +105,9 @@ function buildOrderPlan(row: any, regime: string, recentReentry: boolean) {
   const open24h = extractMarketField(row.asset, "open24hUsd");
   const regimeBreak = regime.toLowerCase().includes("break");
 
-  let firstBuyDiscount = regimeBreak ? 0.06 : 0.04;
-  if (score < 45) firstBuyDiscount += 0.02;
-  if (score >= 55) firstBuyDiscount -= 0.01;
-  if (change24h > 4) firstBuyDiscount += 0.01;
-  if (recentReentry) firstBuyDiscount += 0.02;
-  firstBuyDiscount = clamp(firstBuyDiscount, 0.03, 0.12);
-
-  const secondBuyDiscount = clamp(firstBuyDiscount + 0.04, 0.07, 0.16);
-  let buyNear = current * (1 - firstBuyDiscount);
-  if (open24h && open24h < current) buyNear = Math.min(buyNear, open24h * 0.995);
-  const buyDeep = current * (1 - secondBuyDiscount);
+  const buyNear = entryReference(current, row.asset?.strategy21?.delayedRotation?.recommendedPullbackPct, recentReentry) ?? 0;
+  // One prior across candidates, order reviews and holding adds; no invented deeper tranche.
+  const buyDeep = buyNear;
 
   const firstHarvestPremium = row.upl >= 30 ? 0.025 : row.upl >= 15 ? 0.035 : 0.055;
   const secondHarvestPremium = firstHarvestPremium + 0.045;
@@ -281,6 +277,7 @@ export function App() {
   const [showAllRankings, setShowAllRankings] = useState(false);
   const [analysisSymbol, setAnalysisSymbol] = useState("BTC");
   const [snapshot, setSnapshot] = useState<any>(null);
+  const [instrumentRules,setInstrumentRules] = useState<Record<string,EntryRules>>({});
   const [account, setAccount] = useState<any>(null);
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -295,6 +292,7 @@ export function App() {
   const [form, setForm] = useState({ symbol: "", side: "BUY", quantity: "", usd: "", orderType: "LIMIT" });
 
   async function loadData() {
+    void fetch("/api/entry-rules").then(async r=>{if(!r.ok)throw new Error();setInstrumentRules((await r.json()).rules??{});}).catch(()=>setInstrumentRules({}));
     setLoading(true);
     setError(null);
     try {
@@ -453,7 +451,7 @@ export function App() {
     else if (String(asset?.action ?? "") === "AVOID") action = "NO ADD";
     else if (upl < -8) action = "REVIEW";
     return { ...holding, livePrice, value, upl, action: priceAvailable ? action : "VERIFY PRICE", asset, priceAvailable };
-  }), [assetMap, snapshotFresh, nowMs, account]);
+  }), [assetMap, snapshotFresh, nowMs, account, instrumentRules]);
 
   const invested = portfolioRows.reduce((sum, row) => sum + row.value, 0);
   const total = LIVE_CASH_USD + invested;
@@ -485,15 +483,11 @@ export function App() {
         // that also passes the existing Kraken execution + research-integrity gates.
         if (!snapshotFresh || !gate.pass || conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null || rotation?.status !== "QUALIFIED") return [];
 
-        let discount = Number(rotation?.recommendedPullbackPct ?? 4) / 100;
-        if (reentryRisk.has(symbol)) discount += 0.02;
-        discount = Math.max(0.04, Math.min(0.10, discount));
-        const limit = price * (1 - discount);
-
-        // Keep pilot sizing deliberately small while the strategy builds an
-        // outcome sample; Strategy 2.1 can lower this further via its authority.
-        const orderUsd = Math.max(0, Math.min(PROBE_TYPICAL_USD, gate.maxNextOrderUsd, freeCash));
-        if (orderUsd <= 0) return [];
+        const reference = entryReference(price,rotation?.recommendedPullbackPct,reentryRisk.has(symbol));
+        const budget = Math.max(0, Math.min(PROBE_TYPICAL_USD, gate.maxNextOrderUsd, freeCash / 1.01));
+        const checked = validateEntry(reference,budget,instrumentRules[symbol]);
+        if (!checked.valid || checked.limit == null) return [];
+        const limit=checked.limit, orderUsd=checked.notional, discount=1-limit/price;
 
         return [{
           asset,
@@ -503,6 +497,7 @@ export function App() {
           conf,
           rotationScore: Number(rotation?.score ?? 0),
           discount,
+          quantity:checked.quantity,
           limit,
           orderUsd,
           maxNextOrderUsd: gate.maxNextOrderUsd,
@@ -512,7 +507,7 @@ export function App() {
       })
       .sort((a, b) => b.rotationScore - a.rotationScore || Number(b.asset?.strategy21?.nextDollarScore ?? 0) - Number(a.asset?.strategy21?.nextDollarScore ?? 0) || b.score - a.score)
       .slice(0, 5);
-  }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs, account]);
+  }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs, account, instrumentRules]);
 
   const watchlistRankings = useMemo(() => {
     const symbols = watchlist.length
@@ -526,7 +521,8 @@ export function App() {
       const confidence = confidencePct(asset);
       const rotation = asset?.strategy21?.delayedRotation ?? null;
       const strictRotation = rotation?.status === "QUALIFIED";
-      const ready = Boolean(asset && strictRotation && snapshotFresh && extractPrice(asset) != null && confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT && gate?.pass && !held.has(symbol) && !existingBuy.has(symbol));
+      const entryValid=validateEntry(entryReference(extractPrice(asset)??0,rotation?.recommendedPullbackPct,reentryRisk.has(symbol)),Math.min(PROBE_TYPICAL_USD,gate?.maxNextOrderUsd??0,freeCash/1.01),instrumentRules[symbol]).valid;
+      const ready = Boolean(entryValid && asset && strictRotation && snapshotFresh && extractPrice(asset) != null && confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT && gate?.pass && !held.has(symbol) && !existingBuy.has(symbol));
       const move = held.has(symbol) ? "Manage holding" : existingBuy.has(symbol) ? "Review existing limit"
         : ready ? "Delayed-rotation limit"
         : rotation?.status === "QUALIFIED" ? "Qualified / wait"
@@ -557,7 +553,7 @@ export function App() {
         || b.score - a.score
         || a.symbol.localeCompare(b.symbol);
     });
-  }, [watchlist, rankedAssets, assetMap, snapshotFresh, nowMs, account]);
+  }, [watchlist, rankedAssets, assetMap, snapshotFresh, nowMs, account, instrumentRules,freeCash,reentryRisk]);
 
   const orderEvaluations = useMemo(() => LIVE_OPEN_ORDERS.map((order, index) => {
     const symbol = order.symbol.toUpperCase();
@@ -589,8 +585,8 @@ export function App() {
           reason: `Delayed-rotation pilot does not authorize new capital here (${String(rotation?.status ?? "DATA_INSUFFICIENT")}).`,
         };
       }
-      if (!gate.pass || conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT) {
-        const reason = gate.failureReasons[0] ?? (conf < STRATEGY21_MIN_ORDER_CONFIDENCE_PCT
+      if (!gate.pass || conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT) {
+        const reason = gate.failureReasons[0] ?? (conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT
           ? `confidence ${conf.toFixed(1)}% must be above 50% for consideration`
           : "Kraken execution authority is zero");
         return {
@@ -603,21 +599,21 @@ export function App() {
         };
       }
 
-      let discount = Number(rotation?.recommendedPullbackPct ?? 4) / 100;
-      if (reentryRisk.has(symbol)) discount += 0.02;
-      discount = clamp(discount, 0.04, 0.10);
-      const preferred = current * (1 - discount);
-      const protocolTarget = PROBE_TYPICAL_USD;
-      const suggestedAmountUsd = Math.max(0, Math.min(protocolTarget, gate.maxNextOrderUsd, freeCash));
+      const reference=entryReference(current,rotation?.recommendedPullbackPct,reentryRisk.has(symbol));
+      // Review may reuse this order's reserved principal; other reservations remain protected.
+      const budget=Math.max(0,Math.min(PROBE_TYPICAL_USD,gate.maxNextOrderUsd,(freeCash+order.amountUsd)/1.01));
+      const checked=validateEntry(reference,budget,instrumentRules[symbol]);
+      if(!checked.valid||checked.limit==null)return {...order,key:order.side+symbol+index,status:"VERIFY",suggestedPrice:null,suggestedAmountUsd:0,reason:checked.reason};
+      const preferred=checked.limit, suggestedAmountUsd=checked.notional;
 
       let status = "KEEP";
-      let reason = `Order is close to Zobiris's preferred entry ${money(preferred)}.`;
+      let reason = `Order is close to Zobiris's preferred entry ${entryPrice(preferred)}.`;
       if (order.targetPriceUsd >= current * 0.995 || order.targetPriceUsd > preferred * 1.02) {
         status = "MOVE LOWER";
-        reason = `Current limit is too high versus the preferred entry; move toward ${money(preferred)}.`;
+        reason = `Current limit is too high versus the preferred entry; review the pilot reference ${entryPrice(preferred)}. This price-distance heuristic is not a fill forecast.`;
       } else if (order.targetPriceUsd < preferred * 0.95 && conf >= STRATEGY21_LATER_LINE_CONFIDENCE_PCT) {
         status = "MOVE UP";
-        reason = `Order is materially below the preferred entry and may miss a strong setup; move toward ${money(preferred)}.`;
+        reason = `Order is materially below the preferred entry and may miss a strong setup; review the pilot reference ${entryPrice(preferred)}. This price-distance heuristic is not a fill forecast.`;
       }
       if (suggestedAmountUsd > 0 && order.amountUsd < suggestedAmountUsd * 0.75) {
         status += " / INCREASE SIZE";
@@ -712,7 +708,7 @@ export function App() {
       suggestedAmountUsd,
       reason,
     };
-  }), [assetMap, portfolioRows, regime, reentryRisk, freeCash, snapshotFresh, nowMs, account]);
+  }), [assetMap, portfolioRows, regime, reentryRisk, freeCash, snapshotFresh, nowMs, account, instrumentRules]);
 
   const strongestHoldingAction = [...portfolioRows].sort((a, b) => b.upl - a.upl)[0];
 
@@ -845,6 +841,7 @@ export function App() {
                               loading={Boolean(assetDetailLoading[row.symbol])}
                               openOrders={LIVE_OPEN_ORDERS}
                               cashUsd={LIVE_CASH_USD}
+                              instrumentRule={instrumentRules[row.symbol]}
                             />
                           </td>
                         </tr>
@@ -867,7 +864,7 @@ export function App() {
                     <div style={styles.tiny}>{order.reason}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <strong>{order.suggestedPrice == null ? "VERIFY" : money(order.suggestedPrice)}</strong>
+                    <strong>{order.suggestedPrice == null ? "VERIFY" : entryPrice(order.suggestedPrice)}</strong>
                     <div style={styles.tiny}>{order.suggestedAmountUsd == null ? "size pending" : order.suggestedAmountUsd <= 0 ? "no new size authorized" : "suggested " + money(order.suggestedAmountUsd)}</div>
                   </div>
                 </div>
@@ -904,6 +901,11 @@ export function App() {
           </section>
 
           <section style={styles.card}>
+            <h2 style={styles.h2}>Entry policy · consistent across every buy plan</h2>
+            <div style={styles.subtle}>Live pilot: 4–8% pullback prior, plus 2 percentage points for recent re-entry risk (10% maximum). Buy prices and quantities round down to Kraken requirements. A lower price never overrides strategy, liquidity or capital gates.</div>
+            <details style={{marginTop:12}}><summary>Upgraded entry research · shadow only</summary><p style={styles.tiny}>Structural support/retest, ATR, spread, fees and adverse selection belong in the next entry model. Minimum-edge research rule: max(all-in costs + adverse-selection buffer, 0.25 × ATR, 1.5 × spread), in basis points. LOQS and fill/missed-fill proxies remain unavailable until real inputs and forward validation exist. No fixture probabilities or invented optimal price.</p></details>
+          </section>
+          <section style={styles.card}>
             <h2 style={styles.h2}>New positions to consider</h2>
             <div style={styles.subtle}>Pilot mode: new capital only goes to 30d + 90d laggards with a fresh 7d recovery, and only through a pullback limit after Kraken execution gates pass.</div>
             <div style={{ marginTop: 14 }}>
@@ -916,11 +918,11 @@ export function App() {
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={styles.limitLabel}>LIMIT CANDIDATE · {money(row.orderUsd)}</div>
-                    <strong style={{ fontSize: 18 }}>{money(row.limit)}</strong>
-                    <div style={styles.tiny}>{Math.round(row.discount * 100)}% below current {money(row.price)} · initial PROBE only</div>
+                    <strong style={{ fontSize: 18 }}>{entryPrice(row.limit)}</strong>
+                    <div style={styles.tiny}>{Math.round(row.discount * 100)}% below current {money(row.price)} · initial PROBE only · {num(row.quantity, 12)} {row.symbol}</div>
                   </div>
                 </div>
-              )) : <div style={styles.notice}>{candidateResearchUniverse.some((symbol) => assetDetailLoading[symbol]) ? "Checking Kraken execution volume and liquidity gates…" : rankedAssets.length ? `No eligible limit candidates. Highest confidence ${highestConfidence.toFixed(1)}% (consideration requires more than ${STRATEGY21_MIN_ORDER_CONFIDENCE_PCT}%). ${incompleteKrakenHistory ? "14-day Kraken book/notional history is incomplete for some assets. " : ""}All entry and liquidity gates remain in force.` : "Market research has not loaded yet."}</div>}
+              )) : <div style={styles.notice}>{candidateResearchUniverse.some((symbol) => assetDetailLoading[symbol]) ? "Checking Kraken execution volume and liquidity gates…" : rankedAssets.length ? `No eligible limit candidates. Highest confidence ${highestConfidence.toFixed(1)}% (consideration requires more than ${STRATEGY21_MIN_ORDER_CONFIDENCE_PCT}%). ${incompleteKrakenHistory ? "14-day Kraken book/notional history is incomplete for some assets. " : ""}All entry and liquidity gates remain in force. Kraken tick/minimum checks must also pass; 1% cash buffer is reserved for fees (verify your fee tier).` : "Market research has not loaded yet."}</div>}
             </div>
           </section>
 
@@ -962,7 +964,7 @@ export function App() {
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={styles.tiny}>Zobiris target</div>
-                    <strong>{order.suggestedPrice == null ? "—" : money(order.suggestedPrice)}</strong>
+                    <strong>{order.suggestedPrice == null ? "—" : entryPrice(order.suggestedPrice)}</strong>
                     <div style={styles.tiny}>{order.suggestedAmountUsd == null ? "reviewing size" : order.suggestedAmountUsd <= 0 ? "pause / no add" : money(order.suggestedAmountUsd)}</div>
                   </div>
                 </div>
@@ -991,6 +993,7 @@ export function App() {
 
       {view === "history" ? (
         <main>
+          <PilotScorecard />
           <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
             <Metric label="Unique trades" value={String(mergedTrades.length)} note="USD legs merged; duplicates removed" />
             <Metric label="Approx. realized" value={money(learning.realized)} note="gross FIFO on matched known-cost trades" />
@@ -1083,6 +1086,7 @@ function OrderPlanPanel({
   loading,
   openOrders,
   cashUsd,
+  instrumentRule,
 }: {
   row: any;
   regime: string;
@@ -1091,6 +1095,7 @@ function OrderPlanPanel({
   loading: boolean;
   openOrders: Array<{ side: "BUY" | "SELL"; symbol: string; targetPriceUsd: number; amountUsd: number }>;
   cashUsd: number;
+  instrumentRule?:EntryRules;
 }) {
   const plan = buildOrderPlan(row, regime, recentReentry);
   const sellOrders = openOrders.filter((order) => order.side === "SELL" && order.symbol === row.symbol);
@@ -1103,23 +1108,29 @@ function OrderPlanPanel({
   const failureReasons = Array.isArray(strategy?.eligibility?.failureReasons) ? strategy.eligibility.failureReasons : [];
   const purchaseGate = krakenLimitPurchaseGate({strategy21: strategy});
   const availableCash = Math.max(0, cashUsd - openOrders.filter(o => o.side === "BUY").reduce((sum,o) => sum + o.amountUsd,0));
-  const watchOnly = !row.priceAvailable || !purchaseGate.pass || plan.confidence <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || availableCash <= 0;
-  const addCapacity = watchOnly ? 0 : Math.min(purchaseGate.maxNextOrderUsd, availableCash);
+  let watchOnly = strategy?.delayedRotation?.status !== "QUALIFIED" || !row.priceAvailable || !purchaseGate.pass || plan.confidence <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || availableCash <= 0;
+  const addCapacity = watchOnly ? 0 : Math.min(PROBE_TYPICAL_USD,purchaseGate.maxNextOrderUsd, availableCash/1.01);
   plan.firstAddPct = row.value > 0 ? Math.min(plan.firstAddPct, addCapacity / row.value * 100) : 0;
   plan.secondAddPct = row.value > 0 ? Math.min(plan.secondAddPct, Math.max(0, addCapacity - row.value * plan.firstAddPct / 100) / row.value * 100) : 0;
   const staleOrderWarning = sellOrders.some((order) => order.targetPriceUsd <= row.livePrice);
   const trimUsd = row.value * (plan.trimPct / 100);
   const trimQty = row.quantity * (plan.trimPct / 100);
   const secondTrimUsd = row.value * (plan.secondTrimPct / 100);
-  const firstAddUsd = row.value * (plan.firstAddPct / 100);
-  const firstAddQty = plan.buyNear > 0 ? firstAddUsd / plan.buyNear : 0;
-  const secondAddUsd = row.value * (plan.secondAddPct / 100);
-  const secondAddQty = plan.buyDeep > 0 ? secondAddUsd / plan.buyDeep : 0;
+  const firstCheck=validateEntry(plan.buyNear,row.value*plan.firstAddPct/100,instrumentRule);
+  const secondCheck=validateEntry(plan.buyDeep,row.value*plan.secondAddPct/100,instrumentRule);
+  const firstAddUsd=firstCheck.valid?firstCheck.notional:0, firstAddQty=firstCheck.quantity;
+  const secondAddUsd=secondCheck.valid?secondCheck.notional:0, secondAddQty=secondCheck.quantity;
+  plan.firstAddPct=row.value>0?firstAddUsd/row.value*100:0;
+  plan.secondAddPct=row.value>0?secondAddUsd/row.value*100:0;
+  if(firstCheck.valid)plan.buyNear=firstCheck.limit!;
+  if(secondCheck.valid)plan.buyDeep=secondCheck.limit!;
+  watchOnly=watchOnly||!firstCheck.valid;
+
   const defensiveReduceUsd = row.value * (plan.defensiveReducePct / 100);
   const defensiveReduceQty = row.quantity * (plan.defensiveReducePct / 100);
 
   let firstActionTitle = "HOLD — WAIT FOR A BETTER ENTRY";
-  let firstActionDetail = `Do not add at ${money(row.livePrice)}. ${watchOnly ? "No add authorized; research level only." : `First add ${num(plan.firstAddPct, 2)}% near ${money(plan.buyNear)}.`} Research level ${money(plan.buyNear)}.`;
+  let firstActionDetail = `Do not add at ${money(row.livePrice)}. ${watchOnly ? "No add authorized; research level only." : `First add ${num(plan.firstAddPct, 2)}% near ${entryPrice(plan.buyNear)}.`} Research level ${entryPrice(plan.buyNear)}.`;
   let learnedReason = "Your trade history favors staged limit entries over chasing strength.";
 
   if (!row.priceAvailable) {
@@ -1139,8 +1150,8 @@ function OrderPlanPanel({
     firstActionDetail = `About ${num(trimQty, 8)} ${row.symbol} / ${money(trimUsd)}. Keep the remaining position as the runner.`;
     learnedReason = "Partial harvesting has been one of your better behaviors; fast re-entry after harvesting has been weaker.";
   } else if (!watchOnly && plan.score >= 55 && plan.confidence > STRATEGY21_MIN_ORDER_CONFIDENCE_PCT && row.upl < 8) {
-    firstActionTitle = `ADD ${plan.firstAddPct}% AT ${money(plan.buyNear)}`;
-    firstActionDetail = `About ${num(firstAddQty, 8)} ${row.symbol} / ${money(firstAddUsd)}. Use a limit, not a market chase.`;
+    firstActionTitle = `ADD ${plan.firstAddPct}% AT ${entryPrice(plan.buyNear)}`;
+    firstActionDetail = `About ${num(firstAddQty, 12)} ${row.symbol} / ${money(firstAddUsd)}. Use a limit, not a market chase.`;
     learnedReason = "Your cleaner historical trades came from planned limit entries, while clustered market buys added risk.";
   } else if (row.upl >= 8) {
     firstActionTitle = "HOLD — PREPARE A PARTIAL HARVEST";
@@ -1203,10 +1214,10 @@ function OrderPlanPanel({
         </div>
         <div style={styles.planCard}>
           <div style={styles.limitLabel}>BUY / RE-ENTRY RANGE</div>
-          <strong>{money(Math.min(plan.buyDeep, plan.buyNear))} → {money(Math.max(plan.buyDeep, plan.buyNear))}</strong>
+          <strong>{plan.buyNear>0?entryPrice(plan.buyNear):"Prior unavailable"}</strong>
           <div style={styles.tiny}>
-            First add: {plan.firstAddPct}% of the current position (about {money(firstAddUsd)} / {num(firstAddQty, 8)} {row.symbol}) near {money(plan.buyNear)}.
-            {" "}Second add: {plan.secondAddPct}% (about {money(secondAddUsd)} / {num(secondAddQty, 8)} {row.symbol}) near {money(plan.buyDeep)}.
+            First add: {plan.firstAddPct}% of the current position (about {money(firstAddUsd)} / {num(firstAddQty, 12)} {row.symbol}) near {entryPrice(plan.buyNear)}.
+            {" "}Second add: {plan.secondAddPct}% (about {money(secondAddUsd)} / {num(secondAddQty, 12)} {row.symbol}) near {entryPrice(plan.buyDeep)}.
             {" "}{plan.recentReentry ? "Your quick re-entry history pushes both sizes and prices lower. " : ""}
             {plan.open24h ? "24h open reference " + money(plan.open24h) + ". " : ""}
             Never chase above the range.
@@ -1216,7 +1227,7 @@ function OrderPlanPanel({
           <div style={styles.limitLabel}>OPENING / ADD STATUS</div>
           <strong>{watchOnly ? "WAIT — research range only" : "Eligible for staged limit"}</strong>
           <div style={styles.tiny}>
-            Engine eligibility: {String(eligibility).replaceAll("_", " ")}.
+            Engine eligibility: {String(eligibility).replaceAll("_", " ")}. Rotation: {strategy?.delayedRotation?.status??"UNKNOWN"}. {firstCheck.reason}.
             {failureReasons.length ? " " + failureReasons[0] : ""}
           </div>
         </div>

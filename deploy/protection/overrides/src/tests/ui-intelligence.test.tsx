@@ -92,6 +92,7 @@ beforeEach(() => {
         }
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
+    if(url.includes('/api/entry-rules'))return new Response(JSON.stringify({rules:{ATOM:{symbol:'ATOM',pair:'ATOMUSD',tickSize:0.001,lotDecimals:8,orderMin:0.1,costMin:0.5,status:'online',observedAt:new Date().toISOString()}}}),{status:200});
     if (url.includes("/api/watchlist")) {
       return new Response(JSON.stringify({ watchlist: [{ symbol: "BTC" }, ...rankedAssets.map(asset => ({symbol: asset.symbol}))] }), { status: 200, headers: { "content-type": "application/json" } });
     }
@@ -152,11 +153,12 @@ describe("simplified Zobiris Core", () => {
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
     expect((await screen.findAllByText("ATOM")).length).toBeGreaterThan(0);
-    expect(screen.getByText("Kraken execution gate passed · rotation qualified · max next order $42.50")).toBeTruthy();
+    expect(await screen.findByText("Kraken execution gate passed · rotation qualified · max next order $42.50")).toBeTruthy();
     expect(screen.queryByText("Research thesis + falsifiers")).toBeNull();
     expect(screen.queryByText(/Break conditions:/)).toBeNull();
     expect(screen.queryByText(/Not yet measured:/)).toBeNull();
     expect(screen.getByText("LIMIT CANDIDATE · $37.00")).toBeTruthy();
+    expect(screen.getByText("$2.375")).toBeTruthy();
     expect(screen.getByText("AVAX")).toBeTruthy();
     expect(screen.getByText("Watchlist ranking")).toBeTruthy();
     const ranking = screen.getByText("Watchlist ranking").closest("section");
