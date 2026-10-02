@@ -135,7 +135,7 @@ export function calibrateDelayedRotationMarket(claims: RotationEvidenceClaim[]):
   const marketBullish = Boolean(enoughData
     && btc!.change30dPct > 0
     && btc!.change90dPct > 0
-    && breadth7dPositive! >= 0.55
+    && breadth7dPositive! >= 0.50
     && breadth30dPositive! >= 0.45);
   return {
     mode: DELAYED_ROTATION_MODE,
@@ -150,7 +150,7 @@ export function calibrateDelayedRotationMarket(claims: RotationEvidenceClaim[]):
     breadth7dPositive,
     breadth30dPositive,
     thresholds: {
-      minBreadth7dPositive: 0.55,
+      minBreadth7dPositive: 0.50,
       minBreadth30dPositive: 0.45,
       maxRecovery7dPct: 12,
       minChange30dPct: -35,
@@ -261,3 +261,4 @@ export function evaluateDelayedRotation(
     recommendedPullbackPct,
   };
 }
+

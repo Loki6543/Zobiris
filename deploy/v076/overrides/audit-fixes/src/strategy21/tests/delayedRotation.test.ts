@@ -75,3 +75,16 @@ test("separates near-rotation watch candidates from strict buy candidates", () =
   assert.equal(result.status, "NEAR_ROTATION");
   assert.equal(result.qualifiesForNewCapital, false);
 });
+
+
+// User policy revision, 2026-10-02: exactly half the universe may be recovering.
+test("accepts exactly 50 percent seven-day breadth and rejects below it", () => {
+  const claims = [claim("BTC", 4, 10, 40),
+    ...Array.from({ length: 10 }, (_, i) => claim(`ALT${i}`, i < 5 ? 2 : -2, 5, 10))];
+  const accepted = calibrateDelayedRotationMarket(claims);
+  assert.equal(accepted.breadth7dPositive, 0.5);
+  assert.equal(accepted.marketBullish, true);
+  assert.equal(accepted.thresholds.minBreadth7dPositive, 0.5);
+  claims[1] = claim("ALT0", -2, 5, 10);
+  assert.equal(calibrateDelayedRotationMarket(claims).marketBullish, false);
+});
