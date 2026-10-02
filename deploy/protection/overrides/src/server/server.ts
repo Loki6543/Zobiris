@@ -1,4 +1,5 @@
 import {entryRules} from './entryRules.js';
+import {buildZobirisWatchlist} from './zobirisWatchlist.js';
 import { marketBrief } from './marketBrief.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
@@ -504,6 +505,24 @@ const API: ApiRouter = {
   },
   "GET /api/entry-rules": async (_req,res)=>{
     try{jsonResponse(res,200,{rules:await entryRules(),executionEnabled:false});}catch(e){errorResponse(res,503,e);}
+  },
+  "GET /api/zobiris/watchlist": async (_req,res)=>{
+    res.setHeader('Cache-Control','no-store');
+    const storage=openStorage({path:DEFAULT_DB});
+    try {
+      const latest=getRecentSnapshots(storage.db,1)[0];
+      const snapshot=latest?getSnapshotById(storage.db,latest.id):null;
+      const watchlist=await loadWatchlist();
+      const rules=await entryRules().catch(()=>({}));
+      let rewardRemaining:number|null=null;
+      let protection:ReturnType<typeof openProtection>|undefined;
+      try {protection=openProtection(DEFAULT_DB);rewardRemaining=readProtection(protection).rewardRemaining??null;}
+      catch { /* Missing reward classification must not hide a balance. */ }
+      finally {protection?.close();}
+      // Cached account context only: this GET cannot trade or change the strategy snapshot.
+      jsonResponse(res,200,buildZobirisWatchlist({snapshot,watchlist,account:getAccountView(),rules,rewardRemaining}));
+    } catch { jsonResponse(res,503,{error:'Zobiris decision-state feed unavailable'}); }
+    finally {storage.close();}
   },
   "GET /api/market-brief": async (_req, res) => {
     try { jsonResponse(res, 200, await marketBrief()); }
