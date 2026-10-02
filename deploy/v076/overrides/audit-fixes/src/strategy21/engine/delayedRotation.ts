@@ -154,9 +154,9 @@ export function calibrateDelayedRotationMarket(claims: RotationEvidenceClaim[]):
       minBreadth30dPositive: 0.45,
       maxRecovery7dPct: 12,
       minChange30dPct: -35,
-      maxChange30dPct: 0,
-      minChange90dPct: -75,
-      maxChange90dPct: 0,
+      maxChange30dPct: 45,
+      minChange90dPct: -70,
+      maxChange90dPct: 55,
       maxPositive24hPct: 8,
     },
   };
@@ -224,11 +224,11 @@ export function evaluateDelayedRotation(
     8,
   ) * 100) / 100;
 
-  const strictLag = row.change30dPct <= calibration.thresholds.maxChange30dPct
+  const withinReturnRanges = row.change30dPct <= calibration.thresholds.maxChange30dPct
     && row.change90dPct <= calibration.thresholds.maxChange90dPct;
-  if (strictLag) {
+  if (withinReturnRanges) {
     return {
-      ...empty("QUALIFIED", ["market_bullish", "30d_and_90d_laggard", "7d_recovery_confirmed", "pullback_entry_required"]),
+      ...empty("QUALIFIED", ["market_bullish", "30d_and_90d_within_rotation_ranges", "7d_recovery_confirmed", "pullback_entry_required"]),
       status: "QUALIFIED",
       qualifiesForNewCapital: true,
       score,
@@ -241,7 +241,7 @@ export function evaluateDelayedRotation(
 
   if (relative30 <= -8 || relative90 <= -20) {
     return {
-      ...empty("NEAR_ROTATION", ["still_lagging_btc_but_not_strict_30d_90d_loser"]),
+      ...empty("NEAR_ROTATION", ["lagging_btc_but_outside_rotation_return_ranges"]),
       status: "NEAR_ROTATION",
       score: Math.round(score * 0.75 * 100) / 100,
       relative30dVsBtcPct: relative30,

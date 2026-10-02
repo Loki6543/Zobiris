@@ -529,8 +529,8 @@ export function App() {
         : rotation?.status === "NEAR_ROTATION" ? "Watch rotation"
         : "Wait";
       const rotationReason: Record<string, string> = {
-        QUALIFIED: "30d/90d laggard; 7d recovery confirmed — wait for pullback limit",
-        NEAR_ROTATION: "Lagging BTC, but not a strict 30d + 90d loser yet",
+        QUALIFIED: "30d/90d within approved ranges; 7d recovery confirmed — wait for pullback limit",
+        NEAR_ROTATION: "Lagging BTC, but outside the approved 30d/90d ranges",
         TOO_EARLY: "7d recovery has not turned positive",
         EXTENDED: "Recovery already moved too far to chase",
         STRUCTURALLY_WEAK: "Medium-term losses exceed pilot safety floor",

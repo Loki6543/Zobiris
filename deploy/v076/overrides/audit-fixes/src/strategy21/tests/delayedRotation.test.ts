@@ -70,7 +70,7 @@ test("stays fail-closed when BTC or watchlist breadth is not bullish", () => {
 });
 
 test("separates near-rotation watch candidates from strict buy candidates", () => {
-  const claims = [...bullishClaims(), claim("NEAR", 5, 4, -5)];
+  const claims = [...bullishClaims(), claim("NEAR", 5, 46, -5)];
   const result = evaluateDelayedRotation("NEAR", claims);
   assert.equal(result.status, "NEAR_ROTATION");
   assert.equal(result.qualifiesForNewCapital, false);
@@ -87,4 +87,23 @@ test("accepts exactly 50 percent seven-day breadth and rejects below it", () => 
   assert.equal(accepted.thresholds.minBreadth7dPositive, 0.5);
   claims[1] = claim("ALT0", -2, 5, 10);
   assert.equal(calibrateDelayedRotationMarket(claims).marketBullish, false);
+});
+
+test("accepts inclusive revised return ranges, including positive longer-term returns", () => {
+  for (const [d30, d90] of [[-35, -70], [45, 55], [20, 30]]) {
+    const result = evaluateDelayedRotation("RANGE", [...bullishClaims(), claim("RANGE", 5, d30, d90)]);
+    assert.equal(result.status, "QUALIFIED");
+    assert.equal(result.qualifiesForNewCapital, true);
+  }
+  const thresholds = calibrateDelayedRotationMarket(bullishClaims()).thresholds;
+  assert.equal(thresholds.maxChange30dPct, 45);
+  assert.equal(thresholds.minChange90dPct, -70);
+  assert.equal(thresholds.maxChange90dPct, 55);
+});
+
+test("rejects returns immediately outside the revised ranges", () => {
+  for (const [d30, d90] of [[-35.01, 0], [0, -70.01], [45.01, 0], [0, 55.01]]) {
+    const result = evaluateDelayedRotation("OUTSIDE", [...bullishClaims(), claim("OUTSIDE", 5, d30, d90)]);
+    assert.equal(result.qualifiesForNewCapital, false);
+  }
 });
