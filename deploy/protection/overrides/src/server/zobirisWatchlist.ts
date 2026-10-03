@@ -69,6 +69,14 @@ export function buildZobirisWatchlist({
 }: Input) {
   const ranked = list(snapshot?.rankedAssets),
     bySymbol = new Map(ranked.map((a) => [a.symbol, a]));
+  const outcomesBySymbol = new Map<string, DecisionOutcomeRecord[]>();
+  for (const record of outcomeRecords) {
+    const symbol = String(record?.symbol ?? "").toUpperCase();
+    if (!symbol) continue;
+    const rows = outcomesBySymbol.get(symbol) ?? [];
+    rows.push(record);
+    outcomesBySymbol.set(symbol, rows);
+  }
   const graphShadow = buildCrossAssetGraph(
     ranked.map((asset) => {
       const rotation = asset?.strategy21?.delayedRotation;
@@ -188,7 +196,7 @@ export function buildZobirisWatchlist({
       marketState: typeof strategy?.marketState === "string" ? strategy.marketState : null,
       pilotState: state,
       eligibility,
-      records: outcomeRecords,
+      records: outcomesBySymbol.get(symbol) ?? [],
     });
     const failures = list(eligibility?.failureReasons).filter(
       (v) => typeof v === "string",
