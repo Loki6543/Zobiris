@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { evaluateSwarmShadow, type SwarmContext } from "../strategy21/swarm.js";
-import { readSwarmLedger, updateSwarmLedger } from "../server/swarmLedger.js";
+import { readSwarmLedger, summarizeSwarmCalibration, updateSwarmLedger } from "../server/swarmLedger.js";
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -66,6 +66,12 @@ describe("swarm outcome ledger", () => {
     expect(thirty.priceUsd).toBe(110);
     expect(thirty.returnPct).toBeCloseTo(10);
     expect(record.swarm.authority).toBe("SHADOW_ONLY_NO_TRADING_AUTHORITY");
+
+    const calibration = await summarizeSwarmCalibration(path, { horizon: "30m" });
+    expect(calibration.status).toBe("COLLECTING");
+    expect(calibration.promotionAuthority).toBe("NONE_SHADOW_ONLY");
+    expect(calibration.sampleSize).toBe(1);
+    expect(calibration.consensus.sampleSize).toBe(1);
   });
   it("preserves a corrupt ledger instead of replacing it with empty history", async () => {
     const dir = await mkdtemp(join(tmpdir(), "zobiris-swarm-corrupt-"));
