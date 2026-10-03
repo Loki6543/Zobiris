@@ -70,6 +70,9 @@ describe("swarm outcome ledger", () => {
     const calibration = await summarizeSwarmCalibration(path, { horizon: "30m" });
     expect(calibration.status).toBe("COLLECTING");
     expect(calibration.promotionAuthority).toBe("NONE_SHADOW_ONLY");
+    expect(calibration.returnBasis).toBe(
+      "REFERENCE_PRICE_MARK_TO_MARKET_NOT_EXECUTED_PNL",
+    );
     expect(calibration.sampleSize).toBe(1);
     expect(calibration.consensus.sampleSize).toBe(1);
   });
