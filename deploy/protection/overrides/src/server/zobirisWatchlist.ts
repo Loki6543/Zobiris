@@ -7,6 +7,7 @@ import { PROBE_TYPICAL_USD } from "../ui/simplePortfolioData.js";
 import { priceSentimentShadow, type SocialIntelligenceSummary } from "./socialIntelligence.js";
 import { buildCrossAssetGraph } from "./crossAssetGraph.js";
 import { evaluateSwarmShadow } from "../strategy21/swarm.js";
+import type { HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
 
 // Presentation only: consume production strategy outputs; never recalculate qualification.
 const states = new Set([
@@ -53,6 +54,7 @@ type Input = {
   now?: number;
   rewardRemaining?: number | null;
   socialIntelligence?: Map<string, SocialIntelligenceSummary>;
+  perpPositioning?: Map<string, HyperliquidPositioningSummary>;
 };
 
 export function buildZobirisWatchlist({
@@ -63,6 +65,7 @@ export function buildZobirisWatchlist({
   now = Date.now(),
   rewardRemaining = null,
   socialIntelligence = new Map(),
+  perpPositioning = new Map(),
 }: Input) {
   const ranked = list(snapshot?.rankedAssets),
     bySymbol = new Map(ranked.map((a) => [a.symbol, a]));
@@ -178,6 +181,7 @@ export function buildZobirisWatchlist({
     const eligibility = strategy?.eligibility,
       integrity = strategy?.researchIntegrity;
     const graph = graphShadow.get(symbol) ?? null;
+    const positioning = perpPositioning.get(symbol) ?? null;
     const failures = list(eligibility?.failureReasons).filter(
       (v) => typeof v === "string",
     );
@@ -240,6 +244,7 @@ export function buildZobirisWatchlist({
     );
     const swarmShadow = evaluateSwarmShadow({
       symbol,
+      nowMs: now,
       snapshotFresh,
       observationFresh: fresh(observed, now, 30 * 60000),
       priceUsd: price,
@@ -261,6 +266,7 @@ export function buildZobirisWatchlist({
       confidencePct: number(asset?.confidence?.pct),
       socialShadow,
       graphShadow: graph,
+      perpPositioning: positioning,
       blockedReasonCount: reasons.length,
     });
     return {
@@ -282,6 +288,7 @@ export function buildZobirisWatchlist({
       },
       socialShadow,
       graphShadow: graph,
+      perpPositioningShadow: positioning,
       swarmShadow,
       entry: {
         baselineDiscountPct: discount,
