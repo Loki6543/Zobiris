@@ -74,3 +74,39 @@ it("uses canonical CMC IDs and refuses missing timestamps and wrong returned sym
   );
   expect(rows).toEqual([]);
 });
+
+it("imports a release bundle once without renewing evidence on restart", async () => {
+  const { applyResearchBundle } = await import("../server/researchRuntime.js");
+  const repo = openResearchEvidence(":memory:", new Map([["QNT", "qnt"]]));
+  const record = {canonicalAssetId:"qnt",symbol:"QNT",provider:"connector",sourceUrl:"https://quant.network/news",publishedAt:null,retrievedAt:"2026-10-03T07:00:00Z",expiresAt:"2026-10-03T08:00:00Z",kind:"NEWS",lineageId:"test",summary:"Observed announcement",claim:"A project announced a change",relevance:"Review token relevance",verification:"UNVERIFIED",verificationSourceUrl:null,polarity:"MIXED",material:false,dataMode:"LIVE"};
+  try {
+    applyResearchBundle(repo, {id:"release-test",records:[record]}, Date.parse("2026-10-03T07:10:00Z"));
+    expect(repo.list("qnt")[0]?.dataMode).toBe("IMPORTED");
+    const received=repo.getState("lastImportAt");
+    applyResearchBundle(repo, {id:"release-test",records:[record]}, Date.parse("2026-10-03T09:00:00Z"));
+    expect(repo.getState("lastImportAt")).toBe(received);
+    expect(researchView(repo,[{id:"qnt",symbol:"QNT",name:"Quant"}],Date.parse("2026-10-03T09:00:00Z")).assets[0]?.newsStatus).toBe("STALE");
+    expect(repo.list("qnt")).toHaveLength(1);
+  } finally {repo.close();}
+});
+it("rejects mismatched release identities without marking the bundle imported", async () => {
+  const { applyResearchBundle } = await import("../server/researchRuntime.js");
+  const repo=openResearchEvidence(":memory:",new Map());
+  try {
+    applyResearchBundle(repo,{id:"invalid",records:[{symbol:"QNT"}]});
+    expect(repo.getState("bundle:invalid")).toBeNull();
+    expect(repo.getState("bundleImportStatus")).toMatchObject({status:"FAILED"});
+    expect(repo.getState("lastImportAt")).toBeNull();
+  } finally {repo.close();}
+});
+
+it("validates the actual connector bundle and queues its confirmed QNT catalyst", async () => {
+ const {applyResearchBundle}=await import("../server/researchRuntime.js");
+ const {releaseResearchBundle}=await import("../server/researchImportBundle.js");
+ const repo=openResearchEvidence(":memory:",new Map([["QNT","41351d72-b10d-4ab1-9a70-66aa5943c4b5"],["BTC","f31da15e-f756-4051-ac90-1296488d9952"]]));
+ try {
+  applyResearchBundle(repo,releaseResearchBundle,Date.parse("2026-10-03T07:50:00Z"));
+  expect(repo.getState("bundleImportStatus")).toMatchObject({status:"IMPORTED",accepted:3});
+  expect(repo.readReview("41351d72-b10d-4ab1-9a70-66aa5943c4b5")).toMatchObject({status:"REVIEW_REQUIRED"});
+ } finally {repo.close();}
+});

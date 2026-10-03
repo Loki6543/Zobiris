@@ -1,3 +1,5 @@
+import { releaseResearchBundle } from "./researchImportBundle.js";
+import { applyResearchBundle } from "./researchRuntime.js";
 import {openResearchEvidence} from './researchEvidence.js';
 import {collectResearchTick,importResearchEvidence,researchAdapters,type ResearchAsset} from './researchCollection.js';
 import {researchView,startResearchTimers,snapshotFreshness,fetchOutcomeQuotes} from './researchRuntime.js';
@@ -1258,6 +1260,7 @@ export function startZobirisServer(port = PORT, host = HOST) {
   const stopResearch=startResearchTimers(async()=>{
     const assets=researchAssets();const repo=researchRepository(assets);
     try{
+      applyResearchBundle(repo,releaseResearchBundle);
       if(process.env.ZOBIRIS_ALLOW_LIVE_PROVIDERS==='1'){
         const outcome=await collectOutcomeTick({path:OUTCOME_MEMORY_PATH,now:Date.now,fetchQuotes:symbols=>fetchOutcomeQuotes(symbols,assets,process.env)});
         const previous=repo.getState('outcomes') as {lastSuccessAt?:string}|null;

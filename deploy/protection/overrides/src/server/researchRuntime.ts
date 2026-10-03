@@ -1,5 +1,5 @@
 import { normalizeCmcV3Shape } from "../providers/cmcQuoteShape.js";
-import { safeProviderJson, type ResearchAsset } from "./researchCollection.js";
+import { importResearchEvidence, safeProviderJson, type ResearchAsset } from "./researchCollection.js";
 import type { EvidenceRepo } from "./researchEvidence.js";
 import type { OutcomeQuote } from "./outcomeMemory.js";
 import { evaluateReassessment } from "./reassessment.js";
@@ -134,6 +134,7 @@ export function researchView(
     ),
     outcomeCollection: repo.getState("outcomes"),
     lastImportAt: repo.getState("lastImportAt"),
+    bundleImportStatus: repo.getState("bundleImportStatus"),
   };
 }
 export function startResearchTimers(tick: () => Promise<void>) {
@@ -159,4 +160,16 @@ export function startResearchTimers(tick: () => Promise<void>) {
     stopped = true;
     clearInterval(timer);
   };
+}
+
+// Deployment-reviewed public research only; HTTP imports retain operator authentication.
+export function applyResearchBundle(repo: EvidenceRepo, bundle: {id:string;records:unknown[]}, now=Date.now()) {
+  if (repo.getState("bundle:"+bundle.id)) return;
+  try {
+    const result=importResearchEvidence(repo,bundle.records,true,now);
+    repo.setState("bundle:"+bundle.id,{...result,importedAt:new Date(now).toISOString()});
+    repo.setState("bundleImportStatus",{status:"IMPORTED",id:bundle.id,...result});
+  } catch {
+    repo.setState("bundleImportStatus",{status:"FAILED",id:bundle.id,message:"Research bundle validation failed; no successful import recorded."});
+  }
 }

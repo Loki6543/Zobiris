@@ -56,6 +56,7 @@ export function ResearchEvidenceContent({
         Research review flags are separate from investment rankings. Token
         demand, entry price and portfolio fit still need evaluation.
       </p>
+      <p className="visual-footnote">Automatic feed connections</p>
       <div className="brief-returns">
         {(data?.providers ?? []).map((p: any) => (
           <div key={p.provider}>
@@ -67,7 +68,7 @@ export function ResearchEvidenceContent({
         ))}
       </div>
       <p className="visual-footnote">
-        Last evidence received: {date(data?.asOf ?? null)}. Imported research is
+        Research available for {visible.length} of {rows.length} displayed assets. Last evidence received: {date(data?.asOf ?? null)}. Imported research is
         not continuous monitoring.
       </p>
       {!visible.length ? (
