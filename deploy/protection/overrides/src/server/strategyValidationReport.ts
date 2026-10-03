@@ -96,7 +96,7 @@ export function buildOutcomeValidationLab(
     costAssumptions: {
       feeBpsPerSide: feeBps,
       slippageBpsPerSide: slippageBps,
-      note: fee/slippage are research assumptions only; outcome memory does not prove executable fills,
+      note: "fee/slippage are research assumptions only; outcome memory does not prove executable fills",
     },
     candidateRecordCount: eligible.length,
     reports,
