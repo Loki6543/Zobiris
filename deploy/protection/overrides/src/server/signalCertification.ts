@@ -23,6 +23,8 @@ export type SignalCertification = {
     validWalkForwardWindows: number;
     minimumResolvedForStability: number;
     minimumTouchesForStability: number;
+    touchRate: number;
+    minimumTouchRateForStability: number;
   };
   walkForward: {
     trainEpisodes: number;
@@ -63,7 +65,7 @@ export type SignalCertification = {
     marketState: string | null;
     pilotState: string | null;
     currentCompatible: boolean;
-    historicalRegimeStratificationAvailable: false;
+    historicalRegimeStratificationAvailable: boolean;
   };
   limitations: string[];
 };
@@ -198,7 +200,7 @@ function normalizeEpisode(
     proposedLimitUsd !== null &&
     touchAt !== null &&
     touchAt >= generatedAt &&
-    touchAt <= observedAt;
+    touchAt <= dueAt;
   const baselineReturnPct =
     baselineTouched && proposedLimitUsd !== null
       ? (priceUsd / proposedLimitUsd - 1) * 100
@@ -431,6 +433,8 @@ export function certifyEntrySignal(args: {
       validWalkForwardWindows: validWindows.length,
       minimumResolvedForStability: MIN_RESOLVED,
       minimumTouchesForStability: MIN_TOUCHES,
+      touchRate: round(touchRate) ?? 0,
+      minimumTouchRateForStability: 0.2,
     },
     walkForward: {
       trainEpisodes: Math.min(MIN_TRAIN, accepted.length),
