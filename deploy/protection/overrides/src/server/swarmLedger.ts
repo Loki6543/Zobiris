@@ -55,15 +55,16 @@ async function loadFile(path: string): Promise<SwarmLedgerFile> {
   try {
     const raw = JSON.parse(await readFile(path, "utf8"));
     if (raw?.version !== "swarm-ledger-v1" || !Array.isArray(raw.records))
-      return emptyFile();
+      throw new Error("Invalid swarm ledger format");
     return {
       version: "swarm-ledger-v1",
       updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : null,
       archivedRecordCount: Number(raw.archivedRecordCount ?? 0) || 0,
       records: raw.records,
     };
-  } catch {
-    return emptyFile();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return emptyFile();
+    throw error;
   }
 }
 
