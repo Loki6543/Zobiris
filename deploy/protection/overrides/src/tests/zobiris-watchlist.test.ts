@@ -255,6 +255,64 @@ describe("Unity watchlist projection", () => {
     delete (f.rules as any).ETH;
     expect(buildZobirisWatchlist(f).assets[0].entry.referenceLimit).toBeNull();
   });
+  it("keeps a stable entry certification shadow-only and preserves the live reference limit", () => {
+    const f = fixture();
+    const strategy = f.snapshot.rankedAssets[0].strategy21 as any;
+    strategy.eligibility = {
+      ...strategy.eligibility,
+      spreadP95Bps: 6,
+      entryImpactP95Bps: 5,
+      exitImpactP95Bps: 5,
+      stressedExitImpactBps: 18,
+    };
+    strategy.executionCostEvidence = {
+      takerFeeBpsPerSide: 40,
+      feeSource: "CONSERVATIVE_DEFAULT",
+    };
+    const baseline = buildZobirisWatchlist(f).assets[0];
+    const start = Date.parse("2025-01-01T00:00:00Z");
+    const outcomeRecords = Array.from({ length: 40 }, (_, i) => {
+      const generatedAt = start + i * 8 * 86400000;
+      const dueAt = generatedAt + 7 * 86400000;
+      const observedAt = dueAt + 60000;
+      return {
+        measurementVersion: "episodes-v2",
+        outcomeId: "eth-cert-" + i,
+        symbol: "ETH",
+        generatedAt: new Date(generatedAt).toISOString(),
+        referencePriceObservedAt: new Date(generatedAt).toISOString(),
+        action: "HOLD",
+        assetState: "QUALIFIED",
+        referencePriceUsd: 10,
+        proposedLimitUsd: 9.41,
+        sampledTouchAt: new Date(generatedAt + 86400000).toISOString(),
+        actualFill: null,
+        opportunityScore: 70,
+        researchScore: 60,
+        evidenceQuality: 0.8,
+        thesisId: "cert-" + i,
+        strategyStatus: "QUALIFIED",
+        recommendedPullbackPct: 5.9,
+        maxFavorablePct: 8,
+        maxAdversePct: -7,
+        evaluations: [{
+          status: "RESOLVED",
+          horizon: "7D",
+          dueAt: new Date(dueAt).toISOString(),
+          evaluatedAt: new Date(observedAt + 60000).toISOString(),
+          priceObservedAt: new Date(observedAt).toISOString(),
+          priceUsd: 10.3,
+          returnPct: 3,
+        }],
+      } as any;
+    });
+    const enriched = buildZobirisWatchlist({ ...f, outcomeRecords }).assets[0];
+    expect(enriched.signalCertification.status).toBe("STABLE_SHADOW");
+    expect(enriched.signalCertification.authority).toBe("SHADOW_ONLY_NO_ENTRY_SCORE_CHANGE");
+    expect(enriched.signalCertification.execution.feeSource).toBe("CONSERVATIVE_DEFAULT");
+    expect(enriched.entry.referenceLimit).toBe(baseline.entry.referenceLimit);
+    expect(enriched.scores).toEqual(baseline.scores);
+  });
   it("existing orders stay human review and cannot imply automatic edits", () => {
     const f = fixture();
     (f.account.openOrders as any[]).push({
