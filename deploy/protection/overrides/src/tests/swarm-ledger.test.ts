@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -66,5 +66,18 @@ describe("swarm outcome ledger", () => {
     expect(thirty.priceUsd).toBe(110);
     expect(thirty.returnPct).toBeCloseTo(10);
     expect(record.swarm.authority).toBe("SHADOW_ONLY_NO_TRADING_AUTHORITY");
+  });
+  it("preserves a corrupt ledger instead of replacing it with empty history", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zobiris-swarm-corrupt-"));
+    dirs.push(dir);
+    const path = join(dir, "ledger.json");
+    await writeFile(path, "{broken-json", "utf8");
+
+    await expect(
+      updateSwarmLedger(path, "2026-10-03T12:00:00.000Z", [
+        { symbol: "ETH", price: 100, swarmShadow: shadow() },
+      ]),
+    ).rejects.toBeTruthy();
+    expect(await readFile(path, "utf8")).toBe("{broken-json");
   });
 });
