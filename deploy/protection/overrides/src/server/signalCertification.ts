@@ -75,6 +75,7 @@ const MIN_TRAIN = 12;
 const VALIDATION_SIZE = 5;
 
 function finite(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
@@ -366,10 +367,16 @@ export function certifyEntrySignal(args: {
           Math.max(2, Math.abs(center.averageReturnAfterKnownCostsPct) * 0.5);
 
   const sampledTouches = baselineReturns.length;
+  const touchRate = accepted.length ? sampledTouches / accepted.length : 0;
+  const executionEvidenceComplete =
+    execution.entryImpactP95Bps !== null &&
+    execution.exitImpactP95Bps !== null;
   const enoughSample =
     accepted.length >= MIN_RESOLVED &&
     sampledTouches >= MIN_TOUCHES &&
-    validWindows.length >= 3;
+    touchRate >= 0.2 &&
+    validWindows.length >= 3 &&
+    executionEvidenceComplete;
   const medianWindowReturn = median(windowReturns);
   const worstWindowReturn = windowReturns.length
     ? Math.min(...windowReturns)
@@ -452,7 +459,7 @@ export function certifyEntrySignal(args: {
       "Walk-forward uses timestamped forward outcome episodes, not reconstructed candles.",
       "Sampled limit touches are not confirmed exchange fills.",
       "Perturbation uses seven-day maximum adverse excursion as a touch proxy.",
-      "Known execution cost uses current Kraken p95 entry/exit impact; fees remain excluded unless explicitly present in eligibility data.",
+      "A stable label requires current Kraken p95 entry and exit impact evidence; fees remain excluded unless explicitly present in eligibility data.",
       "Historical regime labels are not stored on outcome episodes yet, so regime-stratified certification remains unavailable.",
       "Certification is shadow-only and cannot change qualification, score, order size, or the production reference limit.",
     ],
