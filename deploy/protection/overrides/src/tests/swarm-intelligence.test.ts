@@ -133,6 +133,7 @@ describe("ZOBIRIS swarm v1 shadow consensus", () => {
     ctx.nowMs = Date.parse("2026-10-03T12:10:00Z");
     ctx.perpPositioning = {
       provider: "hyperliquid",
+      provenance: "HYPERLIQUID_META_AND_ASSET_CTXS",
       observedAt: "2026-10-03T12:00:00Z",
       fundingRate: 0.00008,
       fundingPercentile: 0.95,
@@ -165,6 +166,7 @@ describe("ZOBIRIS swarm v1 shadow consensus", () => {
     ctx.nowMs = Date.parse("2026-10-03T13:00:01Z");
     ctx.perpPositioning = {
       provider: "hyperliquid",
+      provenance: "HYPERLIQUID_META_AND_ASSET_CTXS",
       observedAt: "2026-10-03T12:00:00Z",
       crowdingState: "BALANCED",
       flowState: "NO_LARGE_FLOW_SIGNAL",
