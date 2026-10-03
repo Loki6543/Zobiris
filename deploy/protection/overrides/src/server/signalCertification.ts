@@ -181,7 +181,7 @@ function normalizeEpisode(
   if (!evaluation) return null;
 
   const generatedAt = validTime(record.generatedAt);
-  const featureMaxAt = validTime(record.referencePriceObservedAt ?? record.generatedAt);
+  const featureMaxAt = validTime(record.referencePriceObservedAt);
   const dueAt = validTime(evaluation.dueAt);
   const observedAt = validTime(evaluation.priceObservedAt);
   const evaluatedAt = validTime(evaluation.evaluatedAt);
@@ -374,10 +374,18 @@ export function certifyEntrySignal(args: {
   const worstPerturbation = perturbationReturns.length
     ? Math.min(...perturbationReturns)
     : null;
+  const perturbationSampleThin = perturbationCases.some(
+    (item) =>
+      item.touchedEpisodes < MIN_TOUCHES ||
+      item.touchRate === null ||
+      item.touchRate < 0.15 ||
+      item.averageReturnAfterKnownCostsPct === null,
+  );
   const perturbationFragile =
     center?.averageReturnAfterKnownCostsPct == null || worstPerturbation == null
       ? null
-      : worstPerturbation < 0 ||
+      : perturbationSampleThin ||
+        worstPerturbation < 0 ||
         center.averageReturnAfterKnownCostsPct - worstPerturbation >
           Math.max(2, Math.abs(center.averageReturnAfterKnownCostsPct) * 0.5);
 
@@ -474,14 +482,19 @@ export function certifyEntrySignal(args: {
       marketState: args.marketState ?? null,
       pilotState: args.pilotState ?? null,
       currentCompatible,
-      historicalRegimeStratificationAvailable: accepted.some((episode) => typeof episode.record.regime === "string" && episode.record.regime.length > 0),
+      historicalRegimeStratificationAvailable:
+        accepted.filter(
+          (episode) =>
+            typeof episode.record.regime === "string" &&
+            episode.record.regime.length > 0,
+        ).length >= MIN_RESOLVED,
     },
     limitations: [
       "Walk-forward uses timestamped forward outcome episodes, not reconstructed candles.",
       "Sampled limit touches are not confirmed exchange fills.",
       "Perturbation uses seven-day maximum adverse excursion as a touch proxy.",
       "A stable label requires current Kraken p95 spread, entry/exit impact, stressed-exit impact, and a finite fee input. Fee provenance is reported separately; missing execution evidence fails closed instead of assuming zero.",
-      "Regime labels are stored only for newer outcome episodes; older episodes can limit regime-stratified confidence.",
+      "Strict point-in-time certification rejects episodes without an explicit reference-price observation timestamp. Regime stratification is reported available only after at least 30 accepted labeled episodes.",
       "Certification is shadow-only and cannot change qualification, score, order size, or the production reference limit.",
     ],
   };
