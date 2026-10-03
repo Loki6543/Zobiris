@@ -62,6 +62,7 @@ export type SwarmShadow = {
 
 export type SwarmContext = {
   symbol: string;
+  nowMs?: number;
   snapshotFresh: boolean;
   observationFresh: boolean;
   priceUsd: number | null;
@@ -327,10 +328,11 @@ function onchainWhaleSpecialist(ctx: SwarmContext): SwarmSpecialist {
     typeof positioning.observedAt === "string"
       ? Date.parse(positioning.observedAt)
       : Number.NaN;
+  const now = ctx.nowMs ?? Date.now();
   if (
     !Number.isFinite(observedAt) ||
-    observedAt > Date.now() ||
-    Date.now() - observedAt > 30 * 60_000
+    observedAt > now ||
+    now - observedAt > 30 * 60_000
   )
     return unknown(
       "onchainWhale",
