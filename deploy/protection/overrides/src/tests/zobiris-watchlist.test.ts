@@ -125,6 +125,9 @@ describe("Unity watchlist projection", () => {
     });
     expect(r.assets[0].entry.referenceLimit).toBeCloseTo(9.41);
     expect(r.assets[0].blockedReason).toBeNull();
+    expect(r.assets[0].swarmShadow.authority).toBe("SHADOW_ONLY_NO_TRADING_AUTHORITY");
+    expect(r.assets[0].swarmShadow.executionBoundary.positionAuthorityEffectUsd).toBe(0);
+    expect(r.assets[0].swarmShadow.ranking.productionRankChanged).toBe(false);
     expect(JSON.stringify(f)).toBe(before);
   });
   it("exposes CryptoBERT price-sentiment context without changing entry authority", () => {
@@ -237,6 +240,8 @@ describe("Unity watchlist projection", () => {
     expect(r.assets[0].position.held).toBeNull();
     expect(r.assets[0].entry.reentry).toBeNull();
     expect(r.assets[0].entry.referenceLimit).toBeNull();
+    expect(r.assets[0].swarmShadow.integrity.status).toBe("FAIL_CLOSED");
+    expect(r.assets[0].swarmShadow.entryQuality.shadowDeltaPctPoints).toBe(0);
   });
   it("unknown market calibration is not false evidence and never enables entries", () => {
     const f = fixture();
