@@ -100,6 +100,7 @@ export type SwarmContext = {
   } | null;
   perpPositioning?: {
     provider?: string;
+    provenance?: string;
     observedAt?: string;
     fundingRate?: number | null;
     fundingPercentile?: number | null;
@@ -318,11 +319,15 @@ function sentimentSpecialist(ctx: SwarmContext): SwarmSpecialist {
 
 function onchainWhaleSpecialist(ctx: SwarmContext): SwarmSpecialist {
   const positioning = ctx.perpPositioning;
-  if (!positioning)
+  if (
+    !positioning ||
+    positioning.provider !== "hyperliquid" ||
+    positioning.provenance !== "HYPERLIQUID_META_AND_ASSET_CTXS"
+  )
     return unknown(
       "onchainWhale",
       "derivatives",
-      "Hyperliquid aggregate perp positioning is unavailable; whale-wallet evidence remains unknown.",
+      "Trusted Hyperliquid aggregate perp positioning is unavailable; whale-wallet evidence remains unknown.",
     );
   const observedAt =
     typeof positioning.observedAt === "string"
