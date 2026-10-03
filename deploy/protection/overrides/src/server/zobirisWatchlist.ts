@@ -68,12 +68,13 @@ export function buildZobirisWatchlist({
   const graphShadow = buildCrossAssetGraph(
     ranked.map((asset) => {
       const rotation = asset?.strategy21?.delayedRotation;
+      const observationFresh = fresh(rotation?.observedAt, now, 30 * 60000);
       return {
         symbol: String(asset?.symbol ?? "").toUpperCase(),
-        change24hPct: number(rotation?.change24hPct),
-        change7dPct: number(rotation?.change7dPct),
-        change30dPct: number(rotation?.change30dPct),
-        change90dPct: number(rotation?.change90dPct),
+        change24hPct: observationFresh ? number(rotation?.change24hPct) : null,
+        change7dPct: observationFresh ? number(rotation?.change7dPct) : null,
+        change30dPct: observationFresh ? number(rotation?.change30dPct) : null,
+        change90dPct: observationFresh ? number(rotation?.change90dPct) : null,
       };
     }),
   );
