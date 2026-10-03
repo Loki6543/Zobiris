@@ -90,6 +90,7 @@ import { loadStrategyLiquidity, saveStrategyMarketState } from "../strategy21/st
 import { buildIntelligenceOverview } from "../strategy21/intelligenceVNext/index.js";
 import { CAPABILITY_MANIFEST, NARRATIVE_RESEARCH_POLICY } from "../strategy21/research/researchIntegrity.js";
 import { readOutcomeMemory, summarizeOutcomeMemory, updateOutcomeMemory, pilotScorecard } from "./outcomeMemory.js";
+import { buildOutcomeValidationLab, isOutcomeHorizon } from "./strategyValidationReport.js";
 import { startKrakenBookShadow } from "../strategy21/prediction/bookCollector.js";
 import { createShadowFeatureHandler } from "./shadowRuntime.js";
 import { readShadowForecasts } from "./predictionOutcomes.js";
@@ -990,6 +991,20 @@ const API: ApiRouter = {
   "GET /api/pilot-scorecard": async (_req,res)=>{
     try{jsonResponse(res,200,pilotScorecard(await readOutcomeMemory(OUTCOME_MEMORY_PATH)));}catch(e){errorResponse(res,503,e);}
   },
+  "GET /api/strategy-validation": async (_req, res) => {
+    try {
+      const url = new URL(_req.url ?? "/", "http://localhost");
+      const rawHorizon = (url.searchParams.get("horizon") ?? "7D").toUpperCase();
+      if (!isOutcomeHorizon(rawHorizon)) return jsonResponse(res, 400, { error: "horizon must be one of 1H, 4H, 1D, 3D, 7D" });
+      const symbol = url.searchParams.get("symbol")?.trim().toUpperCase() || undefined;
+      if (symbol && !/^[A-Z0-9]{2,15}$/.test(symbol)) return jsonResponse(res, 400, { error: "valid symbol required" });
+      const strategyTag = url.searchParams.get("strategyTag")?.trim() || undefined;
+      const memory = await readOutcomeMemory(OUTCOME_MEMORY_PATH, symbol);
+      jsonResponse(res, 200, buildOutcomeValidationLab(memory.records, { horizon: rawHorizon, symbol, strategyTag }));
+    } catch (e) {
+      errorResponse(res, 503, e);
+    }
+  },
   "GET /api/outcomes": async (_req, res) => {
     try {
       const url = new URL(_req.url ?? "/", "http://localhost");
@@ -1372,6 +1387,7 @@ export function startZobirisServer(port = PORT, host = HOST) {
     console.log(`  GET  /api/health`);
     console.log(`  GET  /api/account`);
     console.log(`  GET  /api/outcomes?symbol=BTC&limit=100`);
+    console.log(`  GET  /api/strategy-validation?horizon=7D&symbol=SOL`);
     console.log(`  GET  /api/snapshot/latest`);
     console.log(`  GET  /api/snapshot/:id`);
     console.log(`  GET  /api/snapshots?limit=20`);
