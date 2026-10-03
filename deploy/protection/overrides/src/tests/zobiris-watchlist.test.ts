@@ -160,6 +160,54 @@ describe("Unity watchlist projection", () => {
     expect(enriched.entry.referenceLimit).toBe(baseline.entry.referenceLimit);
     expect(enriched.scores).toEqual(baseline.scores);
   });
+  it("exposes graph overextension as a deeper shadow reference without changing live entry authority", () => {
+    const f = fixture();
+    const target = f.snapshot.rankedAssets[0];
+    target.strategy21.delayedRotation.change24hPct = 10;
+    target.strategy21.delayedRotation.change7dPct = 10;
+    target.strategy21.delayedRotation.change30dPct = 10;
+    target.strategy21.delayedRotation.change90dPct = 20;
+    const peerRows = [
+      ["BTC", 4, 7, 10.3, 20.4],
+      ["SOL", 5, 7.5, 9.8, 19.7],
+      ["XRP", 4.5, 6.8, 10.5, 20.6],
+      ["LINK", 3.8, 7.2, 9.6, 19.5],
+      ["AAVE", -2, -5, -20, -35],
+      ["ADA", 1, 0, 35, 55],
+      ["DOGE", -4, -10, -40, -60],
+      ["HBAR", 2, 3, 45, 70],
+      ["COMP", -1, -3, -30, -50],
+    ] as const;
+    for (const [symbol, h24, d7, d30, d90] of peerRows) {
+      f.snapshot.rankedAssets.push({
+        symbol,
+        strategy21: {
+          delayedRotation: {
+            observedAt: new Date(now).toISOString(),
+            change24hPct: h24,
+            change7dPct: d7,
+            change30dPct: d30,
+            change90dPct: d90,
+          },
+        },
+      } as any);
+    }
+    const result = buildZobirisWatchlist(f).assets[0];
+    expect(result.graphShadow.state).toBe("OVEREXTENDED");
+    expect(result.graphShadow.authority).toBe(
+      "SHADOW_ONLY_NO_ENTRY_SCORE_CHANGE",
+    );
+    expect(result.entry.graphShadowReferencePrice).toBeLessThan(
+      result.entry.referenceLimit!,
+    );
+    expect(result.entry.referenceLimit).toBeCloseTo(9.41);
+    expect(result.scores).toEqual({
+      rotation: 0.72,
+      nextDollar: 0.61,
+      research: 0.55,
+    });
+  });
+
   it("retains pattern state but blocks downstream execution failures", () => {
     const f = fixture();
     f.snapshot.rankedAssets[0].strategy21.positionAuthority.maxNextOrderUsd = 0;
