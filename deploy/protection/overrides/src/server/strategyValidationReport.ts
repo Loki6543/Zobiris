@@ -29,6 +29,8 @@ function toEpisode(
     (item) => item.horizon === horizon && item.status === "RESOLVED" && item.returnPct != null,
   );
   if (!evaluation) return null;
+  const grossReturnPct = evaluation.returnPct;
+  if (grossReturnPct == null) return null;
   const evaluatedAt = evaluation.priceObservedAt ?? evaluation.evaluatedAt;
   if (!evaluatedAt) return null;
   return {
@@ -37,7 +39,7 @@ function toEpisode(
     decisionAt: record.generatedAt,
     featureMaxAt: record.referencePriceObservedAt ?? record.generatedAt,
     evaluatedAt,
-    grossReturnPct: evaluation.returnPct,
+    grossReturnPct,
     benchmarkReturnPct: evaluation.benchmarkReturnPct ?? null,
     feeBps,
     slippageBps,
