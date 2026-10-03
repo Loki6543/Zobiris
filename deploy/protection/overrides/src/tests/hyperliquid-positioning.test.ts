@@ -110,7 +110,8 @@ describe("Hyperliquid positioning shadow", () => {
       t0 + 10 * 60_000,
     );
     const btc = second.get("BTC")!;
-    expect(btc.oiChangePct).toBeGreaterThan(20);
+    expect(btc.oiChangePct).toBeCloseTo(25);
+    expect(btc.priceChangeSincePriorPct).toBeCloseTo(2);
     expect(btc.oiAbsoluteMovePercentile).toBe(1);
     expect(btc.flowState).toBe("LEVERAGED_LONG_BUILD");
     expect(btc.crowdingState).toBe("CROWDED_LONG");
