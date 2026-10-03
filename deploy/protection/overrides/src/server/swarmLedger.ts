@@ -237,6 +237,8 @@ export type SwarmSpecialistAttribution = {
   weightReview: SwarmWeightReview;
   automaticWeightChange: false;
   sampleSize: number;
+  independentEpisodeCount: number;
+  distinctUtcDays: number;
   resolvedUniverseSampleSize: number;
   knownCoveragePct: number;
   rawScoreReturnCorrelation: number | null;
@@ -261,6 +263,10 @@ export type SwarmCalibrationSummary = {
   symbol: string | null;
   status: "COLLECTING" | "EVALUABLE";
   minimumEvaluableSamples: 30;
+  minimumIndependentEpisodes: 10;
+  minimumDistinctUtcDays: 3;
+  independentEpisodeCount: number;
+  distinctUtcDays: number;
   promotionAuthority: "NONE_SHADOW_ONLY";
   returnBasis: "REFERENCE_PRICE_MARK_TO_MARKET_NOT_EXECUTED_PNL";
   highScoreThreshold: 60;
@@ -296,6 +302,8 @@ export type SwarmAttributionReport = {
   symbol: string | null;
   authority: "SHADOW_ONLY_NO_AUTOMATIC_WEIGHT_CHANGES";
   minimumEvaluableSamplesPerHorizon: 30;
+  minimumIndependentEpisodesPerHorizon: 10;
+  minimumDistinctUtcDaysPerHorizon: 3;
   shrinkagePriorSamples: 50;
   horizons: Record<SwarmOutcomeHorizon, SwarmCalibrationSummary>;
   specialists: Record<string, SwarmCrossHorizonAttribution>;
@@ -452,11 +460,17 @@ function weightedEvidenceScore(
 
 function classifyAttribution(
   sampleSize: number,
+  independentEpisodeCount: number,
+  distinctUtcDays: number,
   shrunkPartial: number | null,
   scoreOtherCorrelation: number | null,
   directionalLift: number | null,
 ): { status: SwarmAttributionStatus; weightReview: SwarmWeightReview } {
-  if (sampleSize < 30)
+  if (
+    sampleSize < 30 ||
+    independentEpisodeCount < 10 ||
+    distinctUtcDays < 3
+  )
     return { status: "COLLECTING", weightReview: "NO_CHANGE_COLLECTING" };
 
   const lift = directionalLift ?? 0;
@@ -528,8 +542,24 @@ function specialistAttribution(
       : null;
   const metric = calibrationMetric(rawPairs);
   const scoreOtherCorrelation = pearson(specialistControlPairs);
+  const independentEpisodeCount = new Set(
+    rows.flatMap(({ record }) =>
+      knownSpecialistRows(record).some((row) => row.id === id)
+        ? [record.generatedAt]
+        : [],
+    ),
+  ).size;
+  const distinctUtcDays = new Set(
+    rows.flatMap(({ record }) =>
+      knownSpecialistRows(record).some((row) => row.id === id)
+        ? [record.generatedAt.slice(0, 10)]
+        : [],
+    ),
+  ).size;
   const classified = classifyAttribution(
     attributed.length,
+    independentEpisodeCount,
+    distinctUtcDays,
     shrunkPartial,
     scoreOtherCorrelation,
     directionalLift,
@@ -541,6 +571,8 @@ function specialistAttribution(
     weightReview: classified.weightReview,
     automaticWeightChange: false,
     sampleSize: attributed.length,
+    independentEpisodeCount,
+    distinctUtcDays,
     resolvedUniverseSampleSize: rows.length,
     knownCoveragePct: rows.length ? (attributed.length / rows.length) * 100 : 0,
     rawScoreReturnCorrelation: rawCorrelation,
@@ -558,8 +590,8 @@ function specialistAttribution(
     highScoreSampleSize: metric.highScoreSampleSize,
     lowScoreSampleSize: metric.lowScoreSampleSize,
     evidenceNote:
-      attributed.length < 30
-        ? "Collecting: fewer than 30 resolved forward outcomes at this horizon."
+      classified.status === "COLLECTING"
+        ? "Collecting: requires at least 30 resolved outcomes, 10 distinct refresh episodes, and 3 distinct UTC days at this horizon."
         : "Attribution controls for the weighted score of all other known specialists; correlations are shrunk toward zero with a 50-sample prior.",
   };
 }
@@ -613,11 +645,26 @@ export async function summarizeSwarmCalibration(
     attribution[id] = specialistAttribution(id, rows);
   }
 
+  const independentEpisodeCount = new Set(
+    rows.map(({ record }) => record.generatedAt),
+  ).size;
+  const distinctUtcDays = new Set(
+    rows.map(({ record }) => record.generatedAt.slice(0, 10)),
+  ).size;
+  const evaluable =
+    rows.length >= 30 &&
+    independentEpisodeCount >= 10 &&
+    distinctUtcDays >= 3;
+
   return {
     horizon: options.horizon,
     symbol,
-    status: rows.length >= 30 ? "EVALUABLE" : "COLLECTING",
+    status: evaluable ? "EVALUABLE" : "COLLECTING",
     minimumEvaluableSamples: 30,
+    minimumIndependentEpisodes: 10,
+    minimumDistinctUtcDays: 3,
+    independentEpisodeCount,
+    distinctUtcDays,
     promotionAuthority: "NONE_SHADOW_ONLY",
     returnBasis: "REFERENCE_PRICE_MARK_TO_MARKET_NOT_EXECUTED_PNL",
     highScoreThreshold: 60,
@@ -656,7 +703,7 @@ export async function summarizeSwarmAttribution(
   for (const id of specialistIds) {
     const metrics = HORIZONS.map((horizon) => horizons[horizon].attribution[id])
       .filter((metric): metric is SwarmSpecialistAttribution => Boolean(metric));
-    const evaluable = metrics.filter((metric) => metric.sampleSize >= 30);
+    const evaluable = metrics.filter((metric) => metric.status !== "COLLECTING");
     const weighted = evaluable.filter(
       (metric) => metric.shrunkPartialCorrelation != null,
     );
@@ -718,7 +765,7 @@ export async function summarizeSwarmAttribution(
     specialists[id] = {
       specialistId: id,
       evaluableHorizons: evaluable.length,
-      collectingHorizons: metrics.filter((metric) => metric.sampleSize < 30).length,
+      collectingHorizons: HORIZONS.length - evaluable.length,
       positiveEdgeHorizons,
       negativeEdgeHorizons,
       redundantHorizons,
@@ -739,6 +786,8 @@ export async function summarizeSwarmAttribution(
     symbol: options.symbol?.toUpperCase() ?? null,
     authority: "SHADOW_ONLY_NO_AUTOMATIC_WEIGHT_CHANGES",
     minimumEvaluableSamplesPerHorizon: 30,
+    minimumIndependentEpisodesPerHorizon: 10,
+    minimumDistinctUtcDaysPerHorizon: 3,
     shrinkagePriorSamples: 50,
     horizons,
     specialists,
