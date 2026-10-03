@@ -59,6 +59,33 @@ export type StrategyValidationStatus =
   | "FAILED_VAULT"
   | "SHADOW_VALIDATED";
 
+export type StrategyCertificationClass =
+  | "INSUFFICIENT_DATA"
+  | "REJECTED"
+  | "FRAGILE"
+  | "CERTIFIED_SHADOW";
+
+export interface CertificationStressScenario {
+  name: string;
+  extraCostBpsPerSide: number;
+  positiveEdgeHaircutFraction: number;
+  meanNetReturnPct: number | null;
+  medianNetReturnPct: number | null;
+  hitRate: number | null;
+  passed: boolean;
+}
+
+export interface StrategyCertification {
+  version: "signal-certification-v1";
+  classification: StrategyCertificationClass;
+  score: number;
+  stable: boolean;
+  stressPassRate: number | null;
+  stressScenarios: CertificationStressScenario[];
+  reasons: string[];
+  executionEvidenceRequiredForLiveUse: true;
+}
+
 export interface ValidationMetrics {
   episodes: number;
   averageNetReturnPct: number | null;
@@ -123,6 +150,7 @@ export interface StrategyValidationReport {
     passed: boolean;
   };
   regimeMetrics: Record<string, ValidationMetrics>;
+  certification: StrategyCertification;
   config: StrategyValidationConfig;
 }
 
@@ -305,6 +333,95 @@ function walkForward(oos: StrategyValidationEpisode[], config: StrategyValidatio
   return { folds, passRate, passed: passRate >= config.minWalkForwardPassRate };
 }
 
+
+function stressedReturns(
+  episodes: StrategyValidationEpisode[],
+  extraCostBpsPerSide: number,
+  positiveEdgeHaircutFraction: number,
+): number[] {
+  return episodes.map((episode) => {
+    const base = netReturnPct(episode);
+    const haircut = base > 0 ? base * Math.max(0, Math.min(0.95, positiveEdgeHaircutFraction)) : 0;
+    const extraRoundTripCostPct = 2 * Math.max(0, extraCostBpsPerSide) / 100;
+    return base - haircut - extraRoundTripCostPct;
+  });
+}
+
+function buildCertification(
+  status: StrategyValidationStatus,
+  integrityPassed: boolean,
+  oos: ValidationWindow,
+  vault: ValidationWindow,
+  wf: { folds: WalkForwardFold[]; passRate: number | null; passed: boolean },
+  vaultEpisodes: StrategyValidationEpisode[],
+  config: StrategyValidationConfig,
+): StrategyCertification {
+  const definitions = [
+    { name: "COST_PLUS_5_BPS_PER_SIDE", extraCostBpsPerSide: 5, positiveEdgeHaircutFraction: 0 },
+    { name: "COST_PLUS_10_BPS_PER_SIDE", extraCostBpsPerSide: 10, positiveEdgeHaircutFraction: 0 },
+    { name: "POSITIVE_EDGE_HAIRCUT_25PCT", extraCostBpsPerSide: 0, positiveEdgeHaircutFraction: 0.25 },
+    { name: "COMBINED_10_BPS_AND_25PCT_HAIRCUT", extraCostBpsPerSide: 10, positiveEdgeHaircutFraction: 0.25 },
+  ];
+
+  const stressScenarios: CertificationStressScenario[] = definitions.map((definition) => {
+    const values = stressedReturns(
+      vaultEpisodes,
+      definition.extraCostBpsPerSide,
+      definition.positiveEdgeHaircutFraction,
+    );
+    const avg = mean(values);
+    const med = median(values);
+    const hits = values.filter((value) => value > 0).length;
+    const hitRate = values.length ? hits / values.length : null;
+    const passed = values.length >= config.minVaultEpisodes
+      && (avg ?? -Infinity) > 0
+      && (med ?? -Infinity) >= 0
+      && (hitRate ?? -Infinity) >= Math.max(0.40, config.minHitRate - 0.05);
+    return {
+      ...definition,
+      meanNetReturnPct: avg,
+      medianNetReturnPct: med,
+      hitRate,
+      passed,
+    };
+  });
+
+  const stressPassRate = stressScenarios.length
+    ? stressScenarios.filter((scenario) => scenario.passed).length / stressScenarios.length
+    : null;
+
+  const reasons: string[] = [];
+  if (!integrityPassed) reasons.push("Temporal/data-integrity checks failed.");
+  if (!oos.passed) reasons.push("Out-of-sample gates did not pass.");
+  if (!wf.passed) reasons.push("Walk-forward stability did not pass.");
+  if (!vault.passed) reasons.push("Unseen vault gates did not pass.");
+  if ((stressPassRate ?? 0) < 1) reasons.push("One or more execution/edge stress scenarios failed.");
+
+  let classification: StrategyCertificationClass;
+  if (status === "INSUFFICIENT_DATA") classification = "INSUFFICIENT_DATA";
+  else if (status !== "SHADOW_VALIDATED") classification = "REJECTED";
+  else if ((stressPassRate ?? 0) < 1) classification = "FRAGILE";
+  else classification = "CERTIFIED_SHADOW";
+
+  const integrityScore = integrityPassed ? 20 : 0;
+  const oosScore = oos.passed ? 20 : 0;
+  const walkForwardScore = wf.passRate == null ? 0 : 20 * Math.max(0, Math.min(1, wf.passRate));
+  const vaultScore = vault.passed ? 20 : 0;
+  const stressScore = 20 * Math.max(0, Math.min(1, stressPassRate ?? 0));
+  const score = Math.round((integrityScore + oosScore + walkForwardScore + vaultScore + stressScore) * 100) / 100;
+
+  return {
+    version: "signal-certification-v1",
+    classification,
+    score,
+    stable: classification === "CERTIFIED_SHADOW",
+    stressPassRate,
+    stressScenarios,
+    reasons,
+    executionEvidenceRequiredForLiveUse: true,
+  };
+}
+
 function regimeMetrics(episodes: StrategyValidationEpisode[]): Record<string, ValidationMetrics> {
   const groups = new Map<string, StrategyValidationEpisode[]>();
   for (const episode of episodes) {
@@ -341,6 +458,16 @@ export function validateStrategyEpisodes(
   else if (!vault.passed) status = "FAILED_VAULT";
   else status = "SHADOW_VALIDATED";
 
+  const certification = buildCertification(
+    status,
+    violations.length === 0,
+    oos,
+    vault,
+    wf,
+    split.vault,
+    config,
+  );
+
   return {
     version: "strategy-validation-v1",
     authority: "SHADOW_ONLY",
@@ -359,6 +486,7 @@ export function validateStrategyEpisodes(
     vault,
     walkForward: wf,
     regimeMetrics: regimeMetrics(episodes),
+    certification,
     config,
   };
 }
