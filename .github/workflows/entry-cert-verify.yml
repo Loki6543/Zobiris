@@ -1,0 +1,18 @@
+name: Entry certification production verify
+
+on:
+  push:
+    branches:
+      - feature/entry-signal-certification-v2-20261003
+
+permissions:
+  contents: read
+
+jobs:
+  production-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image and run embedded gates
+        run: docker build --pull=false -t zobiris-entry-cert .
