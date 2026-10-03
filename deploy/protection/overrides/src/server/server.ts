@@ -6,6 +6,7 @@ import {researchView,startResearchTimers,snapshotFreshness,fetchOutcomeQuotes} f
 import {collectOutcomeTick} from './outcomeCollector.js';
 import {entryRules} from './entryRules.js';
 import {buildZobirisWatchlist} from './zobirisWatchlist.js';
+import { readSwarmLedger, updateSwarmLedger } from "./swarmLedger.js";
 import { marketBrief } from './marketBrief.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
@@ -113,6 +114,8 @@ const DEFAULT_DB =
   process.env.ZOBIRIS_DB_PATH ?? resolve(PROJECT_ROOT, "zobiris.db");
 const OUTCOME_MEMORY_PATH =
   process.env.ZOBIRIS_OUTCOME_MEMORY_PATH ?? resolve(dirname(DEFAULT_DB), "zobiris-outcome-memory.json");
+const SWARM_LEDGER_PATH =
+  process.env.ZOBIRIS_SWARM_LEDGER_PATH ?? resolve(dirname(DEFAULT_DB), "zobiris-swarm-ledger.json");
 const RESEARCH_DB = resolve(dirname(DEFAULT_DB), 'zobiris-research-evidence.sqlite');
 function researchAssets():ResearchAsset[]{
  const storage=openStorage({path:DEFAULT_DB});
@@ -431,6 +434,38 @@ async function runRefreshHandler(
     } catch (error) {
       console.warn("Outcome memory update failed:", error instanceof Error ? error.message : String(error));
     }
+    try {
+      const swarmRules = await entryRules().catch(() => ({}));
+      let swarmSocial = new Map<string, any>();
+      try {
+        const research = currentResearch();
+        swarmSocial = new Map(
+          research.assets.map((asset) => [asset.symbol, asset.socialIntelligence]),
+        );
+      } catch {
+        // Social evidence is noncritical for the swarm and must remain UNKNOWN on failure.
+      }
+      const swarmDecision = buildZobirisWatchlist({
+        snapshot: result.snapshot,
+        watchlist,
+        account: getAccountView(),
+        rules: swarmRules,
+        socialIntelligence: swarmSocial,
+      });
+      if (swarmDecision.asOf) {
+        await updateSwarmLedger(
+          SWARM_LEDGER_PATH,
+          swarmDecision.asOf,
+          swarmDecision.assets.map((asset) => ({
+            symbol: asset.symbol,
+            price: asset.price,
+            swarmShadow: asset.swarmShadow,
+          })),
+        );
+      }
+    } catch (error) {
+      console.warn("Swarm shadow ledger update failed:", error instanceof Error ? error.message : String(error));
+    }
     const attentionCollection = await collectAttentionShadowOnRefresh();
     const elapsedMs = Date.now() - startedAt;
     jsonResponse(res, 200, {
@@ -520,6 +555,18 @@ const API: ApiRouter = {
   },
   "GET /api/entry-rules": async (_req,res)=>{
     try{jsonResponse(res,200,{rules:await entryRules(),executionEnabled:false});}catch(e){errorResponse(res,503,e);}
+  },
+  "GET /api/swarm/outcomes": async (req,res)=>{
+    if (!isAuthenticated(req, SECURITY))
+      return send401(res, "swarm outcome calibration requires Bearer auth");
+    try {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const symbol = url.searchParams.get("symbol")?.toUpperCase();
+      const limit = Number(url.searchParams.get("limit") ?? "100");
+      jsonResponse(res, 200, await readSwarmLedger(SWARM_LEDGER_PATH, { symbol, limit }));
+    } catch (error) {
+      errorResponse(res, 503, error);
+    }
   },
   "GET /api/zobiris/watchlist": async (_req,res)=>{
     res.setHeader('Cache-Control','no-store');

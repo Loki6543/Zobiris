@@ -137,7 +137,7 @@ describe("simplified Zobiris Core", () => {
     expect(screen.getByText("SELL SOL — CANCEL SECOND TRIM")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Open KAS order analysis" }));
-    expect(await screen.findByText(/TRIM 50% AT/)).toBeTruthy();
+    expect(await screen.findByText("HOLD — POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Close KAS order analysis" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Open SOL order analysis" }));
