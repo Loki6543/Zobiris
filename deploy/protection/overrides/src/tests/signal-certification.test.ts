@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { certifyEntrySignal } from "../server/signalCertification.js";
 
-const eligibility={status:"ACTIVE_ELIGIBLE",entryImpactP95Bps:5,exitImpactP95Bps:5,spreadP95Bps:6};
+const eligibility={status:"ACTIVE_ELIGIBLE",entryImpactP95Bps:5,exitImpactP95Bps:5,spreadP95Bps:6,takerFeeBpsPerSide:10};
 function records(n:number,end=105){
  const start=Date.parse("2025-01-01T00:00:00Z");
  return Array.from({length:n},(_,i)=>{
@@ -16,7 +16,12 @@ describe("signal certification",()=>{
  });
  it("keeps a robust sample shadow-only",()=>{
   const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,marketState:"RISK_ON",pilotState:"QUALIFIED",eligibility,records:records(40) as any});
-  expect(r.status).toBe("STABLE_SHADOW");expect(r.authority).toBe("SHADOW_ONLY_NO_ENTRY_SCORE_CHANGE");expect(r.execution.knownRoundTripCostBps).toBe(10);
+  expect(r.status).toBe("STABLE_SHADOW");expect(r.authority).toBe("SHADOW_ONLY_NO_ENTRY_SCORE_CHANGE");expect(r.execution.knownRoundTripCostBps).toBe(30);
+ });
+ it("does not certify when fee evidence is missing",()=>{
+  const {takerFeeBpsPerSide,...withoutFee}=eligibility;
+  const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,pilotState:"QUALIFIED",eligibility:withoutFee,records:records(40) as any});
+  expect(r.execution.feesKnown).toBe(false);expect(r.status).toBe("INSUFFICIENT_SAMPLE");
  });
  it("does not treat missing execution impact as zero",()=>{
   const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,pilotState:"QUALIFIED",eligibility:{...eligibility,entryImpactP95Bps:null},records:records(40) as any});
