@@ -6,6 +6,8 @@ import {
 import { PROBE_TYPICAL_USD } from "../ui/simplePortfolioData.js";
 import { priceSentimentShadow, type SocialIntelligenceSummary } from "./socialIntelligence.js";
 import { buildCrossAssetGraph } from "./crossAssetGraph.js";
+import { certifyEntrySignal } from "./signalCertification.js";
+import type { DecisionOutcomeRecord } from "./outcomeMemory.js";
 
 // Presentation only: consume production strategy outputs; never recalculate qualification.
 const states = new Set([
@@ -52,6 +54,7 @@ type Input = {
   now?: number;
   rewardRemaining?: number | null;
   socialIntelligence?: Map<string, SocialIntelligenceSummary>;
+  outcomeRecords?: DecisionOutcomeRecord[];
 };
 
 export function buildZobirisWatchlist({
@@ -62,9 +65,18 @@ export function buildZobirisWatchlist({
   now = Date.now(),
   rewardRemaining = null,
   socialIntelligence = new Map(),
+  outcomeRecords = [],
 }: Input) {
   const ranked = list(snapshot?.rankedAssets),
     bySymbol = new Map(ranked.map((a) => [a.symbol, a]));
+  const outcomesBySymbol = new Map<string, DecisionOutcomeRecord[]>();
+  for (const record of outcomeRecords) {
+    const symbol = String(record?.symbol ?? "").toUpperCase();
+    if (!symbol) continue;
+    const rows = outcomesBySymbol.get(symbol) ?? [];
+    rows.push(record);
+    outcomesBySymbol.set(symbol, rows);
+  }
   const graphShadow = buildCrossAssetGraph(
     ranked.map((asset) => {
       const rotation = asset?.strategy21?.delayedRotation;
@@ -177,6 +189,19 @@ export function buildZobirisWatchlist({
     const eligibility = strategy?.eligibility,
       integrity = strategy?.researchIntegrity;
     const graph = graphShadow.get(symbol) ?? null;
+    const signalCertification = certifyEntrySignal({
+      symbol,
+      baselinePullbackPct: discount,
+      effectivePullbackPct: effective,
+      marketState: typeof strategy?.marketState === "string" ? strategy.marketState : null,
+      pilotState: state,
+      eligibility: {
+        ...eligibility,
+        takerFeeBpsPerSide: strategy?.executionCostEvidence?.takerFeeBpsPerSide ?? null,
+        feeSource: strategy?.executionCostEvidence?.feeSource ?? null,
+      },
+      records: outcomesBySymbol.get(symbol) ?? [],
+    });
     const failures = list(eligibility?.failureReasons).filter(
       (v) => typeof v === "string",
     );
@@ -255,6 +280,7 @@ export function buildZobirisWatchlist({
         number(rotation?.change24hPct),
       ),
       graphShadow: graph,
+      signalCertification,
       entry: {
         baselineDiscountPct: discount,
         reentry,

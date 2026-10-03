@@ -81,6 +81,7 @@ export interface StrategyLiquidityInput {
   pair: string;
   profile: LiquidityProfile;
   takerFeeBpsPerSide?: number;
+  feeSource?: 'CONFIGURED_ENV' | 'CONSERVATIVE_DEFAULT' | 'UNSPECIFIED_INPUT';
   estimatedGrossExpectedReturnBps?: number;
   currentTradeCount24h?: number;
   priorCompletedDayTradeCounts24h?: number[];
@@ -111,6 +112,10 @@ export interface Strategy21AssetView {
   delayedRotation: DelayedRotationProfile;
   recommendationMode: RecommendationMode;
   delayedRotationCalibration: DelayedRotationCalibration;
+  executionCostEvidence?: {
+    takerFeeBpsPerSide: number | null;
+    feeSource: 'CONFIGURED_ENV' | 'CONSERVATIVE_DEFAULT' | 'UNSPECIFIED_INPUT' | 'UNAVAILABLE';
+  };
 }
 
 export interface IntegratedAssetLike extends LegacyAssetLike {
@@ -486,7 +491,14 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
         recommendedPullbackPct: delayedRotation.recommendedPullbackPct,
       } : {}),
     });
-    return { asset, decision, positionAuthority, requestedTargetUsd, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity, delayedRotation };
+    const configuredFee = liq?.takerFeeBpsPerSide;
+    const executionCostEvidence = {
+      takerFeeBpsPerSide: typeof configuredFee === 'number' && Number.isFinite(configuredFee) && configuredFee >= 0 ? configuredFee : null,
+      feeSource: typeof configuredFee === 'number' && Number.isFinite(configuredFee) && configuredFee >= 0
+        ? (liq?.feeSource ?? 'UNSPECIFIED_INPUT' as const)
+        : 'UNAVAILABLE' as const,
+    };
+    return { asset, decision, positionAuthority, requestedTargetUsd, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity, delayedRotation, executionCostEvidence };
   });
 
   const researchOrder = [...provisional].sort((a,b) => b.researchScore - a.researchScore);
@@ -494,7 +506,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
   const nextOrder = provisional.filter((x) => x.nextDollarScore !== null).sort((a,b) => (b.nextDollarScore ?? -1) - (a.nextDollarScore ?? -1));
   const nextRank = new Map(nextOrder.map((x,i) => [x.asset.symbol.toUpperCase(), i+1]));
 
-  const rankedAssets: IntegratedAssetLike[] = provisional.map(({asset, decision, positionAuthority, requestedTargetUsd, researchScore: rs, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity, delayedRotation}) => ({
+  const rankedAssets: IntegratedAssetLike[] = provisional.map(({asset, decision, positionAuthority, requestedTargetUsd, researchScore: rs, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity, delayedRotation, executionCostEvidence}) => ({
     ...asset,
     strategy21: {
       researchScore: rs,
@@ -521,6 +533,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
       delayedRotation,
       recommendationMode,
       delayedRotationCalibration,
+      executionCostEvidence,
     },
   }));
 
