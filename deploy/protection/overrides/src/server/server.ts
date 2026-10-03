@@ -6,7 +6,7 @@ import {researchView,startResearchTimers,snapshotFreshness,fetchOutcomeQuotes} f
 import {collectOutcomeTick} from './outcomeCollector.js';
 import {entryRules} from './entryRules.js';
 import {buildZobirisWatchlist} from './zobirisWatchlist.js';
-import { readSwarmLedger, summarizeSwarmCalibration, updateSwarmLedger, type SwarmOutcomeHorizon } from "./swarmLedger.js";
+import { readSwarmLedger, summarizeSwarmAttribution, summarizeSwarmCalibration, updateSwarmLedger, type SwarmOutcomeHorizon } from "./swarmLedger.js";
 import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readLatestHyperliquidPositioning, type HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
 import { marketBrief } from './marketBrief.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
@@ -589,6 +589,21 @@ const API: ApiRouter = {
   },
   "GET /api/entry-rules": async (_req,res)=>{
     try{jsonResponse(res,200,{rules:await entryRules(),executionEnabled:false});}catch(e){errorResponse(res,503,e);}
+  },
+  "GET /api/swarm/attribution": async (req,res)=>{
+    if (!isAuthenticated(req, SECURITY))
+      return send401(res, "swarm attribution requires Bearer auth");
+    try {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const symbol = url.searchParams.get("symbol")?.toUpperCase();
+      jsonResponse(
+        res,
+        200,
+        await summarizeSwarmAttribution(SWARM_LEDGER_PATH, { symbol }),
+      );
+    } catch (error) {
+      errorResponse(res, 503, error);
+    }
   },
   "GET /api/swarm/calibration": async (req,res)=>{
     if (!isAuthenticated(req, SECURITY))

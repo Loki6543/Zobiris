@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { evaluateSwarmShadow, type SwarmContext } from "../strategy21/swarm.js";
-import { readSwarmLedger, summarizeSwarmCalibration, updateSwarmLedger } from "../server/swarmLedger.js";
+import { readSwarmLedger, summarizeSwarmAttribution, summarizeSwarmCalibration, updateSwarmLedger } from "../server/swarmLedger.js";
 
 const dirs: string[] = [];
 afterEach(async () => {
@@ -33,6 +33,67 @@ function shadow() {
     blockedReasonCount: 0,
   };
   return evaluateSwarmShadow(ctx);
+}
+
+
+function syntheticRecord(
+  index: number,
+  outcomePct: number,
+  scores: Partial<Record<string, number>>,
+) {
+  const swarm = structuredClone(shadow()) as any;
+  for (const [id, score] of Object.entries(scores)) {
+    const specialist = swarm.specialists[id];
+    if (!specialist) continue;
+    specialist.state = "KNOWN";
+    specialist.score = score;
+    specialist.reliability = 1;
+    specialist.independenceFactor = 1;
+    specialist.effectiveWeight = 0.1;
+  }
+  for (const specialist of Object.values(swarm.specialists) as any[]) {
+    if (specialist.state !== "KNOWN") {
+      specialist.state = "KNOWN";
+      specialist.score = 0.5;
+      specialist.reliability = 1;
+      specialist.independenceFactor = 1;
+      specialist.effectiveWeight = 0.1;
+    }
+  }
+  const generatedAt = new Date(Date.parse("2026-10-01T00:00:00Z") + index * 3 * 3_600_000).toISOString();
+  return {
+    id: `synthetic-${index}`,
+    generatedAt,
+    symbol: "ETH",
+    referencePriceUsd: 100,
+    swarm,
+    evaluations: [
+      {
+        horizon: "30m",
+        dueAt: generatedAt,
+        status: "RESOLVED",
+        evaluatedAt: generatedAt,
+        priceUsd: 100 * (1 + outcomePct / 100),
+        returnPct: outcomePct,
+      },
+    ],
+  };
+}
+
+async function writeSyntheticLedger(
+  path: string,
+  records: ReturnType<typeof syntheticRecord>[],
+) {
+  await writeFile(
+    path,
+    JSON.stringify({
+      version: "swarm-ledger-v1",
+      updatedAt: records.at(-1)?.generatedAt ?? null,
+      archivedRecordCount: 0,
+      records,
+    }),
+    "utf8",
+  );
 }
 
 describe("swarm outcome ledger", () => {
@@ -76,6 +137,124 @@ describe("swarm outcome ledger", () => {
     expect(calibration.sampleSize).toBe(1);
     expect(calibration.consensus.sampleSize).toBe(1);
   });
+  it("does not treat one broad market episode as 30 independent proofs", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zobiris-swarm-clustered-"));
+    dirs.push(dir);
+    const path = join(dir, "ledger.json");
+    const records = Array.from({ length: 40 }, (_, index) => {
+      const positive = index % 2 === 0;
+      const record = syntheticRecord(index, positive ? 4 : -4, {
+        entry: positive ? 0.9 : 0.1,
+      });
+      record.generatedAt = "2026-10-01T00:00:00.000Z";
+      record.evaluations[0]!.dueAt = record.generatedAt;
+      record.evaluations[0]!.evaluatedAt = record.generatedAt;
+      return record;
+    });
+    await writeSyntheticLedger(path, records);
+
+    const calibration = await summarizeSwarmCalibration(path, { horizon: "30m" });
+    expect(calibration.sampleSize).toBe(40);
+    expect(calibration.independentEpisodeCount).toBe(1);
+    expect(calibration.distinctUtcDays).toBe(1);
+    expect(calibration.status).toBe("COLLECTING");
+    expect(calibration.attribution.entry.status).toBe("COLLECTING");
+    expect(calibration.attribution.entry.weightReview).toBe("NO_CHANGE_COLLECTING");
+  });
+
+  it("identifies incremental positive specialist edge after controlling for the other specialists", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zobiris-swarm-positive-"));
+    dirs.push(dir);
+    const path = join(dir, "ledger.json");
+    const records = Array.from({ length: 40 }, (_, index) => {
+      const positive = index % 2 === 0;
+      const outcome = positive ? 4 + (index % 5) * 0.1 : -4 - (index % 5) * 0.1;
+      const weakControl = index % 4 < 2 ? 0.55 : 0.45;
+      return syntheticRecord(index, outcome, {
+        entry: positive ? 0.9 : 0.1,
+        regime: weakControl,
+        liquidity: weakControl,
+        relative: 0.5,
+        sentiment: 0.5,
+        onchainWhale: 0.5,
+        portfolioRisk: 0.5,
+        critic: 0.5,
+      });
+    });
+    await writeSyntheticLedger(path, records);
+
+    const calibration = await summarizeSwarmCalibration(path, { horizon: "30m" });
+    expect(calibration.status).toBe("EVALUABLE");
+    expect(calibration.independentEpisodeCount).toBe(40);
+    expect(calibration.distinctUtcDays).toBeGreaterThanOrEqual(3);
+    expect(calibration.attribution.entry.status).toBe("POSITIVE_EDGE");
+    expect(calibration.attribution.entry.shrunkPartialCorrelation).toBeGreaterThan(0.08);
+    expect(calibration.attribution.entry.directionalLiftPctPoints).toBeGreaterThan(2);
+    expect(calibration.attribution.entry.weightReview).toBe("REVIEW_FOR_MORE_WEIGHT");
+    expect(calibration.attribution.entry.automaticWeightChange).toBe(false);
+  });
+
+  it("identifies redundant specialists instead of rewarding duplicated confirmation", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zobiris-swarm-redundant-"));
+    dirs.push(dir);
+    const path = join(dir, "ledger.json");
+    const records = Array.from({ length: 40 }, (_, index) => {
+      const positive = index % 2 === 0;
+      const common = positive ? 0.8 : 0.2;
+      const outcome = positive ? 3 + (index % 3) * 0.1 : -3 - (index % 3) * 0.1;
+      return syntheticRecord(index, outcome, {
+        regime: common,
+        entry: common,
+        liquidity: common,
+        relative: common,
+        sentiment: common,
+        onchainWhale: common,
+        portfolioRisk: common,
+        critic: common,
+      });
+    });
+    await writeSyntheticLedger(path, records);
+
+    const calibration = await summarizeSwarmCalibration(path, { horizon: "30m" });
+    expect(calibration.attribution.regime.status).toBe("REDUNDANT");
+    expect(calibration.attribution.regime.specialistConsensusWithoutCorrelation).toBeGreaterThan(0.85);
+    expect(calibration.attribution.regime.weightReview).toBe("REVIEW_FOR_REDUNDANCY");
+  });
+
+  it("identifies negative incremental edge without automatically changing weights", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zobiris-swarm-negative-"));
+    dirs.push(dir);
+    const path = join(dir, "ledger.json");
+    const records = Array.from({ length: 40 }, (_, index) => {
+      const positive = index % 2 === 0;
+      const outcome = positive ? 5 + (index % 4) * 0.1 : -5 - (index % 4) * 0.1;
+      const weakControl = index % 4 < 2 ? 0.55 : 0.45;
+      return syntheticRecord(index, outcome, {
+        critic: positive ? 0.1 : 0.9,
+        regime: weakControl,
+        entry: weakControl,
+        liquidity: 0.5,
+        relative: 0.5,
+        sentiment: 0.5,
+        onchainWhale: 0.5,
+        portfolioRisk: 0.5,
+      });
+    });
+    await writeSyntheticLedger(path, records);
+
+    const calibration = await summarizeSwarmCalibration(path, { horizon: "30m" });
+    expect(calibration.attribution.critic.status).toBe("NEGATIVE_EDGE");
+    expect(calibration.attribution.critic.shrunkPartialCorrelation).toBeLessThan(-0.08);
+    expect(calibration.attribution.critic.directionalLiftPctPoints).toBeLessThan(-2);
+    expect(calibration.attribution.critic.weightReview).toBe("REVIEW_FOR_LESS_WEIGHT");
+    expect(calibration.attribution.critic.automaticWeightChange).toBe(false);
+
+    const report = await summarizeSwarmAttribution(path);
+    expect(report.version).toBe("SWARM_ATTRIBUTION_V1");
+    expect(report.authority).toBe("SHADOW_ONLY_NO_AUTOMATIC_WEIGHT_CHANGES");
+    expect(report.specialists.critic.automaticWeightChange).toBe(false);
+  });
+
   it("preserves a corrupt ledger instead of replacing it with empty history", async () => {
     const dir = await mkdtemp(join(tmpdir(), "zobiris-swarm-corrupt-"));
     dirs.push(dir);
