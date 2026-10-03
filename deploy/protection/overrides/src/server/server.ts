@@ -6,7 +6,7 @@ import {researchView,startResearchTimers,snapshotFreshness,fetchOutcomeQuotes} f
 import {collectOutcomeTick} from './outcomeCollector.js';
 import {entryRules} from './entryRules.js';
 import {buildZobirisWatchlist} from './zobirisWatchlist.js';
-import { readSwarmLedger, summarizeSwarmCalibration, updateSwarmLedger } from "./swarmLedger.js";
+import { readSwarmLedger, summarizeSwarmCalibration, updateSwarmLedger, type SwarmOutcomeHorizon } from "./swarmLedger.js";
 import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readLatestHyperliquidPositioning, type HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
 import { marketBrief } from './marketBrief.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
@@ -594,7 +594,7 @@ const API: ApiRouter = {
         res,
         200,
         await summarizeSwarmCalibration(SWARM_LEDGER_PATH, {
-          horizon: horizon as any,
+          horizon: horizon as SwarmOutcomeHorizon,
           symbol,
         }),
       );
