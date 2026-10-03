@@ -264,6 +264,7 @@ export function buildZobirisWatchlist({
         graphShadowPullbackAdjustmentPct:
           graph?.entryPullbackAdjustmentPct ?? null,
         graphShadowReferencePrice:
+          reasons.length === 0 &&
           price !== null &&
           effective !== null &&
           graph?.available === true &&
