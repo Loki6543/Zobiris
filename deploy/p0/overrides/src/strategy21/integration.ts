@@ -81,6 +81,7 @@ export interface StrategyLiquidityInput {
   pair: string;
   profile: LiquidityProfile;
   takerFeeBpsPerSide?: number;
+  feeSource?: 'CONFIGURED_ENV' | 'CONSERVATIVE_DEFAULT' | 'UNSPECIFIED_INPUT';
   estimatedGrossExpectedReturnBps?: number;
   currentTradeCount24h?: number;
   priorCompletedDayTradeCounts24h?: number[];
@@ -113,7 +114,7 @@ export interface Strategy21AssetView {
   delayedRotationCalibration: DelayedRotationCalibration;
   executionCostEvidence: {
     takerFeeBpsPerSide: number | null;
-    feeSource: 'CONFIGURED_ENV' | 'CONSERVATIVE_DEFAULT' | 'UNAVAILABLE';
+    feeSource: 'CONFIGURED_ENV' | 'CONSERVATIVE_DEFAULT' | 'UNSPECIFIED_INPUT' | 'UNAVAILABLE';
   };
 }
 
@@ -494,7 +495,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
     const executionCostEvidence = {
       takerFeeBpsPerSide: typeof configuredFee === 'number' && Number.isFinite(configuredFee) && configuredFee >= 0 ? configuredFee : null,
       feeSource: typeof configuredFee === 'number' && Number.isFinite(configuredFee) && configuredFee >= 0
-        ? (process.env.ZOBIRIS_KRAKEN_FEE_BPS != null ? 'CONFIGURED_ENV' as const : 'CONSERVATIVE_DEFAULT' as const)
+        ? (liq?.feeSource ?? 'UNSPECIFIED_INPUT' as const)
         : 'UNAVAILABLE' as const,
     };
     return { asset, decision, positionAuthority, requestedTargetUsd, researchScore: rScore, nextDollarScore, dataReadiness, liquidityAcceleration, researchIntegrity, delayedRotation, executionCostEvidence };
