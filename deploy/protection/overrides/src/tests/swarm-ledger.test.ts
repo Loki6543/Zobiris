@@ -137,6 +137,31 @@ describe("swarm outcome ledger", () => {
     expect(calibration.sampleSize).toBe(1);
     expect(calibration.consensus.sampleSize).toBe(1);
   });
+  it("does not treat one broad market episode as 30 independent proofs", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zobiris-swarm-clustered-"));
+    dirs.push(dir);
+    const path = join(dir, "ledger.json");
+    const records = Array.from({ length: 40 }, (_, index) => {
+      const positive = index % 2 === 0;
+      const record = syntheticRecord(index, positive ? 4 : -4, {
+        entry: positive ? 0.9 : 0.1,
+      });
+      record.generatedAt = "2026-10-01T00:00:00.000Z";
+      record.evaluations[0]!.dueAt = record.generatedAt;
+      record.evaluations[0]!.evaluatedAt = record.generatedAt;
+      return record;
+    });
+    await writeSyntheticLedger(path, records);
+
+    const calibration = await summarizeSwarmCalibration(path, { horizon: "30m" });
+    expect(calibration.sampleSize).toBe(40);
+    expect(calibration.independentEpisodeCount).toBe(1);
+    expect(calibration.distinctUtcDays).toBe(1);
+    expect(calibration.status).toBe("COLLECTING");
+    expect(calibration.attribution.entry.status).toBe("COLLECTING");
+    expect(calibration.attribution.entry.weightReview).toBe("NO_CHANGE_COLLECTING");
+  });
+
   it("identifies incremental positive specialist edge after controlling for the other specialists", async () => {
     const dir = await mkdtemp(join(tmpdir(), "zobiris-swarm-positive-"));
     dirs.push(dir);
