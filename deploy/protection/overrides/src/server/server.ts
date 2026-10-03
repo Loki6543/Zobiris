@@ -490,7 +490,6 @@ async function runRefreshHandler(
       if (live) {
         const evidenceReport = await reportShadowEntryPlans({
           decisionId: persisted.snapshotId,
-          decisionTime: swarmDecision.asOf ?? new Date().toISOString(),
           regime: result.snapshot.regime,
           assets: swarmDecision.assets,
         });
