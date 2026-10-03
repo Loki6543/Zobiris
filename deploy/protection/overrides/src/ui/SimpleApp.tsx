@@ -1,3 +1,4 @@
+import {ResearchEvidencePanel,useResearchEvidence} from './ResearchEvidencePanel';
 import {PilotScorecard} from './PilotScorecard';
 import {entryReference,validateEntry,type EntryRules} from '../shared/entryPlan';
 import { WatchlistPage } from './WatchlistPage';
@@ -279,6 +280,7 @@ export function App() {
   const [snapshot, setSnapshot] = useState<any>(null);
   const [instrumentRules,setInstrumentRules] = useState<Record<string,EntryRules>>({});
   const [account, setAccount] = useState<any>(null);
+  const researchEvidence=useResearchEvidence();
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -881,11 +883,12 @@ export function App() {
         </main>
       ) : null}
 
-      {view === "watchlist" ? <WatchlistPage rows={watchlistRankings} now={nowMs} snapshotFresh={snapshotFresh} onAnalyze={symbol=>{setAnalysisSymbol(symbol);setView("compare");}} /> : null}
+      {view === "watchlist" ? <WatchlistPage research={researchEvidence.data?.assets??[]} rows={watchlistRankings} now={nowMs} snapshotFresh={snapshotFresh} onAnalyze={symbol=>{setAnalysisSymbol(symbol);setView("compare");}} /> : null}
 
       {view === "market" ? (
         <main>
           <MarketBrief refreshKey={snapshotMs} />
+          <ResearchEvidencePanel {...researchEvidence} />
           <section style={styles.heroCard}>
             <div style={styles.eyebrow}>TODAY</div>
             <h1 style={styles.h1}>{regime}</h1>
@@ -989,7 +992,7 @@ export function App() {
         </main>
       ) : null}
 
-      {view === "compare" ? <CompareLab rankedAssets={rankedAssets} focusSymbol={analysisSymbol} /> : null}
+      {view === "compare" ? <><ResearchEvidencePanel {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab rankedAssets={rankedAssets} focusSymbol={analysisSymbol} /></> : null}
 
       {view === "history" ? (
         <main>

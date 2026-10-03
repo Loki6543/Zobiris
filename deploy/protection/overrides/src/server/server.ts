@@ -1,3 +1,7 @@
+import {openResearchEvidence} from './researchEvidence.js';
+import {collectResearchTick,importResearchEvidence,researchAdapters,type ResearchAsset} from './researchCollection.js';
+import {researchView,startResearchTimers,snapshotFreshness,fetchOutcomeQuotes} from './researchRuntime.js';
+import {collectOutcomeTick} from './outcomeCollector.js';
 import {entryRules} from './entryRules.js';
 import {buildZobirisWatchlist} from './zobirisWatchlist.js';
 import { marketBrief } from './marketBrief.js';
@@ -42,6 +46,7 @@ import {
   getEvidenceForSymbol,
   getObservationsForSymbol,
   getCanonicalBySymbol,
+  listAllCanonical,
   jget,
 } from "../storage/repository.js";
 import { runRefresh } from "../runtime/refresh.js";
@@ -105,6 +110,13 @@ const DEFAULT_DB =
   process.env.ZOBIRIS_DB_PATH ?? resolve(PROJECT_ROOT, "zobiris.db");
 const OUTCOME_MEMORY_PATH =
   process.env.ZOBIRIS_OUTCOME_MEMORY_PATH ?? resolve(dirname(DEFAULT_DB), "zobiris-outcome-memory.json");
+const RESEARCH_DB = resolve(dirname(DEFAULT_DB), 'zobiris-research-evidence.sqlite');
+function researchAssets():ResearchAsset[]{
+ const storage=openStorage({path:DEFAULT_DB});
+ try{return listAllCanonical(storage.db).filter(a=>a.mappingStatus==='verified'&&a.mappingConfidence>=0.8).map(a=>({id:a.id,symbol:a.symbol,name:a.name,cmcId:(typeof a.providerIds==='string'?JSON.parse(a.providerIds):a.providerIds)?.cmcNumericId}));}finally{storage.close();}
+}
+function researchRepository(assets=researchAssets()){return openResearchEvidence(RESEARCH_DB,new Map(assets.map(a=>[a.symbol,a.id])));}
+function currentResearch(symbol?:string){const assets=researchAssets().filter(a=>!symbol||a.symbol===symbol);const repo=researchRepository(assets);try{return researchView(repo,assets);}finally{repo.close();}}
 const WATCHLIST_SOURCE_URL =
   "https://coinmarketcap.com/?type=coins&tableRankBy=watchlist&watchListId=6a9a95c387e5a45cc1f40d5e";
 
@@ -524,6 +536,18 @@ const API: ApiRouter = {
     } catch { jsonResponse(res,503,{error:'Zobiris decision-state feed unavailable'}); }
     finally {storage.close();}
   },
+  "GET /api/research/evidence": (req,res) => {
+    try{const symbol=new URL(req.url??'/', 'http://localhost').searchParams.get('symbol')?.toUpperCase();jsonResponse(res,200,currentResearch(symbol));}catch{jsonResponse(res,503,{error:'Research evidence unavailable'});}
+  },
+  "GET /api/research/reassessment": (req,res) => {
+    try{const symbol=new URL(req.url??'/', 'http://localhost').searchParams.get('symbol')?.toUpperCase();const data=currentResearch(symbol);jsonResponse(res,200,{...data,assets:data.assets.map(({evidence,...a})=>a)});}catch{jsonResponse(res,503,{error:'Reassessment unavailable'});}
+  },
+  "POST /api/research/evidence/import": async(req,res) => {
+    if(!isAuthenticated(req,SECURITY))return send401(res,'operator token required');
+    if(!checkRateLimit('research-import:'+clientIpFrom(req),10,60000).allowed)return send429(res,60);
+    let repo:ReturnType<typeof researchRepository>|undefined;
+    try{const body=JSON.parse(await readBody(req));repo=researchRepository();jsonResponse(res,200,importResearchEvidence(repo,body.records,true));}catch{jsonResponse(res,400,{error:'Invalid research import: check identities, dates, source URLs and record limits (64KB HTTP body).'});}finally{repo?.close();}
+  },
   "GET /api/market-brief": async (_req, res) => {
     try { jsonResponse(res, 200, await marketBrief()); }
     catch(e) { errorResponse(res, 503, e); }
@@ -561,7 +585,7 @@ const API: ApiRouter = {
         attention = null;
       }
       const latestRunStatus = attention?.latestRun?.status ?? null;
-      const snapshotStatus = latest == null ? "missing" : ageSeconds != null && ageSeconds > 6 * 60 * 60 ? "stale" : "current";
+      const snapshotStatus = snapshotFreshness(Number.isFinite(snapshotMs)?snapshotMs:null);
       const attentionFailed = latestRunStatus === "FAILED";
       const providerDegraded = providers.length > 0 && healthyProviders < providers.length;
       const status = latest == null || attentionFailed
@@ -571,6 +595,7 @@ const API: ApiRouter = {
           : "healthy";
       jsonResponse(res, 200, {
         version: "0.7.6",
+        research: (()=>{try{const r=currentResearch();return {asOf:r.asOf,providers:r.providers,outcomeCollection:r.outcomeCollection,lastImportAt:r.lastImportAt};}catch{return {status:"UNAVAILABLE"};}})(),
         status,
         checkedAt: new Date().toISOString(),
         refresh: { active: isRefreshActive() },
@@ -915,8 +940,7 @@ const API: ApiRouter = {
     jsonResponse(res, 200, { authority: overview.authority, asOf: overview.asOf, provenance: overview.provenance, executionReadiness: overview.executionReadiness });
   },
   "GET /api/intelligence/attention-ignition": (_req, res) => {
-    const overview = buildIntelligenceOverview();
-    jsonResponse(res, 200, { authority: overview.authority, asOf: overview.asOf, provenance: overview.provenance, attentionIgnition: overview.attentionIgnition });
+    try{const {assets,...data}=currentResearch();jsonResponse(res,200,data);}catch{jsonResponse(res,503,{error:"Live attention evidence unavailable"});}
   },
   "GET /api/intelligence/ownership-risk": (_req, res) => {
     const overview = buildIntelligenceOverview();
@@ -1231,6 +1255,19 @@ export function createZobirisServer() {
 export function startZobirisServer(port = PORT, host = HOST) {
   const server = createZobirisServer();
   startAccountContextSync();
+  const stopResearch=startResearchTimers(async()=>{
+    const assets=researchAssets();const repo=researchRepository(assets);
+    try{
+      if(process.env.ZOBIRIS_ALLOW_LIVE_PROVIDERS==='1'){
+        const outcome=await collectOutcomeTick({path:OUTCOME_MEMORY_PATH,now:Date.now,fetchQuotes:symbols=>fetchOutcomeQuotes(symbols,assets,process.env)});
+        const previous=repo.getState('outcomes') as {lastSuccessAt?:string}|null;
+        repo.setState('outcomes',{...outcome,lastSuccessAt:outcome.lastSuccessAt??previous?.lastSuccessAt??null});
+        const active=new Set((await loadWatchlist()).map(a=>a.symbol));
+        await collectResearchTick(repo,researchAdapters(process.env),assets.filter(a=>active.has(a.symbol)),Date.now());
+      }else repo.setState('outcomes',{status:'NOT_CONFIGURED',lastSuccessAt:null});
+    }finally{repo.close();}
+  });
+  server.on('close',stopResearch);
   // Independent read-only account/market observer: never submits exchange orders.
   let protectionRunning = false;
   let nextDailyContext = 0;

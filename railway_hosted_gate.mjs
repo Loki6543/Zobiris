@@ -282,6 +282,14 @@ async function verifyCandidate() {
     console.log(`PASS candidate valid-token protected handler reached: HTTP ${positive.status}`);
     if (positive.status === 401 || positive.status === 403) throw new Error('candidate valid token was rejected');
 
+    const evidence = await jsonCheck(localOrigin, '/api/research/evidence', {}, [200], 'candidate research evidence');
+    const reviews = await jsonCheck(localOrigin, '/api/research/reassessment', {}, [200], 'candidate reassessment');
+    if (!Array.isArray(evidence.payload.assets) || !Array.isArray(reviews.payload.assets)) throw new Error('research contract missing asset arrays');
+    if (evidence.payload.authority !== 'SHADOW_ONLY_NO_TRADING_AUTHORITY') throw new Error('research authority changed');
+    const attention = await jsonCheck(localOrigin, '/api/intelligence/attention-ignition', {}, [200], 'candidate persistent attention');
+    if (JSON.stringify(attention.payload.provenance).includes('fixture')) throw new Error('production attention still serves fixture provenance');
+    await jsonCheck(localOrigin, '/api/research/evidence/import', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({records:[]})}, [401], 'candidate research import requires authentication');
+
     await jsonCheck(localOrigin, '/api/definitely-not-a-route', {}, [404], 'candidate unknown API route returns JSON 404');
     await verifyNoSecret(localOrigin, ['/', '/api/health', '/api/integrity', '/api/db-info', '/api/watchlist', '/api/providers', '/api/snapshots?limit=5']);
     console.log('PASS candidate secret absent from checked UI/API responses');

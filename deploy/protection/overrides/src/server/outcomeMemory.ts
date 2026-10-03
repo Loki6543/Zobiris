@@ -46,7 +46,7 @@ interface OutcomeFile {
   records: DecisionOutcomeRecord[];
 }
 
-interface SnapshotLike {
+export interface SnapshotLike {
   asOf: string;
   rankedAssets: Array<{
     symbol: string;
@@ -147,7 +147,9 @@ function seedToRecord(seed: NonNullable<NonNullable<NonNullable<SnapshotLike["ra
   };
 }
 
-async function updateMemory(path: string, snapshot: SnapshotLike): Promise<OutcomeFile> {
+export interface OutcomeQuote { symbol: string; priceUsd: number; observedAt: string }
+
+async function updateMemory(path: string, snapshot: SnapshotLike, observations?: OutcomeQuote[]): Promise<OutcomeFile> {
   const data = await loadFile(path);
   const asOfMs = Date.parse(snapshot.asOf);
   if (!Number.isFinite(asOfMs)) return data;
@@ -158,6 +160,10 @@ async function updateMemory(path: string, snapshot: SnapshotLike): Promise<Outco
     const seed=asset.strategy21?.researchIntegrity?.outcomeSeed;
     const price=finitePositive(seed?.referencePriceUsd),at=Date.parse(seed?.priceObservedAt??'');
     if(price&&Number.isFinite(at)&&at<=asOfMs&&asOfMs-at<=15*60000)currentPrices.set(String(asset.symbol).toUpperCase(),{price,at});
+  }
+  for (const q of observations ?? []) {
+    const at=Date.parse(q.observedAt);
+    if(Number.isFinite(q.priceUsd)&&q.priceUsd>0&&Number.isFinite(at)&&at<=asOfMs&&asOfMs-at<=15*60000) currentPrices.set(q.symbol.toUpperCase(),{price:q.priceUsd,at});
   }
   for (const record of data.records) {
     // Preserve old history but never mix legacy overlapping/late observations into the new cohort.
@@ -255,6 +261,10 @@ const queues=new Map<string,Promise<unknown>>();
 export async function updateOutcomeMemory(path:string,snapshot:SnapshotLike):Promise<OutcomeFile>{
  const next=(queues.get(path)??Promise.resolve()).catch(()=>undefined).then(()=>updateMemory(path,snapshot));
  queues.set(path,next);try{return await next;}finally{if(queues.get(path)===next)queues.delete(path);}
+}
+export async function updateOutcomeObservations(path:string,quotes:OutcomeQuote[],receivedAt:string):Promise<void>{
+ const next=(queues.get(path)??Promise.resolve()).catch(()=>undefined).then(()=>updateMemory(path,{asOf:receivedAt,rankedAssets:[]},quotes));
+ queues.set(path,next);try{await next;}finally{if(queues.get(path)===next)queues.delete(path);}
 }
 export function pilotScorecard(data:OutcomeFile,now=Date.now()){
  const episodes=data.records.filter(r=>r.measurementVersion==='episodes-v2');
