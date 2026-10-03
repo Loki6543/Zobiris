@@ -6,6 +6,7 @@ import {
 import { PROBE_TYPICAL_USD } from "../ui/simplePortfolioData.js";
 import { priceSentimentShadow, type SocialIntelligenceSummary } from "./socialIntelligence.js";
 import { buildCrossAssetGraph } from "./crossAssetGraph.js";
+import { evaluateSwarmShadow } from "../strategy21/swarm.js";
 
 // Presentation only: consume production strategy outputs; never recalculate qualification.
 const states = new Set([
@@ -233,6 +234,35 @@ export function buildZobirisWatchlist({
       now,
     );
     if (!check.valid) reasons.push(check.reason);
+    const socialShadow = priceSentimentShadow(
+      socialIntelligence.get(symbol),
+      number(rotation?.change24hPct),
+    );
+    const swarmShadow = evaluateSwarmShadow({
+      symbol,
+      snapshotFresh,
+      observationFresh: fresh(observed, now, 30 * 60000),
+      priceUsd: price,
+      marketGate,
+      rotationScore: score(rotation?.score),
+      recommendedPullbackPct: effective ?? discount,
+      eligibilityStatus:
+        typeof eligibility?.status === "string" ? eligibility.status : null,
+      eligibleMaxUsd: eligibleMax,
+      positionAuthorityUsd: authority,
+      researchEligibility:
+        typeof integrity?.risk?.researchEligibility === "string"
+          ? integrity.risk.researchEligibility
+          : null,
+      accountFresh,
+      freeCashUsd: validCash,
+      reentry,
+      hasOpenOrder: symbolOrders.length > 0,
+      confidencePct: number(asset?.confidence?.pct),
+      socialShadow,
+      graphShadow: graph,
+      blockedReasonCount: reasons.length,
+    });
     return {
       symbol,
       krakenPair: rules[symbol]?.pair ?? null,
@@ -250,11 +280,9 @@ export function buildZobirisWatchlist({
         nextDollar: score(strategy?.nextDollarScore),
         research: score(strategy?.researchScore),
       },
-      socialShadow: priceSentimentShadow(
-        socialIntelligence.get(symbol),
-        number(rotation?.change24hPct),
-      ),
+      socialShadow,
       graphShadow: graph,
+      swarmShadow,
       entry: {
         baselineDiscountPct: discount,
         reentry,
