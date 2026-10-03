@@ -98,8 +98,42 @@ export function buildOutcomeValidationLab(
     costAssumptions: {
       feeBpsPerSide: feeBps,
       slippageBpsPerSide: slippageBps,
+      source: "MODELED_ASSUMPTION",
       note: "fee/slippage are research assumptions only; outcome memory does not prove executable fills",
     },
+    executionEvidence: {
+      l2FillReconciled: false,
+      queuePositionKnown: false,
+      executableFillCertified: false,
+      source: "MODELED_ASSUMPTION",
+      requiredBeforeAnyLiveAuthority: true,
+    },
+    factorAudit: [
+      {
+        factor: "price",
+        status: "POINT_IN_TIME_ENFORCED",
+        usedInCertification: true,
+        note: "persisted quote timestamps may not exceed decisionAt",
+      },
+      {
+        factor: "macro",
+        status: "BLOCKED_UNLESS_POINT_IN_TIME",
+        usedInCertification: false,
+        note: "latest/revised macro snapshots are not admitted into historical certification",
+      },
+      {
+        factor: "news",
+        status: "BLOCKED_UNLESS_POINT_IN_TIME",
+        usedInCertification: false,
+        note: "news/sentiment requires source publication and observation timestamps",
+      },
+      {
+        factor: "onchain",
+        status: "BLOCKED_UNLESS_POINT_IN_TIME",
+        usedInCertification: false,
+        note: "proxy order-book fields must never be mislabeled as genuine on-chain history",
+      },
+    ],
     candidateRecordCount: eligible.length,
     reports,
     limitations: [
@@ -107,7 +141,8 @@ export function buildOutcomeValidationLab(
       "The feature timestamp check uses the persisted reference quote timestamp; upstream feature provenance remains separately governed by research-integrity checks.",
       "A sampled limit touch is not a fill. This lab cannot estimate queue position or missed-fill regret without reconciled order/L2 evidence.",
       "Correlated crypto assets are not statistically independent; t-statistics are descriptive and are not promotion gates.",
-      "SHADOW_VALIDATED means the research gates passed. It never grants live trading or order authority.",
+      "CERTIFIED_SHADOW means validation plus stress certification passed. It never grants live trading or order authority.",
+      "Modeled execution costs are not executable-fill evidence; Kraken L2/fill reconciliation remains a separate required gate.",
     ],
   };
 }

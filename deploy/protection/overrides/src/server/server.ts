@@ -1046,8 +1046,25 @@ const API: ApiRouter = {
       const symbol = url.searchParams.get("symbol")?.trim().toUpperCase() || undefined;
       if (symbol && !/^[A-Z0-9]{2,15}$/.test(symbol)) return jsonResponse(res, 400, { error: "valid symbol required" });
       const strategyTag = url.searchParams.get("strategyTag")?.trim() || undefined;
+      const parseCostBps = (name: string) => {
+        const raw = url.searchParams.get(name);
+        if (raw == null || raw === "") return undefined;
+        const value = Number(raw);
+        if (!Number.isFinite(value) || value < 0 || value > 1000) {
+          throw new Error(name + " must be a number from 0 to 1000 bps per side");
+        }
+        return value;
+      };
+      const feeBps = parseCostBps("feeBps");
+      const slippageBps = parseCostBps("slippageBps");
       const memory = await readOutcomeMemory(OUTCOME_MEMORY_PATH, symbol);
-      jsonResponse(res, 200, buildOutcomeValidationLab(memory.records, { horizon: rawHorizon, symbol, strategyTag }));
+      jsonResponse(res, 200, buildOutcomeValidationLab(memory.records, {
+        horizon: rawHorizon,
+        symbol,
+        strategyTag,
+        feeBps,
+        slippageBps,
+      }));
     } catch (e) {
       errorResponse(res, 503, e);
     }
@@ -1434,7 +1451,7 @@ export function startZobirisServer(port = PORT, host = HOST) {
     console.log(`  GET  /api/health`);
     console.log(`  GET  /api/account`);
     console.log(`  GET  /api/outcomes?symbol=BTC&limit=100`);
-    console.log(`  GET  /api/strategy-validation?horizon=7D&symbol=SOL`);
+    console.log(`  GET  /api/strategy-validation?horizon=7D&symbol=SOL&feeBps=5&slippageBps=8`);
     console.log(`  GET  /api/snapshot/latest`);
     console.log(`  GET  /api/snapshot/:id`);
     console.log(`  GET  /api/snapshots?limit=20`);
