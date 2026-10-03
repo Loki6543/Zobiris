@@ -43,3 +43,50 @@ The first adapter uses the existing forward `episodes-v2` outcome memory. These 
 `GET /api/strategy-validation?horizon=7D&symbol=SOL&strategyTag=ENTRY_MODEL_V1`
 
 All filters are optional except that `horizon` must be one of `1H, 4H, 1D, 3D, 7D`. The route is read-only and intentionally not shown in the main UI.
+
+
+## Signal Certification v1
+
+The validation lab now emits a `certification` block for every strategy report.
+
+Certification remains **shadow-only** and never grants live order authority.
+
+### Certification states
+
+- `INSUFFICIENT_DATA` — not enough OOS/vault observations.
+- `REJECTED` — leakage, OOS, walk-forward, or unseen-vault validation failed.
+- `FRAGILE` — the base validation passed, but modest execution-cost or positive-edge stress breaks robustness.
+- `CERTIFIED_SHADOW` — temporal integrity, OOS, walk-forward, unseen vault, and all defined stress cases pass.
+
+The score is a 0–100 research-quality score built from integrity, OOS, walk-forward, vault, and stress survival. It is not a probability of profit.
+
+### Stress cases
+
+The certification layer re-evaluates the unseen vault under:
+
+1. +5 bps modeled cost per side.
+2. +10 bps modeled cost per side.
+3. 25% haircut to positive observed edge.
+4. Combined +10 bps per side plus 25% positive-edge haircut.
+
+These are robustness shocks, not claims about actual Kraken fill cost.
+
+### Execution evidence boundary
+
+The API explicitly reports modeled fee/slippage separately from executable-fill evidence:
+
+- `l2FillReconciled: false`
+- `queuePositionKnown: false`
+- `executableFillCertified: false`
+
+A sampled limit touch is still not a fill. Kraken L2 depth, queue position, missed-fill regret, and reconciled order/fill evidence remain separate future certification inputs.
+
+### Point-in-time factor audit
+
+Historical certification currently admits persisted price/reference timestamps. Macro, news/sentiment, and genuine on-chain inputs remain blocked from historical certification unless point-in-time source/observation timestamps are available. Order-book-derived proxies must not be relabeled as on-chain metrics.
+
+### API
+
+`GET /api/strategy-validation?horizon=7D&symbol=SOL&strategyTag=ENTRY_MODEL_V1&feeBps=5&slippageBps=8`
+
+`feeBps` and `slippageBps` are optional modeled per-side costs from 0 to 1000 bps. Their source is reported as `MODELED_ASSUMPTION`.
