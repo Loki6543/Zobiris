@@ -223,6 +223,9 @@ export type SwarmCalibrationSummary = {
   status: "COLLECTING" | "EVALUABLE";
   minimumEvaluableSamples: 30;
   promotionAuthority: "NONE_SHADOW_ONLY";
+  returnBasis: "REFERENCE_PRICE_MARK_TO_MARKET_NOT_EXECUTED_PNL";
+  highScoreThreshold: 60;
+  lowScoreThreshold: 40;
   sampleSize: number;
   consensus: SwarmCalibrationMetric;
   specialists: Record<string, SwarmCalibrationMetric>;
@@ -335,6 +338,9 @@ export async function summarizeSwarmCalibration(
     status: rows.length >= 30 ? "EVALUABLE" : "COLLECTING",
     minimumEvaluableSamples: 30,
     promotionAuthority: "NONE_SHADOW_ONLY",
+    returnBasis: "REFERENCE_PRICE_MARK_TO_MARKET_NOT_EXECUTED_PNL",
+    highScoreThreshold: 60,
+    lowScoreThreshold: 40,
     sampleSize: rows.length,
     consensus: calibrationMetric(consensusPairs),
     specialists,
