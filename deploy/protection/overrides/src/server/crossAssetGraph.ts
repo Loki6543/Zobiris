@@ -6,6 +6,14 @@ export type CrossAssetGraphInput = {
   change90dPct: number | null;
 };
 
+type CompleteGraphInput = {
+  symbol: string;
+  change24hPct: number;
+  change7dPct: number;
+  change30dPct: number;
+  change90dPct: number;
+};
+
 export type CrossAssetNeighbor = {
   symbol: string;
   edgeWeight: number;
@@ -76,7 +84,7 @@ function stdev(values: number[]) {
 }
 
 function zScores(
-  rows: Required<CrossAssetGraphInput>[],
+  rows: CompleteGraphInput[],
   key: "change7dPct" | "change30dPct" | "change90dPct",
 ) {
   const values = rows.map((row) => row[key]);
@@ -135,7 +143,7 @@ export function buildCrossAssetGraph(
   }
 
   const complete = [...deduped.values()].filter(
-    (row): row is Required<CrossAssetGraphInput> =>
+    (row): row is CompleteGraphInput =>
       finite(row.change24hPct) &&
       finite(row.change7dPct) &&
       finite(row.change30dPct) &&
