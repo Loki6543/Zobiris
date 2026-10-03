@@ -42,6 +42,7 @@ export type HyperliquidPositioningSummary = {
   dayNtlVolumeUsd: number | null;
   volumeToOpenInterest: number | null;
   previousObservedAt: string | null;
+  priceChangeSincePriorPct: number | null;
   oiChangePct: number | null;
   oiAbsoluteMovePercentile: number | null;
   fundingChangeBps: number | null;
@@ -306,9 +307,11 @@ function buildSummaries(
     return {
       row,
       prior,
+      priceChangeSincePriorPct:
+        prior?.markPx != null ? pctChange(prior.markPx, row.markPx) : null,
       oiChangePct:
-        prior?.openInterestUsd != null && row.openInterestUsd != null
-          ? pctChange(prior.openInterestUsd, row.openInterestUsd)
+        prior?.openInterestUnits != null && row.openInterestUnits != null
+          ? pctChange(prior.openInterestUnits, row.openInterestUnits)
           : null,
       fundingChangeBps:
         prior?.fundingRate != null && row.fundingRate != null
@@ -322,7 +325,13 @@ function buildSummaries(
     )
     .filter((value): value is number => value != null);
 
-  return withDelta.map(({ row, prior, oiChangePct, fundingChangeBps }) => {
+  return withDelta.map(({
+    row,
+    prior,
+    priceChangeSincePriorPct,
+    oiChangePct,
+    fundingChangeBps,
+  }) => {
     const fundingPercentile = percentileRank(fundingValues, row.fundingRate);
     const premiumPercentile = percentileRank(premiumValues, row.premiumPct);
     const oiAbsoluteMovePercentile = percentileRank(
@@ -336,7 +345,7 @@ function buildSummaries(
     const flowState = classifyFlow(
       oiChangePct,
       oiAbsoluteMovePercentile,
-      row.dayChangePct,
+      priceChangeSincePriorPct,
     );
     let confidence = 0.5;
     if (
@@ -370,6 +379,7 @@ function buildSummaries(
       dayNtlVolumeUsd: row.dayNtlVolumeUsd,
       volumeToOpenInterest: row.volumeToOpenInterest,
       previousObservedAt: prior?.observedAt ?? null,
+      priceChangeSincePriorPct,
       oiChangePct,
       oiAbsoluteMovePercentile,
       fundingChangeBps,
