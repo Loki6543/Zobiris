@@ -23,7 +23,7 @@ The history is persisted under the ZOBIRIS data volume with bounded retention an
 
 ## Flow states
 
-When a meaningful prior observation exists, ZOBIRIS can classify unusually large open-interest moves as:
+When a meaningful prior observation exists, ZOBIRIS compares native open-interest change and price change over the same observation interval, then classifies unusually large OI moves as:
 
 - **LEVERAGED_LONG_BUILD** — OI rises while price rises.
 - **LEVERAGED_SHORT_BUILD** — OI rises while price falls.
@@ -44,7 +44,7 @@ Funding and premium are compared cross-sectionally among supported ZOBIRIS watch
 - **SHORT_BIAS**
 - **CROWDED_SHORT**
 
-This prevents a fixed funding threshold from pretending to be universal across different market regimes.
+This prevents a fixed funding threshold from pretending to be universal across different market regimes. USD OI is reported for scale, but OI-flow direction is computed from native open-interest units so price appreciation alone cannot manufacture an OI increase.
 
 ## Whale-evidence boundary
 
