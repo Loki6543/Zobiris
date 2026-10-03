@@ -161,6 +161,22 @@ describe("ZOBIRIS swarm v1 shadow consensus", () => {
     expect(result.executionBoundary.positionAuthorityEffectUsd).toBe(0);
   });
 
+  it("rejects untrusted positioning provenance", () => {
+    const ctx = baseContext();
+    ctx.nowMs = Date.parse("2026-10-03T12:10:00Z");
+    ctx.perpPositioning = {
+      provider: "hyperliquid",
+      provenance: "UNVERIFIED_IMPORT",
+      observedAt: "2026-10-03T12:00:00Z",
+      crowdingState: "CROWDED_SHORT",
+      flowState: "SHORT_COVERING",
+      confidence: 1,
+      whaleWalletEvidence: "UNKNOWN_PUBLIC_AGGREGATE_ONLY",
+    };
+    const result = evaluateSwarmShadow(ctx);
+    expect(result.specialists.onchainWhale.state).toBe("UNKNOWN");
+  });
+
   it("keeps stale perp positioning UNKNOWN", () => {
     const ctx = baseContext();
     ctx.nowMs = Date.parse("2026-10-03T13:00:01Z");
