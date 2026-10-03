@@ -6,7 +6,8 @@ import {researchView,startResearchTimers,snapshotFreshness,fetchOutcomeQuotes} f
 import {collectOutcomeTick} from './outcomeCollector.js';
 import {entryRules} from './entryRules.js';
 import {buildZobirisWatchlist} from './zobirisWatchlist.js';
-import { readSwarmLedger, updateSwarmLedger } from "./swarmLedger.js";
+import { readSwarmLedger, summarizeSwarmCalibration, updateSwarmLedger, type SwarmOutcomeHorizon } from "./swarmLedger.js";
+import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readLatestHyperliquidPositioning, type HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
 import { marketBrief } from './marketBrief.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
@@ -116,6 +117,9 @@ const OUTCOME_MEMORY_PATH =
   process.env.ZOBIRIS_OUTCOME_MEMORY_PATH ?? resolve(dirname(DEFAULT_DB), "zobiris-outcome-memory.json");
 const SWARM_LEDGER_PATH =
   process.env.ZOBIRIS_SWARM_LEDGER_PATH ?? resolve(dirname(DEFAULT_DB), "zobiris-swarm-ledger.json");
+const HYPERLIQUID_POSITIONING_PATH =
+  process.env.ZOBIRIS_HYPERLIQUID_POSITIONING_PATH ??
+  resolve(dirname(DEFAULT_DB), "zobiris-hyperliquid-positioning.json");
 const RESEARCH_DB = resolve(dirname(DEFAULT_DB), 'zobiris-research-evidence.sqlite');
 function researchAssets():ResearchAsset[]{
  const storage=openStorage({path:DEFAULT_DB});
@@ -437,6 +441,7 @@ async function runRefreshHandler(
     try {
       const swarmRules = await entryRules().catch(() => ({}));
       let swarmSocial = new Map<string, any>();
+      let swarmPositioning = new Map<string, HyperliquidPositioningSummary>();
       try {
         const research = currentResearch();
         swarmSocial = new Map(
@@ -445,12 +450,41 @@ async function runRefreshHandler(
       } catch {
         // Social evidence is noncritical for the swarm and must remain UNKNOWN on failure.
       }
+      if (live) {
+        try {
+          swarmPositioning = await collectHyperliquidPositioning(
+            HYPERLIQUID_POSITIONING_PATH,
+            watchlist.map((asset) => asset.symbol),
+          );
+        } catch {
+          // A provider outage must not invalidate the production strategy snapshot.
+          // Fall back only to a recent persisted aggregate positioning snapshot.
+          try {
+            swarmPositioning = await readLatestHyperliquidPositioning(
+              HYPERLIQUID_POSITIONING_PATH,
+              { symbols: watchlist.map((asset) => asset.symbol) },
+            );
+          } catch {
+            swarmPositioning = new Map();
+          }
+        }
+      } else {
+        try {
+          swarmPositioning = await readLatestHyperliquidPositioning(
+            HYPERLIQUID_POSITIONING_PATH,
+            { symbols: watchlist.map((asset) => asset.symbol) },
+          );
+        } catch {
+          swarmPositioning = new Map();
+        }
+      }
       const swarmDecision = buildZobirisWatchlist({
         snapshot: result.snapshot,
         watchlist,
         account: getAccountView(),
         rules: swarmRules,
         socialIntelligence: swarmSocial,
+        perpPositioning: swarmPositioning,
       });
       if (swarmDecision.asOf) {
         await updateSwarmLedger(
@@ -556,6 +590,46 @@ const API: ApiRouter = {
   "GET /api/entry-rules": async (_req,res)=>{
     try{jsonResponse(res,200,{rules:await entryRules(),executionEnabled:false});}catch(e){errorResponse(res,503,e);}
   },
+  "GET /api/swarm/calibration": async (req,res)=>{
+    if (!isAuthenticated(req, SECURITY))
+      return send401(res, "swarm calibration requires Bearer auth");
+    try {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const horizon = url.searchParams.get("horizon") ?? "1d";
+      if (!["30m","2h","8h","12h","1d","3d","7d"].includes(horizon))
+        return jsonResponse(res, 400, { error: "invalid swarm calibration horizon" });
+      const symbol = url.searchParams.get("symbol")?.toUpperCase();
+      jsonResponse(
+        res,
+        200,
+        await summarizeSwarmCalibration(SWARM_LEDGER_PATH, {
+          horizon: horizon as SwarmOutcomeHorizon,
+          symbol,
+        }),
+      );
+    } catch (error) {
+      errorResponse(res, 503, error);
+    }
+  },
+  "GET /api/swarm/positioning": async (req,res)=>{
+    if (!isAuthenticated(req, SECURITY))
+      return send401(res, "swarm positioning diagnostics require Bearer auth");
+    try {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const symbol = url.searchParams.get("symbol")?.toUpperCase();
+      const limit = Number(url.searchParams.get("limit") ?? "100");
+      jsonResponse(
+        res,
+        200,
+        await readHyperliquidPositioningHistory(
+          HYPERLIQUID_POSITIONING_PATH,
+          { symbol, limit },
+        ),
+      );
+    } catch (error) {
+      errorResponse(res, 503, error);
+    }
+  },
   "GET /api/swarm/outcomes": async (req,res)=>{
     if (!isAuthenticated(req, SECURITY))
       return send401(res, "swarm outcome calibration requires Bearer auth");
@@ -585,6 +659,7 @@ const API: ApiRouter = {
       // CryptoBERT remains shadow-only: it is exposed beside the entry plan but cannot alter
       // qualification, score, order size or reference limit until outcome calibration promotes it.
       let socialIntelligence = new Map<string, any>();
+      let perpPositioning = new Map<string, HyperliquidPositioningSummary>();
       try {
         const research = currentResearch();
         socialIntelligence = new Map(
@@ -593,7 +668,15 @@ const API: ApiRouter = {
       } catch {
         // Research enrichment must never take down the decision-state feed.
       }
-      jsonResponse(res,200,buildZobirisWatchlist({snapshot,watchlist,account:getAccountView(),rules,rewardRemaining,socialIntelligence}));
+      try {
+        perpPositioning = await readLatestHyperliquidPositioning(
+          HYPERLIQUID_POSITIONING_PATH,
+          { symbols: watchlist.map((asset) => asset.symbol) },
+        );
+      } catch {
+        // Positioning enrichment is shadow-only and must never take down this feed.
+      }
+      jsonResponse(res,200,buildZobirisWatchlist({snapshot,watchlist,account:getAccountView(),rules,rewardRemaining,socialIntelligence,perpPositioning}));
     } catch { jsonResponse(res,503,{error:'Zobiris decision-state feed unavailable'}); }
     finally {storage.close();}
   },

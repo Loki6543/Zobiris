@@ -62,6 +62,7 @@ export type SwarmShadow = {
 
 export type SwarmContext = {
   symbol: string;
+  nowMs?: number;
   snapshotFresh: boolean;
   observationFresh: boolean;
   priceUsd: number | null;
@@ -96,6 +97,23 @@ export type SwarmContext = {
     confidence?: number | null;
     residual24hPct?: number | null;
     residual7dPct?: number | null;
+  } | null;
+  perpPositioning?: {
+    provider?: string;
+    provenance?: string;
+    observedAt?: string;
+    fundingRate?: number | null;
+    fundingPercentile?: number | null;
+    premiumPct?: number | null;
+    premiumPercentile?: number | null;
+    openInterestUsd?: number | null;
+    dayNtlVolumeUsd?: number | null;
+    oiChangePct?: number | null;
+    oiAbsoluteMovePercentile?: number | null;
+    crowdingState?: string;
+    flowState?: string;
+    confidence?: number | null;
+    whaleWalletEvidence?: string;
   } | null;
   blockedReasonCount?: number;
 };
@@ -299,11 +317,91 @@ function sentimentSpecialist(ctx: SwarmContext): SwarmSpecialist {
   );
 }
 
-function onchainWhaleSpecialist(): SwarmSpecialist {
-  return unknown(
+function onchainWhaleSpecialist(ctx: SwarmContext): SwarmSpecialist {
+  const positioning = ctx.perpPositioning;
+  if (
+    !positioning ||
+    positioning.provider !== "hyperliquid" ||
+    positioning.provenance !== "HYPERLIQUID_META_AND_ASSET_CTXS"
+  )
+    return unknown(
+      "onchainWhale",
+      "derivatives",
+      "Trusted Hyperliquid aggregate perp positioning is unavailable; whale-wallet evidence remains unknown.",
+    );
+  const observedAt =
+    typeof positioning.observedAt === "string"
+      ? Date.parse(positioning.observedAt)
+      : Number.NaN;
+  const now = ctx.nowMs ?? Date.now();
+  if (
+    !Number.isFinite(observedAt) ||
+    observedAt > now ||
+    now - observedAt > 30 * 60_000
+  )
+    return unknown(
+      "onchainWhale",
+      "derivatives",
+      "Hyperliquid aggregate perp positioning is stale or future-dated.",
+    );
+
+  let score = 0.5;
+  const reasons: string[] = [];
+  switch (positioning.crowdingState) {
+    case "CROWDED_LONG":
+      score -= 0.22;
+      reasons.push("Hyperliquid funding/premium cross-section indicates crowded longs.");
+      break;
+    case "LONG_BIAS":
+      score -= 0.10;
+      reasons.push("Hyperliquid funding cross-section leans long.");
+      break;
+    case "SHORT_BIAS":
+      score += 0.07;
+      reasons.push("Hyperliquid funding cross-section leans short.");
+      break;
+    case "CROWDED_SHORT":
+      score += 0.14;
+      reasons.push("Hyperliquid funding/premium cross-section indicates crowded shorts.");
+      break;
+    default:
+      reasons.push("Hyperliquid perp crowding is balanced.");
+  }
+
+  switch (positioning.flowState) {
+    case "LEVERAGED_LONG_BUILD":
+      score -= positioning.crowdingState === "CROWDED_LONG" ? 0.12 : 0.04;
+      reasons.push("Open interest is expanding with price, increasing leveraged-long crowding risk.");
+      break;
+    case "LEVERAGED_SHORT_BUILD":
+      score -= 0.06;
+      reasons.push("Open interest is expanding while price falls, consistent with leveraged short build.");
+      break;
+    case "SHORT_COVERING":
+      score += 0.04;
+      reasons.push("Open interest is contracting while price rises, consistent with short covering.");
+      break;
+    case "LONG_FLUSH":
+      score += 0.08;
+      reasons.push("Open interest is contracting while price falls, consistent with a leverage flush.");
+      break;
+    case "NO_LARGE_FLOW_SIGNAL":
+      reasons.push("No cross-sectionally large open-interest move is present.");
+      break;
+    default:
+      reasons.push("Open-interest delta history is not mature enough yet.");
+  }
+
+  reasons.push(
+    "Public aggregate perp data is not wallet-level whale evidence; whale identity remains UNKNOWN.",
+  );
+  const sourceConfidence = finite(positioning.confidence) ?? 0.5;
+  return known(
     "onchainWhale",
-    "onchain",
-    "No trusted live whale/on-chain source is wired into this production path yet.",
+    score,
+    Math.min(0.78, 0.52 + 0.3 * clamp(sourceConfidence)),
+    "derivatives",
+    reasons,
   );
 }
 
@@ -412,7 +510,7 @@ export function evaluateSwarmShadow(ctx: SwarmContext): SwarmShadow {
     liquidity: liquiditySpecialist(ctx),
     relative: relativeSpecialist(ctx),
     sentiment: sentimentSpecialist(ctx),
-    onchainWhale: onchainWhaleSpecialist(),
+    onchainWhale: onchainWhaleSpecialist(ctx),
     portfolioRisk: portfolioRiskSpecialist(ctx),
     critic: criticSpecialist(ctx),
   };

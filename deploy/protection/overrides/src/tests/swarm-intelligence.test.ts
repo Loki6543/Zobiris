@@ -128,6 +128,71 @@ describe("ZOBIRIS swarm v1 shadow consensus", () => {
     expect(result.specialists.entry.score).toBe(0.3 * 0.74 + 0.2 * 0.78);
   });
 
+  it("uses aggregate perp positioning without claiming wallet-level whale evidence", () => {
+    const ctx = baseContext();
+    ctx.nowMs = Date.parse("2026-10-03T12:10:00Z");
+    ctx.perpPositioning = {
+      provider: "hyperliquid",
+      provenance: "HYPERLIQUID_META_AND_ASSET_CTXS",
+      observedAt: "2026-10-03T12:00:00Z",
+      fundingRate: 0.00008,
+      fundingPercentile: 0.95,
+      premiumPct: 0.1,
+      premiumPercentile: 0.9,
+      openInterestUsd: 125000,
+      dayNtlVolumeUsd: 1000000,
+      oiChangePct: 25,
+      oiAbsoluteMovePercentile: 1,
+      crowdingState: "CROWDED_LONG",
+      flowState: "LEVERAGED_LONG_BUILD",
+      confidence: 0.82,
+      whaleWalletEvidence: "UNKNOWN_PUBLIC_AGGREGATE_ONLY",
+    };
+    const result = evaluateSwarmShadow(ctx);
+    expect(result.specialists.onchainWhale.state).toBe("KNOWN");
+    expect(result.specialists.onchainWhale.evidenceFamily).toBe("derivatives");
+    expect(result.specialists.onchainWhale.score).toBeLessThan(0.5);
+    expect(result.specialists.onchainWhale.reliability).toBeLessThanOrEqual(0.78);
+    expect(
+      result.specialists.onchainWhale.reasons.some((reason) =>
+        reason.includes("wallet-level whale evidence"),
+      ),
+    ).toBe(true);
+    expect(result.executionBoundary.positionAuthorityEffectUsd).toBe(0);
+  });
+
+  it("rejects untrusted positioning provenance", () => {
+    const ctx = baseContext();
+    ctx.nowMs = Date.parse("2026-10-03T12:10:00Z");
+    ctx.perpPositioning = {
+      provider: "hyperliquid",
+      provenance: "UNVERIFIED_IMPORT",
+      observedAt: "2026-10-03T12:00:00Z",
+      crowdingState: "CROWDED_SHORT",
+      flowState: "SHORT_COVERING",
+      confidence: 1,
+      whaleWalletEvidence: "UNKNOWN_PUBLIC_AGGREGATE_ONLY",
+    };
+    const result = evaluateSwarmShadow(ctx);
+    expect(result.specialists.onchainWhale.state).toBe("UNKNOWN");
+  });
+
+  it("keeps stale perp positioning UNKNOWN", () => {
+    const ctx = baseContext();
+    ctx.nowMs = Date.parse("2026-10-03T13:00:01Z");
+    ctx.perpPositioning = {
+      provider: "hyperliquid",
+      provenance: "HYPERLIQUID_META_AND_ASSET_CTXS",
+      observedAt: "2026-10-03T12:00:00Z",
+      crowdingState: "BALANCED",
+      flowState: "NO_LARGE_FLOW_SIGNAL",
+      confidence: 0.8,
+      whaleWalletEvidence: "UNKNOWN_PUBLIC_AGGREGATE_ONLY",
+    };
+    const result = evaluateSwarmShadow(ctx);
+    expect(result.specialists.onchainWhale.state).toBe("UNKNOWN");
+  });
+
   it("cannot escalate Strategy 2.1 execution authority", () => {
     const result = evaluateSwarmShadow(baseContext());
     expect(result.authority).toBe("SHADOW_ONLY_NO_TRADING_AUTHORITY");

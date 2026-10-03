@@ -203,3 +203,146 @@ export async function readSwarmLedger(
     .reverse();
   return { ...data, records };
 }
+
+
+export type SwarmCalibrationMetric = {
+  sampleSize: number;
+  averageReturnPct: number | null;
+  positiveReturnRatePct: number | null;
+  pearsonScoreReturn: number | null;
+  highScoreSampleSize: number;
+  highScoreAverageReturnPct: number | null;
+  lowScoreSampleSize: number;
+  lowScoreAverageReturnPct: number | null;
+  highMinusLowReturnPct: number | null;
+};
+
+export type SwarmCalibrationSummary = {
+  horizon: SwarmOutcomeHorizon;
+  symbol: string | null;
+  status: "COLLECTING" | "EVALUABLE";
+  minimumEvaluableSamples: 30;
+  promotionAuthority: "NONE_SHADOW_ONLY";
+  returnBasis: "REFERENCE_PRICE_MARK_TO_MARKET_NOT_EXECUTED_PNL";
+  highScoreThreshold: 60;
+  lowScoreThreshold: 40;
+  sampleSize: number;
+  consensus: SwarmCalibrationMetric;
+  specialists: Record<string, SwarmCalibrationMetric>;
+};
+
+function average(values: number[]): number | null {
+  return values.length
+    ? values.reduce((sum, value) => sum + value, 0) / values.length
+    : null;
+}
+
+function pearson(pairs: Array<{ score: number; value: number }>): number | null {
+  if (pairs.length < 3) return null;
+  const meanScore = average(pairs.map((pair) => pair.score));
+  const meanValue = average(pairs.map((pair) => pair.value));
+  if (meanScore == null || meanValue == null) return null;
+  let covariance = 0;
+  let scoreVariance = 0;
+  let valueVariance = 0;
+  for (const pair of pairs) {
+    const scoreDelta = pair.score - meanScore;
+    const valueDelta = pair.value - meanValue;
+    covariance += scoreDelta * valueDelta;
+    scoreVariance += scoreDelta ** 2;
+    valueVariance += valueDelta ** 2;
+  }
+  if (scoreVariance <= 0 || valueVariance <= 0) return null;
+  return covariance / Math.sqrt(scoreVariance * valueVariance);
+}
+
+function calibrationMetric(
+  pairs: Array<{ score: number; value: number }>,
+): SwarmCalibrationMetric {
+  const returns = pairs.map((pair) => pair.value);
+  const high = pairs.filter((pair) => pair.score >= 60).map((pair) => pair.value);
+  const low = pairs.filter((pair) => pair.score <= 40).map((pair) => pair.value);
+  const highAverage = average(high);
+  const lowAverage = average(low);
+  return {
+    sampleSize: pairs.length,
+    averageReturnPct: average(returns),
+    positiveReturnRatePct: returns.length
+      ? (returns.filter((value) => value > 0).length / returns.length) * 100
+      : null,
+    pearsonScoreReturn: pearson(pairs),
+    highScoreSampleSize: high.length,
+    highScoreAverageReturnPct: highAverage,
+    lowScoreSampleSize: low.length,
+    lowScoreAverageReturnPct: lowAverage,
+    highMinusLowReturnPct:
+      highAverage != null && lowAverage != null ? highAverage - lowAverage : null,
+  };
+}
+
+function normalizedSpecialistScore(score: unknown): number | null {
+  if (typeof score !== "number" || !Number.isFinite(score)) return null;
+  if (score >= 0 && score <= 1) return score * 100;
+  if (score >= 0 && score <= 100) return score;
+  return null;
+}
+
+export async function summarizeSwarmCalibration(
+  path: string,
+  options: {
+    horizon: SwarmOutcomeHorizon;
+    symbol?: string;
+  },
+): Promise<SwarmCalibrationSummary> {
+  const data = await loadFile(path);
+  const symbol = options.symbol?.toUpperCase() ?? null;
+  const rows = data.records.flatMap((record) => {
+    if (symbol && record.symbol !== symbol) return [];
+    const evaluation = record.evaluations.find(
+      (item) =>
+        item.horizon === options.horizon &&
+        item.status === "RESOLVED" &&
+        typeof item.returnPct === "number" &&
+        Number.isFinite(item.returnPct),
+    );
+    if (!evaluation || evaluation.returnPct == null) return [];
+    return [{ record, returnPct: evaluation.returnPct }];
+  });
+
+  const consensusPairs = rows.flatMap(({ record, returnPct }) => {
+    const score = record.swarm?.consensus?.score;
+    return typeof score === "number" && Number.isFinite(score)
+      ? [{ score, value: returnPct }]
+      : [];
+  });
+
+  const specialistIds = new Set<string>();
+  for (const { record } of rows)
+    for (const key of Object.keys(record.swarm?.specialists ?? {}))
+      specialistIds.add(key);
+
+  const specialists: Record<string, SwarmCalibrationMetric> = {};
+  for (const id of specialistIds) {
+    const pairs = rows.flatMap(({ record, returnPct }) => {
+      const specialist = (record.swarm?.specialists as Record<string, any> | undefined)?.[id];
+      if (!specialist || specialist.state !== "KNOWN") return [];
+      const score = normalizedSpecialistScore(specialist.score);
+      return score == null ? [] : [{ score, value: returnPct }];
+    });
+    specialists[id] = calibrationMetric(pairs);
+  }
+
+  return {
+    horizon: options.horizon,
+    symbol,
+    status: rows.length >= 30 ? "EVALUABLE" : "COLLECTING",
+    minimumEvaluableSamples: 30,
+    promotionAuthority: "NONE_SHADOW_ONLY",
+    returnBasis: "REFERENCE_PRICE_MARK_TO_MARKET_NOT_EXECUTED_PNL",
+    highScoreThreshold: 60,
+    lowScoreThreshold: 40,
+    sampleSize: rows.length,
+    consensus: calibrationMetric(consensusPairs),
+    specialists,
+  };
+}
