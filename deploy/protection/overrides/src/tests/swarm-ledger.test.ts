@@ -60,7 +60,7 @@ function syntheticRecord(
       specialist.effectiveWeight = 0.1;
     }
   }
-  const generatedAt = new Date(Date.parse("2026-10-01T00:00:00Z") + index * 10_000).toISOString();
+  const generatedAt = new Date(Date.parse("2026-10-01T00:00:00Z") + index * 3 * 3_600_000).toISOString();
   return {
     id: `synthetic-${index}`,
     generatedAt,
@@ -160,6 +160,8 @@ describe("swarm outcome ledger", () => {
 
     const calibration = await summarizeSwarmCalibration(path, { horizon: "30m" });
     expect(calibration.status).toBe("EVALUABLE");
+    expect(calibration.independentEpisodeCount).toBe(40);
+    expect(calibration.distinctUtcDays).toBeGreaterThanOrEqual(3);
     expect(calibration.attribution.entry.status).toBe("POSITIVE_EDGE");
     expect(calibration.attribution.entry.shrunkPartialCorrelation).toBeGreaterThan(0.08);
     expect(calibration.attribution.entry.directionalLiftPctPoints).toBeGreaterThan(2);
