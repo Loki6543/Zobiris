@@ -9,3 +9,5 @@ Authority remains SHADOW_ONLY. The main ZOBIRIS service reports fully unblocked 
 Actual-fill reconciliation is intentionally not auto-wired in this integration because the current normalized Kraken trade-history record does not preserve enough verified pair provenance to safely manufacture a Kraken WebSocket pair.
 
 Railway service configuration uses the repository root as build context with `deploy/evidence-sidecar/Dockerfile` selected explicitly, a private `zobiris-evidence` endpoint, one `us-west2` replica, and a dedicated `/data` volume.
+
+The Railway service uses `/deploy/evidence-sidecar` as an isolated monorepo root and `Dockerfile.isolated` as its Dockerfile, preventing the repository-level main-app `railway.json` from applying to this sidecar.
