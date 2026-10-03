@@ -18,6 +18,10 @@ describe("signal certification",()=>{
   const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,marketState:"RISK_ON",pilotState:"QUALIFIED",eligibility,records:records(40) as any});
   expect(r.status).toBe("STABLE_SHADOW");expect(r.authority).toBe("SHADOW_ONLY_NO_ENTRY_SCORE_CHANGE");expect(r.execution.knownRoundTripCostBps).toBe(10);
  });
+ it("does not treat missing execution impact as zero",()=>{
+  const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,pilotState:"QUALIFIED",eligibility:{...eligibility,entryImpactP95Bps:null},records:records(40) as any});
+  expect(r.execution.entryImpactP95Bps).toBeNull();expect(r.status).toBe("INSUFFICIENT_SAMPLE");
+ });
  it("detects parameter fragility",()=>{
   const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,pilotState:"QUALIFIED",eligibility,records:records(40,95.5) as any});
   expect(r.perturbation.fragile).toBe(true);expect(r.status).toBe("FRAGILE");
