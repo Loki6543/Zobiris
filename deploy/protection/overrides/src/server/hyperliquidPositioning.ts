@@ -160,6 +160,9 @@ async function fetchHyperliquidJson(
     body: JSON.stringify({ type: "metaAndAssetCtxs" }),
   });
   if (!response.ok) throw new Error("Hyperliquid positioning unavailable");
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json"))
+    throw new Error("Hyperliquid positioning response is not JSON");
   const length = Number(response.headers.get("content-length"));
   if (Number.isFinite(length) && length > MAX_RESPONSE_BYTES)
     throw new Error("Hyperliquid positioning response too large");
