@@ -244,6 +244,87 @@ export function parseHyperliquidPositioning(payload: unknown): ParsedContext[] {
   return rows;
 }
 
+function isHyperliquidPositioningSummary(
+  value: unknown,
+): value is HyperliquidPositioningSummary {
+  if (value == null || typeof value !== "object" || Array.isArray(value))
+    return false;
+  const record = value as Record<string, unknown>;
+  const nullableNumbers = [
+    record.oraclePx,
+    record.prevDayPx,
+    record.dayChangePct,
+    record.fundingRate,
+    record.fundingPercentile,
+    record.premiumPct,
+    record.premiumPercentile,
+    record.openInterestUnits,
+    record.openInterestUsd,
+    record.dayNtlVolumeUsd,
+    record.volumeToOpenInterest,
+    record.priceChangeSincePriorPct,
+    record.oiChangePct,
+    record.oiAbsoluteMovePercentile,
+    record.fundingChangeBps,
+  ];
+  const nullableNumbersValid = nullableNumbers.every(
+    (field) =>
+      field === null ||
+      (typeof field === "number" && Number.isFinite(field)),
+  );
+  const percentilesValid = [
+    record.fundingPercentile,
+    record.premiumPercentile,
+    record.oiAbsoluteMovePercentile,
+  ].every(
+    (field) =>
+      field === null ||
+      (typeof field === "number" &&
+        Number.isFinite(field) &&
+        field >= 0 &&
+        field <= 1),
+  );
+  const previousObservedAtValid =
+    record.previousObservedAt === null ||
+    (typeof record.previousObservedAt === "string" &&
+      Number.isFinite(Date.parse(record.previousObservedAt)));
+  return (
+    record.provider === "hyperliquid" &&
+    record.provenance === "HYPERLIQUID_META_AND_ASSET_CTXS" &&
+    record.authority === "SHADOW_ONLY_NO_TRADING_AUTHORITY" &&
+    typeof record.symbol === "string" &&
+    /^[A-Z0-9]{2,20}$/.test(record.symbol) &&
+    typeof record.observedAt === "string" &&
+    Number.isFinite(Date.parse(record.observedAt)) &&
+    typeof record.markPx === "number" &&
+    Number.isFinite(record.markPx) &&
+    record.markPx > 0 &&
+    nullableNumbersValid &&
+    percentilesValid &&
+    previousObservedAtValid &&
+    [
+      "CROWDED_LONG",
+      "LONG_BIAS",
+      "BALANCED",
+      "SHORT_BIAS",
+      "CROWDED_SHORT",
+    ].includes(String(record.crowdingState)) &&
+    [
+      "LEVERAGED_LONG_BUILD",
+      "LEVERAGED_SHORT_BUILD",
+      "SHORT_COVERING",
+      "LONG_FLUSH",
+      "NO_LARGE_FLOW_SIGNAL",
+      "DELTA_UNAVAILABLE",
+    ].includes(String(record.flowState)) &&
+    typeof record.confidence === "number" &&
+    Number.isFinite(record.confidence) &&
+    record.confidence >= 0 &&
+    record.confidence <= 1 &&
+    record.whaleWalletEvidence === "UNKNOWN_PUBLIC_AGGREGATE_ONLY"
+  );
+}
+
 async function loadHistory(path: string): Promise<HyperliquidHistoryFile> {
   try {
     const raw = JSON.parse(await readFile(path, "utf8"));
@@ -255,7 +336,7 @@ async function loadHistory(path: string): Promise<HyperliquidHistoryFile> {
     return {
       version: "hyperliquid-positioning-v1",
       updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : null,
-      records: raw.records,
+      records: raw.records.filter(isHyperliquidPositioningSummary),
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return emptyHistory();
