@@ -60,6 +60,7 @@ export type SignalCertification = {
     roundTripFeeBps: number | null;
     knownRoundTripCostBps: number | null;
     feesKnown: boolean;
+    feeSource: string | null;
   };
   regime: {
     marketState: string | null;
@@ -124,6 +125,12 @@ function executionCosts(eligibility: any) {
   );
   const roundTripFeeBps =
     explicitRoundTripFee ?? (feePerSide === null ? null : feePerSide * 2);
+  const feeSource =
+    typeof eligibility?.feeSource === "string" && eligibility.feeSource.length
+      ? eligibility.feeSource
+      : roundTripFeeBps !== null
+        ? "UNSPECIFIED_INPUT"
+        : null;
   const knownRoundTripCostBps =
     entryImpactP95Bps !== null && exitImpactP95Bps !== null
       ? entryImpactP95Bps + exitImpactP95Bps + (roundTripFeeBps ?? 0)
@@ -136,6 +143,7 @@ function executionCosts(eligibility: any) {
     roundTripFeeBps,
     knownRoundTripCostBps,
     feesKnown: roundTripFeeBps !== null,
+    feeSource,
   };
 }
 
@@ -460,6 +468,7 @@ export function certifyEntrySignal(args: {
       roundTripFeeBps: round(execution.roundTripFeeBps),
       knownRoundTripCostBps: round(execution.knownRoundTripCostBps),
       feesKnown: execution.feesKnown,
+      feeSource: execution.feeSource,
     },
     regime: {
       marketState: args.marketState ?? null,
@@ -471,7 +480,7 @@ export function certifyEntrySignal(args: {
       "Walk-forward uses timestamped forward outcome episodes, not reconstructed candles.",
       "Sampled limit touches are not confirmed exchange fills.",
       "Perturbation uses seven-day maximum adverse excursion as a touch proxy.",
-      "A stable label requires current Kraken p95 spread, entry/exit impact, stressed-exit impact, and an explicit round-trip fee input; missing execution evidence fails closed instead of assuming zero.",
+      "A stable label requires current Kraken p95 spread, entry/exit impact, stressed-exit impact, and a finite fee input. Fee provenance is reported separately; missing execution evidence fails closed instead of assuming zero.",
       "Regime labels are stored only for newer outcome episodes; older episodes can limit regime-stratified confidence.",
       "Certification is shadow-only and cannot change qualification, score, order size, or the production reference limit.",
     ],
