@@ -2,7 +2,7 @@
 
 User-approved thresholds supersede the earlier whitepaper values:
 
-- Seven-day positive market breadth: at least 50% (previously 55%).
+- Seven-day positive market breadth: at least 40% (revised from 55%, then 50%).
 - Asset 30-day return: −35% through +45%, inclusive.
 - Asset 90-day return: −70% through +55%, inclusive.
 
