@@ -6,7 +6,7 @@ function records(n:number,end=105){
  const start=Date.parse("2025-01-01T00:00:00Z");
  return Array.from({length:n},(_,i)=>{
   const g=start+i*8*86400000,d=g+7*86400000,o=d+60000;
-  return {measurementVersion:"episodes-v2",outcomeId:"e"+i,symbol:"ETH",generatedAt:new Date(g).toISOString(),action:"HOLD",assetState:"QUALIFIED",referencePriceUsd:100,proposedLimitUsd:95,sampledTouchAt:new Date(g+86400000).toISOString(),actualFill:null,opportunityScore:70,researchScore:60,evidenceQuality:.8,thesisId:"t"+i,strategyStatus:"QUALIFIED",recommendedPullbackPct:5,maxFavorablePct:8,maxAdversePct:-7,evaluations:[{status:"RESOLVED",horizon:"7D",dueAt:new Date(d).toISOString(),evaluatedAt:new Date(o+60000).toISOString(),priceObservedAt:new Date(o).toISOString(),priceUsd:end,returnPct:end-100}]};
+  return {measurementVersion:"episodes-v2",outcomeId:"e"+i,symbol:"ETH",generatedAt:new Date(g).toISOString(),referencePriceObservedAt:new Date(g).toISOString(),action:"HOLD",assetState:"QUALIFIED",referencePriceUsd:100,proposedLimitUsd:95,sampledTouchAt:new Date(g+86400000).toISOString(),actualFill:null,opportunityScore:70,researchScore:60,evidenceQuality:.8,thesisId:"t"+i,strategyStatus:"QUALIFIED",recommendedPullbackPct:5,maxFavorablePct:8,maxAdversePct:-7,evaluations:[{status:"RESOLVED",horizon:"7D",dueAt:new Date(d).toISOString(),evaluatedAt:new Date(o+60000).toISOString(),priceObservedAt:new Date(o).toISOString(),priceUsd:end,returnPct:end-100}]};
  });
 }
 describe("signal certification",()=>{
@@ -33,6 +33,11 @@ describe("signal certification",()=>{
   sample[0].sampledTouchAt=new Date(due+30000).toISOString();
   const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,pilotState:"QUALIFIED",eligibility,records:sample as any});
   expect(r.sample.sampledTouches).toBe(0);expect(r.sample.touchRate).toBe(0);
+ });
+ it("rejects episodes without an explicit reference observation timestamp",()=>{
+  const sample=records(1) as any[];delete sample[0].referencePriceObservedAt;
+  const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,pilotState:"QUALIFIED",eligibility,records:sample as any});
+  expect(r.pointInTimeAudit.acceptedEpisodes).toBe(0);expect(r.pointInTimeAudit.rejectedEpisodes).toBe(1);
  });
  it("rejects feature timestamps after the decision",()=>{
   const sample=records(1) as any[];sample[0].referencePriceObservedAt=new Date(Date.parse(sample[0].generatedAt)+60000).toISOString();
