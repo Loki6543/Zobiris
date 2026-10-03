@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { publicSourceUrl, type EvidenceRepo } from "./researchEvidence.js";
 import { evaluateReassessment } from "./reassessment.js";
+import { cryptoBertStocktwitsAdapter } from "./socialIntelligence.js";
 import {
   parseStocktwitsFirestreamSnapshot,
   STOCKTWITS_FIRESTREAM_ALL_SYMBOLS_URL,
@@ -322,5 +323,6 @@ export function researchAdapters(
           }));
       },
     },
+    cryptoBertStocktwitsAdapter(env, fetcher),
   ];
 }

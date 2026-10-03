@@ -4,6 +4,7 @@ import {
   type EntryRules,
 } from "../shared/entryPlan.js";
 import { PROBE_TYPICAL_USD } from "../ui/simplePortfolioData.js";
+import { priceSentimentShadow, type SocialIntelligenceSummary } from "./socialIntelligence.js";
 
 // Presentation only: consume production strategy outputs; never recalculate qualification.
 const states = new Set([
@@ -49,6 +50,7 @@ type Input = {
   rules: Record<string, EntryRules>;
   now?: number;
   rewardRemaining?: number | null;
+  socialIntelligence?: Map<string, SocialIntelligenceSummary>;
 };
 
 export function buildZobirisWatchlist({
@@ -58,6 +60,7 @@ export function buildZobirisWatchlist({
   rules,
   now = Date.now(),
   rewardRemaining = null,
+  socialIntelligence = new Map(),
 }: Input) {
   const ranked = list(snapshot?.rankedAssets),
     bySymbol = new Map(ranked.map((a) => [a.symbol, a]));
@@ -232,6 +235,10 @@ export function buildZobirisWatchlist({
         nextDollar: score(strategy?.nextDollarScore),
         research: score(strategy?.researchScore),
       },
+      socialShadow: priceSentimentShadow(
+        socialIntelligence.get(symbol),
+        number(rotation?.change24hPct),
+      ),
       entry: {
         baselineDiscountPct: discount,
         reentry,

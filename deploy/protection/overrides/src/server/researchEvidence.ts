@@ -67,6 +67,16 @@ const schema = z.object({
       periodEnd: date,
     })
     .optional(),
+  sentiment: z
+    .object({
+      model: z.literal("ElKulako/cryptobert"),
+      bearish: z.number().min(0).max(1),
+      neutral: z.number().min(0).max(1),
+      bullish: z.number().min(0).max(1),
+      net: z.number().min(-1).max(1),
+      confidence: z.number().min(0).max(1),
+    })
+    .optional(),
 });
 export type ResearchEvidence = z.infer<typeof schema> & {
   id: string;

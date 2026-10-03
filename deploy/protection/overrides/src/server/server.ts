@@ -534,7 +534,18 @@ const API: ApiRouter = {
       catch { /* Missing reward classification must not hide a balance. */ }
       finally {protection?.close();}
       // Cached account context only: this GET cannot trade or change the strategy snapshot.
-      jsonResponse(res,200,buildZobirisWatchlist({snapshot,watchlist,account:getAccountView(),rules,rewardRemaining}));
+      // CryptoBERT remains shadow-only: it is exposed beside the entry plan but cannot alter
+      // qualification, score, order size or reference limit until outcome calibration promotes it.
+      let socialIntelligence = new Map<string, any>();
+      try {
+        const research = currentResearch();
+        socialIntelligence = new Map(
+          research.assets.map((asset) => [asset.symbol, asset.socialIntelligence]),
+        );
+      } catch {
+        // Research enrichment must never take down the decision-state feed.
+      }
+      jsonResponse(res,200,buildZobirisWatchlist({snapshot,watchlist,account:getAccountView(),rules,rewardRemaining,socialIntelligence}));
     } catch { jsonResponse(res,503,{error:'Zobiris decision-state feed unavailable'}); }
     finally {storage.close();}
   },

@@ -127,6 +127,39 @@ describe("Unity watchlist projection", () => {
     expect(r.assets[0].blockedReason).toBeNull();
     expect(JSON.stringify(f)).toBe(before);
   });
+  it("exposes CryptoBERT price-sentiment context without changing entry authority", () => {
+    const f = fixture();
+    const baseline = buildZobirisWatchlist(f).assets[0];
+    const socialIntelligence = new Map([
+      [
+        "ETH",
+        {
+          available: true,
+          model: "ElKulako/cryptobert" as const,
+          authority: "SHADOW_ONLY_NO_TRADING_AUTHORITY" as const,
+          horizons: {
+            "8h": {
+              hours: 8,
+              samples: 4,
+              bearish: 0.05,
+              neutral: 0.15,
+              bullish: 0.8,
+              net: 0.75,
+              confidence: 0.8,
+              acceleration: 0.2,
+              crowding: "BULLISH" as const,
+            },
+          },
+        },
+      ],
+    ]);
+    f.snapshot.rankedAssets[0].strategy21.delayedRotation.change24hPct = 6;
+    const enriched = buildZobirisWatchlist({ ...f, socialIntelligence }).assets[0];
+    expect(enriched.socialShadow.state).toBe("BULLISH_CROWDING_PULLBACK_RISK");
+    expect(enriched.socialShadow.authority).toBe("SHADOW_ONLY_NO_ENTRY_SCORE_CHANGE");
+    expect(enriched.entry.referenceLimit).toBe(baseline.entry.referenceLimit);
+    expect(enriched.scores).toEqual(baseline.scores);
+  });
   it("retains pattern state but blocks downstream execution failures", () => {
     const f = fixture();
     f.snapshot.rankedAssets[0].strategy21.positionAuthority.maxNextOrderUsd = 0;

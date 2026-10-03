@@ -3,6 +3,7 @@ import { importResearchEvidence, safeProviderJson, type ResearchAsset } from "./
 import type { EvidenceRepo } from "./researchEvidence.js";
 import type { OutcomeQuote } from "./outcomeMemory.js";
 import { evaluateReassessment } from "./reassessment.js";
+import { summarizeSocialIntelligence } from "./socialIntelligence.js";
 export function snapshotFreshness(at: number | null, now = Date.now()) {
   return at == null || !Number.isFinite(at) || at > now
     ? "missing"
@@ -91,6 +92,7 @@ export function researchView(
       newsStatus: status("news"),
       socialStatus: status("social"),
       review,
+      socialIntelligence: summarizeSocialIntelligence(evidence, now),
       evidence,
     };
   });
@@ -124,7 +126,7 @@ export function researchView(
     },
     attentionIgnition: attention,
     assets: rows,
-    providers: ["parallel-news", "stocktwits"].map(
+    providers: ["parallel-news", "stocktwits", "cryptobert-stocktwits"].map(
       (p) =>
         repo.getState("provider:" + p) ?? {
           provider: p,
