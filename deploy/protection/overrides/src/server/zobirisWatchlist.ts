@@ -5,6 +5,7 @@ import {
 } from "../shared/entryPlan.js";
 import { PROBE_TYPICAL_USD } from "../ui/simplePortfolioData.js";
 import { priceSentimentShadow, type SocialIntelligenceSummary } from "./socialIntelligence.js";
+import { buildCrossAssetGraph } from "./crossAssetGraph.js";
 
 // Presentation only: consume production strategy outputs; never recalculate qualification.
 const states = new Set([
@@ -64,6 +65,18 @@ export function buildZobirisWatchlist({
 }: Input) {
   const ranked = list(snapshot?.rankedAssets),
     bySymbol = new Map(ranked.map((a) => [a.symbol, a]));
+  const graphShadow = buildCrossAssetGraph(
+    ranked.map((asset) => {
+      const rotation = asset?.strategy21?.delayedRotation;
+      return {
+        symbol: String(asset?.symbol ?? "").toUpperCase(),
+        change24hPct: number(rotation?.change24hPct),
+        change7dPct: number(rotation?.change7dPct),
+        change30dPct: number(rotation?.change30dPct),
+        change90dPct: number(rotation?.change90dPct),
+      };
+    }),
+  );
   const accountFresh =
     account?.privateAccountSynced === true &&
     !account.lastError &&
@@ -162,6 +175,7 @@ export function buildZobirisWatchlist({
       eligibleMax = number(strategy?.eligibility?.maximumOrderUsd);
     const eligibility = strategy?.eligibility,
       integrity = strategy?.researchIntegrity;
+    const graph = graphShadow.get(symbol) ?? null;
     const failures = list(eligibility?.failureReasons).filter(
       (v) => typeof v === "string",
     );
@@ -239,12 +253,30 @@ export function buildZobirisWatchlist({
         socialIntelligence.get(symbol),
         number(rotation?.change24hPct),
       ),
+      graphShadow: graph,
       entry: {
         baselineDiscountPct: discount,
         reentry,
         effectiveDiscountPct: effective,
         referencePrice: price,
         referenceLimit: reasons.length ? null : check.limit,
+        graphShadowPullbackAdjustmentPct:
+          graph?.entryPullbackAdjustmentPct ?? null,
+        graphShadowReferencePrice:
+          price !== null &&
+          effective !== null &&
+          graph?.available === true &&
+          (graph.entryPullbackAdjustmentPct ?? 0) > 0
+            ? price *
+              (1 -
+                Math.min(
+                  10,
+                  effective + graph.entryPullbackAdjustmentPct,
+                ) /
+                  100)
+            : null,
+        graphShadowAuthority:
+          graph?.authority ?? "SHADOW_ONLY_NO_ENTRY_SCORE_CHANGE",
       },
       position: {
         held: quantity === null ? null : quantity > 0,
