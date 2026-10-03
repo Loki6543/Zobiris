@@ -44,6 +44,9 @@ describe("strategy validation lab", () => {
     expect(report.walkForward.passed).toBe(true);
     expect(report.vault.passed).toBe(true);
     expect(report.status).toBe("SHADOW_VALIDATED");
+    expect(report.certification.classification).toBe("CERTIFIED_SHADOW");
+    expect(report.certification.stable).toBe(true);
+    expect(report.certification.stressPassRate).toBe(1);
     expect(report.liveOrderAuthority).toBe(false);
   });
 
@@ -77,6 +80,16 @@ describe("strategy validation lab", () => {
     const report = validateStrategyEpisodes(sample);
     expect(report.oos.metrics.averageNetReturnPct).toBeCloseTo(-0.10, 9);
     expect(report.status).toBe("FAILED_OOS");
+    expect(report.certification.classification).toBe("REJECTED");
+  });
+
+  it("marks a validation-pass strategy fragile when modest cost/edge stress breaks the vault edge", () => {
+    const sample = episodes(120, () => 0.25, () => 0.05);
+    const report = validateStrategyEpisodes(sample);
+    expect(report.status).toBe("SHADOW_VALIDATED");
+    expect(report.certification.classification).toBe("FRAGILE");
+    expect(report.certification.stressPassRate).toBeLessThan(1);
+    expect(report.certification.executionEvidenceRequiredForLiveUse).toBe(true);
   });
 
   it("adapts qualified forward outcome episodes by strategy tag without granting authority", () => {
@@ -119,6 +132,9 @@ describe("strategy validation lab", () => {
     expect(lab.reports).toHaveLength(1);
     expect(lab.reports[0]!.strategyTag).toBe("ENTRY_MODEL_V1");
     expect(lab.reports[0]!.report.status).toBe("SHADOW_VALIDATED");
+    expect(lab.reports[0]!.report.certification.classification).toBe("CERTIFIED_SHADOW");
+    expect(lab.executionEvidence.executableFillCertified).toBe(false);
+    expect(lab.factorAudit.find((item) => item.factor === "onchain")?.usedInCertification).toBe(false);
     expect(lab.liveOrderAuthority).toBe(false);
   });
 });
