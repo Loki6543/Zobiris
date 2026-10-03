@@ -5,7 +5,7 @@ export function parseEntryRules(result:Record<string,any>,now=Date.now()):Record
   const parts=String(r?.wsname??'').split('/');if(parts.length!==2||parts[1]!=='USD'||pair.endsWith('.d'))continue;
   const symbol=parts[0]==='XBT'?'BTC':parts[0]==='XDG'?'DOGE':parts[0]!;
   const tickSize=r.tick_size==null?(Number.isInteger(r.pair_decimals)?10**(-r.pair_decimals):NaN):Number(r.tick_size);
-  const rule={symbol,pair,wsPair:String(r.wsname),tickSize,lotDecimals:r.lot_decimals,orderMin:Number(r.ordermin),costMin:Number(r.costmin),status:String(r.status??'unknown'),observedAt:new Date(now).toISOString()};
+  const rule={symbol,pair,wsPair:`${symbol}/USD`,tickSize,lotDecimals:r.lot_decimals,orderMin:Number(r.ordermin),costMin:Number(r.costmin),status:String(r.status??'unknown'),observedAt:new Date(now).toISOString()};
   rows.set(symbol,[...(rows.get(symbol)??[]),rule]);
  }
  return Object.fromEntries([...rows].filter(([,v])=>v.length===1).map(([s,v])=>[s,v[0]!]));
