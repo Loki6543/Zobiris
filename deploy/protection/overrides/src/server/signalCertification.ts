@@ -376,8 +376,10 @@ export function certifyEntrySignal(args: {
   const sampledTouches = baselineReturns.length;
   const touchRate = accepted.length ? sampledTouches / accepted.length : 0;
   const executionEvidenceComplete =
+    execution.spreadP95Bps !== null &&
     execution.entryImpactP95Bps !== null &&
     execution.exitImpactP95Bps !== null &&
+    execution.stressedExitImpactBps !== null &&
     execution.feesKnown;
   const enoughSample =
     accepted.length >= MIN_RESOLVED &&
@@ -469,7 +471,7 @@ export function certifyEntrySignal(args: {
       "Walk-forward uses timestamped forward outcome episodes, not reconstructed candles.",
       "Sampled limit touches are not confirmed exchange fills.",
       "Perturbation uses seven-day maximum adverse excursion as a touch proxy.",
-      "A stable label requires current Kraken p95 entry/exit impact and an explicit round-trip fee input; missing fee evidence fails closed instead of assuming zero.",
+      "A stable label requires current Kraken p95 spread, entry/exit impact, stressed-exit impact, and an explicit round-trip fee input; missing execution evidence fails closed instead of assuming zero.",
       "Regime labels are stored only for newer outcome episodes; older episodes can limit regime-stratified confidence.",
       "Certification is shadow-only and cannot change qualification, score, order size, or the production reference limit.",
     ],
