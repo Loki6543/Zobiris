@@ -27,6 +27,13 @@ describe("signal certification",()=>{
   const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,pilotState:"QUALIFIED",eligibility:{...eligibility,entryImpactP95Bps:null},records:records(40) as any});
   expect(r.execution.entryImpactP95Bps).toBeNull();expect(r.status).toBe("INSUFFICIENT_SAMPLE");
  });
+ it("does not count a sampled touch after the 7D horizon",()=>{
+  const sample=records(1) as any[];
+  const due=Date.parse(sample[0].evaluations[0].dueAt);
+  sample[0].sampledTouchAt=new Date(due+30000).toISOString();
+  const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,pilotState:"QUALIFIED",eligibility,records:sample as any});
+  expect(r.sample.sampledTouches).toBe(0);expect(r.sample.touchRate).toBe(0);
+ });
  it("rejects feature timestamps after the decision",()=>{
   const sample=records(1) as any[];sample[0].referencePriceObservedAt=new Date(Date.parse(sample[0].generatedAt)+60000).toISOString();
   const r=certifyEntrySignal({symbol:"ETH",baselinePullbackPct:5,pilotState:"QUALIFIED",eligibility,records:sample as any});
