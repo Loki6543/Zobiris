@@ -557,6 +557,8 @@ const API: ApiRouter = {
     try{jsonResponse(res,200,{rules:await entryRules(),executionEnabled:false});}catch(e){errorResponse(res,503,e);}
   },
   "GET /api/swarm/outcomes": async (req,res)=>{
+    if (!isAuthenticated(req, SECURITY))
+      return send401(res, "swarm outcome calibration requires Bearer auth");
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
       const symbol = url.searchParams.get("symbol")?.toUpperCase();
