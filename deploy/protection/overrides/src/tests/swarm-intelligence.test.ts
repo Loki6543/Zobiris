@@ -118,6 +118,16 @@ describe("ZOBIRIS swarm v1 shadow consensus", () => {
     );
   });
 
+  it("contains non-finite inputs instead of poisoning consensus math", () => {
+    const ctx = baseContext();
+    ctx.rotationScore = Number.NaN;
+    (ctx.socialShadow as any).samples = "not-a-number";
+    const result = evaluateSwarmShadow(ctx);
+    expect(Number.isNaN(result.consensus.score)).toBe(false);
+    expect(Number.isNaN(result.consensus.confidencePct)).toBe(false);
+    expect(result.specialists.entry.score).toBe(0.3 * 0.74 + 0.2 * 0.78);
+  });
+
   it("cannot escalate Strategy 2.1 execution authority", () => {
     const result = evaluateSwarmShadow(baseContext());
     expect(result.authority).toBe("SHADOW_ONLY_NO_TRADING_AUTHORITY");
