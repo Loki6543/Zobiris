@@ -546,7 +546,10 @@ const API: ApiRouter = {
       } catch {
         // Research enrichment must never take down the decision-state feed.
       }
-      jsonResponse(res,200,buildZobirisWatchlist({snapshot,watchlist,account:getAccountView(),rules,rewardRemaining,socialIntelligence}));
+      let outcomeRecords: Awaited<ReturnType<typeof readOutcomeMemory>>["records"] = [];
+      try { outcomeRecords = (await readOutcomeMemory(OUTCOME_MEMORY_PATH)).records; }
+      catch { /* Entry certification is shadow-only and must not take down the decision feed. */ }
+      jsonResponse(res,200,buildZobirisWatchlist({snapshot,watchlist,account:getAccountView(),rules,rewardRemaining,socialIntelligence,outcomeRecords}));
     } catch { jsonResponse(res,503,{error:'Zobiris decision-state feed unavailable'}); }
     finally {storage.close();}
   },
