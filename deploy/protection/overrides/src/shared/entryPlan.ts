@@ -3,7 +3,7 @@ export function entryReference(price:number,pullbackPct:number|null|undefined,re
  if(!Number.isFinite(price)||price<=0||typeof pullbackPct!=='number'||!Number.isFinite(pullbackPct)||pullbackPct<4||pullbackPct>8)return null;
  return price*(1-Math.min(10,pullbackPct+(reentry?2:0))/100);
 }
-export type EntryRules={symbol:string;pair:string;tickSize:number;lotDecimals:number;orderMin:number;costMin:number;status:string;observedAt:string};
+export type EntryRules={symbol:string;pair:string;wsPair?:string;tickSize:number;lotDecimals:number;orderMin:number;costMin:number;status:string;observedAt:string};
 export type ValidatedEntry={valid:boolean;reason:string;limit:number|null;quantity:number;notional:number};
 const blocked=(reason:string):ValidatedEntry=>({valid:false,reason,limit:null,quantity:0,notional:0});
 function floorStep(value:number,step:number){const raw=Math.floor(value/step)*step;const rounded=Number(raw.toPrecision(15));return rounded<=value?rounded:Number((raw-step).toPrecision(15));}
