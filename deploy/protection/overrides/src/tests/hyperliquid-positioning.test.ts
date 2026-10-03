@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -136,6 +136,29 @@ describe("Hyperliquid positioning shadow", () => {
       maxAgeMs: 30 * 60_000,
     });
     expect(stale.size).toBe(0);
+  });
+
+  it("filters a malformed persisted record without losing valid history", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "zobiris-hyperliquid-malformed-"));
+    dirs.push(dir);
+    const path = join(dir, "positioning.json");
+    const t0 = Date.parse("2026-10-03T12:00:00Z");
+
+    await collectHyperliquidPositioning(
+      path,
+      ["BTC", "ETH", "SOL"],
+      fetcherFor(payload({ btcOi: 1000 })),
+      t0,
+    );
+    const stored = JSON.parse(await readFile(path, "utf8"));
+    stored.records.push(null, { provider: "hyperliquid", symbol: "BTC" });
+    await writeFile(path, JSON.stringify(stored), "utf8");
+
+    const latest = await readLatestHyperliquidPositioning(path, {
+      now: t0 + 5 * 60_000,
+    });
+    expect(latest.get("BTC")?.provider).toBe("hyperliquid");
+    expect(latest.size).toBe(3);
   });
 
   it("fails closed on a truncated universe/context response", () => {
