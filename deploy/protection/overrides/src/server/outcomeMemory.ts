@@ -24,6 +24,8 @@ export interface DecisionOutcomeRecord {
   outcomeId: string;
   symbol: string;
   generatedAt: string;
+  referencePriceObservedAt?: string | null;
+  regime?: string | null;
   action: string;
   assetState: string;
   referencePriceUsd: number;
@@ -48,6 +50,7 @@ interface OutcomeFile {
 
 export interface SnapshotLike {
   asOf: string;
+  regime?: string;
   rankedAssets: Array<{
     symbol: string;
     strategy21?: {
@@ -124,6 +127,7 @@ function seedToRecord(seed: NonNullable<NonNullable<NonNullable<SnapshotLike["ra
     outcomeId: seed.outcomeId,
     symbol: seed.symbol.toUpperCase(),
     generatedAt: seed.generatedAt,
+    referencePriceObservedAt: typeof seed.priceObservedAt === "string" ? seed.priceObservedAt : null,
     action: String(seed.action ?? "UNKNOWN"),
     assetState: String(seed.assetState ?? "UNKNOWN"),
     referencePriceUsd,
@@ -197,6 +201,7 @@ async function updateMemory(path: string, snapshot: SnapshotLike, observations?:
     if (!seed?.outcomeId || known.has(seed.outcomeId)) continue;
     const record = seedToRecord(seed);
     if (!record) continue;
+    record.regime = typeof snapshot.regime === "string" ? snapshot.regime : null;
     const generated=Date.parse(record.generatedAt),quote=currentPrices.get(record.symbol);
     if(!quote||!Number.isFinite(generated)||generated>asOfMs||asOfMs-generated>15*60000)continue;
     if(data.records.some(r=>r.measurementVersion==='episodes-v2'&&r.symbol===record.symbol&&Math.abs(generated-Date.parse(r.generatedAt))<7*86400000))continue;
