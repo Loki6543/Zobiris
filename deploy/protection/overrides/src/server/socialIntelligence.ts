@@ -186,15 +186,13 @@ export function parseStocktwitsMessageLine(line: string): StreamMessage | null {
         ? data.createdAt
         : "";
   const createdMs = Date.parse(createdAt);
-  const symbols = Array.isArray(data?.symbols)
-    ? [
-        ...new Set(
-          data.symbols
-            .map(normalizedSymbol)
-            .filter((value: string | null): value is string => value !== null),
-        ),
-      ]
-    : [];
+  const symbols: string[] = [];
+  if (Array.isArray(data?.symbols)) {
+    for (const value of data.symbols as unknown[]) {
+      const symbol = normalizedSymbol(value);
+      if (symbol && !symbols.includes(symbol)) symbols.push(symbol);
+    }
+  }
   if (!body || !Number.isFinite(createdMs) || !symbols.length) return null;
   const id =
     data?.id == null
