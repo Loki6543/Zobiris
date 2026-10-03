@@ -217,6 +217,45 @@ export type SwarmCalibrationMetric = {
   highMinusLowReturnPct: number | null;
 };
 
+export type SwarmAttributionStatus =
+  | "COLLECTING"
+  | "POSITIVE_EDGE"
+  | "NEGATIVE_EDGE"
+  | "REDUNDANT"
+  | "MIXED";
+
+export type SwarmWeightReview =
+  | "NO_CHANGE_COLLECTING"
+  | "REVIEW_FOR_MORE_WEIGHT"
+  | "REVIEW_FOR_LESS_WEIGHT"
+  | "REVIEW_FOR_REDUNDANCY"
+  | "KEEP_OBSERVING";
+
+export type SwarmSpecialistAttribution = {
+  specialistId: string;
+  status: SwarmAttributionStatus;
+  weightReview: SwarmWeightReview;
+  automaticWeightChange: false;
+  sampleSize: number;
+  resolvedUniverseSampleSize: number;
+  knownCoveragePct: number;
+  rawScoreReturnCorrelation: number | null;
+  shrunkScoreReturnCorrelation: number | null;
+  consensusWithoutSpecialistCorrelation: number | null;
+  specialistConsensusWithoutCorrelation: number | null;
+  partialCorrelationControllingOtherSpecialists: number | null;
+  shrunkPartialCorrelation: number | null;
+  marginalContributionReturnCorrelation: number | null;
+  directionalSampleSize: number;
+  directionalHitRatePct: number | null;
+  consensusWithoutDirectionalHitRatePct: number | null;
+  directionalLiftPctPoints: number | null;
+  highMinusLowReturnPct: number | null;
+  highScoreSampleSize: number;
+  lowScoreSampleSize: number;
+  evidenceNote: string;
+};
+
 export type SwarmCalibrationSummary = {
   horizon: SwarmOutcomeHorizon;
   symbol: string | null;
@@ -229,6 +268,37 @@ export type SwarmCalibrationSummary = {
   sampleSize: number;
   consensus: SwarmCalibrationMetric;
   specialists: Record<string, SwarmCalibrationMetric>;
+  attribution: Record<string, SwarmSpecialistAttribution>;
+};
+
+export type SwarmCrossHorizonAttribution = {
+  specialistId: string;
+  evaluableHorizons: number;
+  collectingHorizons: number;
+  positiveEdgeHorizons: number;
+  negativeEdgeHorizons: number;
+  redundantHorizons: number;
+  mixedHorizons: number;
+  weightedShrunkPartialCorrelation: number | null;
+  totalAttributedSamples: number;
+  status:
+    | "COLLECTING"
+    | "CONSISTENT_POSITIVE"
+    | "CONSISTENT_NEGATIVE"
+    | "MOSTLY_REDUNDANT"
+    | "MIXED";
+  weightReview: SwarmWeightReview;
+  automaticWeightChange: false;
+};
+
+export type SwarmAttributionReport = {
+  version: "SWARM_ATTRIBUTION_V1";
+  symbol: string | null;
+  authority: "SHADOW_ONLY_NO_AUTOMATIC_WEIGHT_CHANGES";
+  minimumEvaluableSamplesPerHorizon: 30;
+  shrinkagePriorSamples: 50;
+  horizons: Record<SwarmOutcomeHorizon, SwarmCalibrationSummary>;
+  specialists: Record<string, SwarmCrossHorizonAttribution>;
 };
 
 function average(values: number[]): number | null {
@@ -254,6 +324,65 @@ function pearson(pairs: Array<{ score: number; value: number }>): number | null 
   }
   if (scoreVariance <= 0 || valueVariance <= 0) return null;
   return covariance / Math.sqrt(scoreVariance * valueVariance);
+}
+
+function residualize(
+  values: Array<{ target: number; control: number }>,
+): number[] | null {
+  if (values.length < 3) return null;
+  const controlMean = average(values.map((row) => row.control));
+  const targetMean = average(values.map((row) => row.target));
+  if (controlMean == null || targetMean == null) return null;
+  let numerator = 0;
+  let denominator = 0;
+  for (const row of values) {
+    numerator += (row.control - controlMean) * (row.target - targetMean);
+    denominator += (row.control - controlMean) ** 2;
+  }
+  const beta = denominator > 0 ? numerator / denominator : 0;
+  const alpha = targetMean - beta * controlMean;
+  return values.map((row) => row.target - (alpha + beta * row.control));
+}
+
+function partialCorrelation(
+  rows: Array<{ specialist: number; outcome: number; control: number }>,
+): number | null {
+  if (rows.length < 5) return null;
+  const specialistResidual = residualize(
+    rows.map((row) => ({ target: row.specialist, control: row.control })),
+  );
+  const outcomeResidual = residualize(
+    rows.map((row) => ({ target: row.outcome, control: row.control })),
+  );
+  if (!specialistResidual || !outcomeResidual) return null;
+  return pearson(
+    specialistResidual.map((score, index) => ({
+      score,
+      value: outcomeResidual[index]!,
+    })),
+  );
+}
+
+function shrinkCorrelation(value: number | null, sampleSize: number): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  const priorSamples = 50;
+  return value * (sampleSize / (sampleSize + priorSamples));
+}
+
+function directionalHitRate(
+  rows: Array<{ score: number; value: number }>,
+): { sampleSize: number; hitRatePct: number | null } {
+  const directional = rows.filter(
+    (row) => row.score !== 50 && row.value !== 0,
+  );
+  if (!directional.length) return { sampleSize: 0, hitRatePct: null };
+  const hits = directional.filter(
+    (row) => (row.score > 50) === (row.value > 0),
+  ).length;
+  return {
+    sampleSize: directional.length,
+    hitRatePct: (hits / directional.length) * 100,
+  };
 }
 
 function calibrationMetric(
@@ -285,6 +414,154 @@ function normalizedSpecialistScore(score: unknown): number | null {
   if (score >= 0 && score <= 1) return score * 100;
   if (score >= 0 && score <= 100) return score;
   return null;
+}
+
+function knownSpecialistRows(record: SwarmLedgerRecord): Array<{
+  id: string;
+  score: number;
+  weight: number;
+}> {
+  const specialists =
+    record.swarm?.specialists as Record<
+      string,
+      { state?: string; score?: unknown; effectiveWeight?: unknown }
+    > | undefined;
+  if (!specialists) return [];
+  return Object.entries(specialists).flatMap(([id, specialist]) => {
+    if (specialist?.state !== "KNOWN") return [];
+    const score = normalizedSpecialistScore(specialist.score);
+    const weight =
+      typeof specialist.effectiveWeight === "number" &&
+      Number.isFinite(specialist.effectiveWeight) &&
+      specialist.effectiveWeight > 0
+        ? specialist.effectiveWeight
+        : null;
+    return score == null || weight == null ? [] : [{ id, score, weight }];
+  });
+}
+
+function weightedEvidenceScore(
+  rows: Array<{ score: number; weight: number }>,
+): number | null {
+  const totalWeight = rows.reduce((sum, row) => sum + row.weight, 0);
+  if (totalWeight <= 0) return null;
+  return (
+    rows.reduce((sum, row) => sum + row.score * row.weight, 0) / totalWeight
+  );
+}
+
+function classifyAttribution(
+  sampleSize: number,
+  shrunkPartial: number | null,
+  scoreOtherCorrelation: number | null,
+  directionalLift: number | null,
+): { status: SwarmAttributionStatus; weightReview: SwarmWeightReview } {
+  if (sampleSize < 30)
+    return { status: "COLLECTING", weightReview: "NO_CHANGE_COLLECTING" };
+
+  const lift = directionalLift ?? 0;
+  if (
+    scoreOtherCorrelation != null &&
+    Math.abs(scoreOtherCorrelation) >= 0.85 &&
+    (shrunkPartial == null || Math.abs(shrunkPartial) < 0.04) &&
+    Math.abs(lift) < 2
+  )
+    return { status: "REDUNDANT", weightReview: "REVIEW_FOR_REDUNDANCY" };
+
+  if (shrunkPartial != null && shrunkPartial >= 0.08 && lift >= 2)
+    return { status: "POSITIVE_EDGE", weightReview: "REVIEW_FOR_MORE_WEIGHT" };
+
+  if (shrunkPartial != null && shrunkPartial <= -0.08 && lift <= -2)
+    return { status: "NEGATIVE_EDGE", weightReview: "REVIEW_FOR_LESS_WEIGHT" };
+
+  return { status: "MIXED", weightReview: "KEEP_OBSERVING" };
+}
+
+function specialistAttribution(
+  id: string,
+  rows: Array<{ record: SwarmLedgerRecord; returnPct: number }>,
+): SwarmSpecialistAttribution {
+  const attributed = rows.flatMap(({ record, returnPct }) => {
+    const specialists = knownSpecialistRows(record);
+    const specialist = specialists.find((row) => row.id === id);
+    if (!specialist) return [];
+    const others = specialists.filter((row) => row.id !== id);
+    const consensusWithout = weightedEvidenceScore(others);
+    const fullEvidence = weightedEvidenceScore(specialists);
+    if (consensusWithout == null || fullEvidence == null) return [];
+    return [{
+      specialist: specialist.score,
+      outcome: returnPct,
+      control: consensusWithout,
+      fullEvidence,
+      contribution: fullEvidence - consensusWithout,
+    }];
+  });
+
+  const rawPairs = attributed.map((row) => ({
+    score: row.specialist,
+    value: row.outcome,
+  }));
+  const controlPairs = attributed.map((row) => ({
+    score: row.control,
+    value: row.outcome,
+  }));
+  const specialistControlPairs = attributed.map((row) => ({
+    score: row.specialist,
+    value: row.control,
+  }));
+  const contributionPairs = attributed.map((row) => ({
+    score: row.contribution,
+    value: row.outcome,
+  }));
+
+  const rawCorrelation = pearson(rawPairs);
+  const partial = partialCorrelation(attributed);
+  const shrunkRaw = shrinkCorrelation(rawCorrelation, attributed.length);
+  const shrunkPartial = shrinkCorrelation(partial, attributed.length);
+  const specialistDirectional = directionalHitRate(rawPairs);
+  const controlDirectional = directionalHitRate(controlPairs);
+  const directionalLift =
+    specialistDirectional.hitRatePct != null &&
+    controlDirectional.hitRatePct != null
+      ? specialistDirectional.hitRatePct - controlDirectional.hitRatePct
+      : null;
+  const metric = calibrationMetric(rawPairs);
+  const scoreOtherCorrelation = pearson(specialistControlPairs);
+  const classified = classifyAttribution(
+    attributed.length,
+    shrunkPartial,
+    scoreOtherCorrelation,
+    directionalLift,
+  );
+
+  return {
+    specialistId: id,
+    status: classified.status,
+    weightReview: classified.weightReview,
+    automaticWeightChange: false,
+    sampleSize: attributed.length,
+    resolvedUniverseSampleSize: rows.length,
+    knownCoveragePct: rows.length ? (attributed.length / rows.length) * 100 : 0,
+    rawScoreReturnCorrelation: rawCorrelation,
+    shrunkScoreReturnCorrelation: shrunkRaw,
+    consensusWithoutSpecialistCorrelation: pearson(controlPairs),
+    specialistConsensusWithoutCorrelation: scoreOtherCorrelation,
+    partialCorrelationControllingOtherSpecialists: partial,
+    shrunkPartialCorrelation: shrunkPartial,
+    marginalContributionReturnCorrelation: pearson(contributionPairs),
+    directionalSampleSize: specialistDirectional.sampleSize,
+    directionalHitRatePct: specialistDirectional.hitRatePct,
+    consensusWithoutDirectionalHitRatePct: controlDirectional.hitRatePct,
+    directionalLiftPctPoints: directionalLift,
+    highMinusLowReturnPct: metric.highMinusLowReturnPct,
+    highScoreSampleSize: metric.highScoreSampleSize,
+    lowScoreSampleSize: metric.lowScoreSampleSize,
+    evidenceNote:
+      attributed.length < 30
+        ? "Collecting: fewer than 30 resolved forward outcomes at this horizon."
+        : "Attribution controls for the weighted score of all other known specialists; correlations are shrunk toward zero with a 50-sample prior.",
+  };
 }
 
 export async function summarizeSwarmCalibration(
@@ -322,14 +599,18 @@ export async function summarizeSwarmCalibration(
       specialistIds.add(key);
 
   const specialists: Record<string, SwarmCalibrationMetric> = {};
+  const attribution: Record<string, SwarmSpecialistAttribution> = {};
   for (const id of specialistIds) {
     const pairs = rows.flatMap(({ record, returnPct }) => {
-      const specialist = (record.swarm?.specialists as Record<string, any> | undefined)?.[id];
+      const specialist = (
+        record.swarm?.specialists as Record<string, any> | undefined
+      )?.[id];
       if (!specialist || specialist.state !== "KNOWN") return [];
       const score = normalizedSpecialistScore(specialist.score);
       return score == null ? [] : [{ score, value: returnPct }];
     });
     specialists[id] = calibrationMetric(pairs);
+    attribution[id] = specialistAttribution(id, rows);
   }
 
   return {
@@ -343,6 +624,123 @@ export async function summarizeSwarmCalibration(
     lowScoreThreshold: 40,
     sampleSize: rows.length,
     consensus: calibrationMetric(consensusPairs),
+    specialists,
+    attribution,
+  };
+}
+
+export async function summarizeSwarmAttribution(
+  path: string,
+  options: { symbol?: string } = {},
+): Promise<SwarmAttributionReport> {
+  const horizonEntries = await Promise.all(
+    HORIZONS.map(async (horizon) => [
+      horizon,
+      await summarizeSwarmCalibration(path, {
+        horizon,
+        symbol: options.symbol,
+      }),
+    ] as const),
+  );
+  const horizons = Object.fromEntries(horizonEntries) as Record<
+    SwarmOutcomeHorizon,
+    SwarmCalibrationSummary
+  >;
+
+  const specialistIds = new Set<string>();
+  for (const summary of Object.values(horizons))
+    for (const id of Object.keys(summary.attribution))
+      specialistIds.add(id);
+
+  const specialists: Record<string, SwarmCrossHorizonAttribution> = {};
+  for (const id of specialistIds) {
+    const metrics = HORIZONS.map((horizon) => horizons[horizon].attribution[id])
+      .filter((metric): metric is SwarmSpecialistAttribution => Boolean(metric));
+    const evaluable = metrics.filter((metric) => metric.sampleSize >= 30);
+    const weighted = evaluable.filter(
+      (metric) => metric.shrunkPartialCorrelation != null,
+    );
+    const weightTotal = weighted.reduce(
+      (sum, metric) => sum + Math.sqrt(metric.sampleSize),
+      0,
+    );
+    const weightedShrunkPartialCorrelation =
+      weightTotal > 0
+        ? weighted.reduce(
+            (sum, metric) =>
+              sum +
+              (metric.shrunkPartialCorrelation ?? 0) *
+                Math.sqrt(metric.sampleSize),
+            0,
+          ) / weightTotal
+        : null;
+    const positiveEdgeHorizons = evaluable.filter(
+      (metric) => metric.status === "POSITIVE_EDGE",
+    ).length;
+    const negativeEdgeHorizons = evaluable.filter(
+      (metric) => metric.status === "NEGATIVE_EDGE",
+    ).length;
+    const redundantHorizons = evaluable.filter(
+      (metric) => metric.status === "REDUNDANT",
+    ).length;
+    const mixedHorizons = evaluable.filter(
+      (metric) => metric.status === "MIXED",
+    ).length;
+
+    let status: SwarmCrossHorizonAttribution["status"] = "COLLECTING";
+    let weightReview: SwarmWeightReview = "NO_CHANGE_COLLECTING";
+    if (evaluable.length > 0) {
+      if (
+        positiveEdgeHorizons >= 2 &&
+        negativeEdgeHorizons === 0 &&
+        (weightedShrunkPartialCorrelation ?? 0) > 0
+      ) {
+        status = "CONSISTENT_POSITIVE";
+        weightReview = "REVIEW_FOR_MORE_WEIGHT";
+      } else if (
+        negativeEdgeHorizons >= 2 &&
+        positiveEdgeHorizons === 0 &&
+        (weightedShrunkPartialCorrelation ?? 0) < 0
+      ) {
+        status = "CONSISTENT_NEGATIVE";
+        weightReview = "REVIEW_FOR_LESS_WEIGHT";
+      } else if (
+        redundantHorizons >= Math.max(2, Math.ceil(evaluable.length / 2))
+      ) {
+        status = "MOSTLY_REDUNDANT";
+        weightReview = "REVIEW_FOR_REDUNDANCY";
+      } else {
+        status = "MIXED";
+        weightReview = "KEEP_OBSERVING";
+      }
+    }
+
+    specialists[id] = {
+      specialistId: id,
+      evaluableHorizons: evaluable.length,
+      collectingHorizons: metrics.filter((metric) => metric.sampleSize < 30).length,
+      positiveEdgeHorizons,
+      negativeEdgeHorizons,
+      redundantHorizons,
+      mixedHorizons,
+      weightedShrunkPartialCorrelation,
+      totalAttributedSamples: metrics.reduce(
+        (sum, metric) => sum + metric.sampleSize,
+        0,
+      ),
+      status,
+      weightReview,
+      automaticWeightChange: false,
+    };
+  }
+
+  return {
+    version: "SWARM_ATTRIBUTION_V1",
+    symbol: options.symbol?.toUpperCase() ?? null,
+    authority: "SHADOW_ONLY_NO_AUTOMATIC_WEIGHT_CHANGES",
+    minimumEvaluableSamplesPerHorizon: 30,
+    shrinkagePriorSamples: 50,
+    horizons,
     specialists,
   };
 }
