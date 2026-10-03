@@ -468,6 +468,15 @@ async function runRefreshHandler(
             swarmPositioning = new Map();
           }
         }
+      } else {
+        try {
+          swarmPositioning = await readLatestHyperliquidPositioning(
+            HYPERLIQUID_POSITIONING_PATH,
+            { symbols: watchlist.map((asset) => asset.symbol) },
+          );
+        } catch {
+          swarmPositioning = new Map();
+        }
       }
       const swarmDecision = buildZobirisWatchlist({
         snapshot: result.snapshot,
