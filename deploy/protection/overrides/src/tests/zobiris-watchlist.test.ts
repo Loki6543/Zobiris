@@ -128,6 +128,9 @@ describe("Unity watchlist projection", () => {
     expect(r.assets[0].swarmShadow.authority).toBe("SHADOW_ONLY_NO_TRADING_AUTHORITY");
     expect(r.assets[0].swarmShadow.executionBoundary.positionAuthorityEffectUsd).toBe(0);
     expect(r.assets[0].swarmShadow.ranking.productionRankChanged).toBe(false);
+    const serialized = JSON.parse(JSON.stringify(r.assets[0].swarmShadow));
+    expect(serialized.version).toBe("ZOBIRIS_SWARM_V1");
+    expect(serialized.consensus).toBeTruthy();
     expect(JSON.stringify(f)).toBe(before);
   });
   it("exposes CryptoBERT price-sentiment context without changing entry authority", () => {
