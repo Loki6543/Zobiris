@@ -66,7 +66,6 @@ export interface EvidenceEntryAsset {
 
 export interface ShadowPlanReportInput {
   decisionId: string;
-  decisionTime: string;
   regime?: string | null;
   assets: EvidenceEntryAsset[];
 }
@@ -81,6 +80,7 @@ export interface ShadowPlanReport {
 export async function reportShadowEntryPlans(
   input: ShadowPlanReportInput,
   client: Pick<ZobirisEvidenceClient, 'configured' | 'registerShadowOrder'> = new ZobirisEvidenceClient(),
+  now: () => number = () => Date.now(),
 ): Promise<ShadowPlanReport> {
   if (!client.configured()) return { configured: false, attempted: 0, registered: 0, failures: [] };
 
@@ -100,13 +100,14 @@ export async function reportShadowEntryPlans(
   });
 
   const failures: { symbol: string; error: string }[] = [];
+  const decisionTime = new Date(now()).toISOString();
   let registered = 0;
   await Promise.all(candidates.map(async (asset) => {
     try {
       await client.registerShadowOrder({
         source: 'zobiris:production-entry-plan',
         decisionId: input.decisionId + ':' + asset.symbol,
-        decisionTime: input.decisionTime,
+        decisionTime,
         symbol: asset.krakenWsPair!,
         side: 'buy',
         requestedNotionalUsd: asset.entry!.requestedNotionalUsd!,
