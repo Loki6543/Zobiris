@@ -40,7 +40,7 @@ The returned contract explicitly reports productionScoreChanged=false, productio
 
 ## Forward outcome ledger
 
-Each refresh can record a bounded swarm episode at the current observed price. Outcomes are evaluated at 30 minutes, 2 hours, 8 hours, 12 hours, 1 day, 3 days and 7 days. The active ledger is capped and older episodes are archived before pruning. Writes are serialized and atomic. The ledger is available through a machine-readable API; no new research-heavy UI panel is added.
+Each refresh can record a bounded swarm episode at the current observed price. Outcomes are evaluated at 30 minutes, 2 hours, 8 hours, 12 hours, 1 day, 3 days and 7 days. The active ledger is capped and older episodes are archived before pruning. Writes are serialized and atomic. The ledger is available through an operator-authenticated machine-readable API; no new research-heavy UI panel is added.
 
 ## Promotion rule
 
