@@ -112,7 +112,7 @@ const BASE_WEIGHTS: Record<SwarmSpecialistId, number> = {
 };
 
 const clamp = (value: number, low = 0, high = 1) =>
-  Math.max(low, Math.min(high, value));
+  Number.isFinite(value) ? Math.max(low, Math.min(high, value)) : low;
 
 const round = (value: number, digits = 4) => {
   const scale = 10 ** digits;
