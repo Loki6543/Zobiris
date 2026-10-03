@@ -195,7 +195,11 @@ export function buildZobirisWatchlist({
       effectivePullbackPct: effective,
       marketState: typeof strategy?.marketState === "string" ? strategy.marketState : null,
       pilotState: state,
-      eligibility,
+      eligibility: {
+        ...eligibility,
+        takerFeeBpsPerSide: strategy?.executionCostEvidence?.takerFeeBpsPerSide ?? null,
+        feeSource: strategy?.executionCostEvidence?.feeSource ?? null,
+      },
       records: outcomesBySymbol.get(symbol) ?? [],
     });
     const failures = list(eligibility?.failureReasons).filter(
