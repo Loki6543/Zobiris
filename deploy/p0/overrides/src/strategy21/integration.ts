@@ -112,7 +112,7 @@ export interface Strategy21AssetView {
   delayedRotation: DelayedRotationProfile;
   recommendationMode: RecommendationMode;
   delayedRotationCalibration: DelayedRotationCalibration;
-  executionCostEvidence: {
+  executionCostEvidence?: {
     takerFeeBpsPerSide: number | null;
     feeSource: 'CONFIGURED_ENV' | 'CONSERVATIVE_DEFAULT' | 'UNSPECIFIED_INPUT' | 'UNAVAILABLE';
   };
