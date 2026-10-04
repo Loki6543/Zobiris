@@ -6,6 +6,7 @@ import {researchView,startResearchTimers,snapshotFreshness,fetchOutcomeQuotes} f
 import {collectOutcomeTick} from './outcomeCollector.js';
 import {entryRules} from './entryRules.js';
 import {buildZobirisWatchlist} from './zobirisWatchlist.js';
+import { reportShadowEntryPlans } from './evidenceServiceClient.js';
 import { readSwarmLedger, summarizeSwarmAttribution, summarizeSwarmCalibration, updateSwarmLedger, type SwarmOutcomeHorizon } from "./swarmLedger.js";
 import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readLatestHyperliquidPositioning, type HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
 import { marketBrief } from './marketBrief.js';
@@ -486,6 +487,16 @@ async function runRefreshHandler(
         socialIntelligence: swarmSocial,
         perpPositioning: swarmPositioning,
       });
+      if (live) {
+        const evidenceReport = await reportShadowEntryPlans({
+          decisionId: persisted.snapshotId,
+          regime: result.snapshot.regime,
+          assets: swarmDecision.assets,
+        });
+        if (evidenceReport.failures.length > 0) {
+          console.warn("Evidence sidecar registration degraded:", evidenceReport);
+        }
+      }
       if (swarmDecision.asOf) {
         await updateSwarmLedger(
           SWARM_LEDGER_PATH,

@@ -272,6 +272,7 @@ export function buildZobirisWatchlist({
     return {
       symbol,
       krakenPair: rules[symbol]?.pair ?? null,
+      krakenWsPair: rules[symbol]?.wsPair ?? null,
       price,
       returns: {
         h24: number(rotation?.change24hPct),
@@ -296,6 +297,7 @@ export function buildZobirisWatchlist({
         effectiveDiscountPct: effective,
         referencePrice: price,
         referenceLimit: reasons.length ? null : check.limit,
+        requestedNotionalUsd: reasons.length ? null : check.notional,
         graphShadowPullbackAdjustmentPct:
           graph?.entryPullbackAdjustmentPct ?? null,
         graphShadowReferencePrice:
