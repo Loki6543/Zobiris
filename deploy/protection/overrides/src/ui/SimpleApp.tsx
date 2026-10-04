@@ -275,6 +275,10 @@ function krakenLimitPurchaseGate(detail: any) {
 export function App() {
   const [nowMs, setNowMs] = useState(Date.now);
   useEffect(() => { const timer = window.setInterval(() => setNowMs(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
+  const [operatorToken, setOperatorToken] = useState(() => {
+    try { return window.sessionStorage.getItem("zobiris.operatorToken.v1") ?? ""; }
+    catch { return ""; }
+  });
   const [view, setView] = useState<View>("portfolio");
   const [showAllRankings, setShowAllRankings] = useState(false);
   const [analysisSymbol, setAnalysisSymbol] = useState("BTC");
@@ -294,15 +298,17 @@ export function App() {
   const [assetDetailLoading, setAssetDetailLoading] = useState<Record<string, boolean>>({});
   const [form, setForm] = useState({ symbol: "", side: "BUY", quantity: "", usd: "", orderType: "LIMIT" });
 
+  const authHeaders = operatorToken ? { Authorization: `Bearer ${operatorToken}` } : {};
+
   async function loadData() {
     void fetch("/api/entry-rules").then(async r=>{if(!r.ok)throw new Error();setInstrumentRules((await r.json()).rules??{});}).catch(()=>setInstrumentRules({}));
     setLoading(true);
     setError(null);
     try {
       const [snapshotResponse, watchlistResponse, accountResponse] = await Promise.all([
-        fetch("/api/snapshot/latest"),
+        fetch("/api/snapshot/latest", { headers: authHeaders }),
         fetch("/api/watchlist"),
-        fetch("/api/account"),
+        fetch("/api/account", { headers: authHeaders }),
       ]);
       if (!snapshotResponse.ok) throw new Error(`Snapshot load failed (HTTP ${snapshotResponse.status}).`);
       if (!watchlistResponse.ok) throw new Error(`Watchlist load failed (HTTP ${watchlistResponse.status}).`);
@@ -325,12 +331,12 @@ export function App() {
     }
   }
 
-  useEffect(() => { void loadData(); }, []);
+  useEffect(() => { void loadData(); }, [operatorToken]);
   useEffect(() => {
     let cancelled = false;
     const pollAccount = async () => {
       try {
-        const response = await fetch("/api/account");
+        const response = await fetch("/api/account", { headers: authHeaders });
         if (!response.ok || cancelled) return;
         const data = await response.json();
         if (!cancelled) setAccount(data?.account ?? null);
@@ -340,7 +346,7 @@ export function App() {
     };
     const timer = window.setInterval(() => { void pollAccount(); }, 15_000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, []);
+  }, [operatorToken]);
 
   const accountSynced = Boolean(account?.privateAccountSynced);
   const LIVE_HOLDINGS: HoldingSeed[] = accountSynced && Array.isArray(account?.holdings)
@@ -386,7 +392,7 @@ export function App() {
     try {
       const response = await fetch("/api/refresh", {
         method: "POST",
-        headers: { "X-Zobiris-Refresh": "1", "Content-Type": "application/json" },
+        headers: { "X-Zobiris-Refresh": "1", "Content-Type": "application/json", ...authHeaders },
         body: "{}",
       });
       if (response.status === 202) throw new Error("Refresh is still running. Wait and refresh again.");
@@ -761,9 +767,37 @@ export function App() {
           <div aria-label="ZOBIRIS CORE" style={styles.brand}><span className="brand-mark" aria-hidden="true">Z</span> ZOBIRIS <span className="brand-core">CORE</span></div>
           <div style={styles.subtle}>Portfolio decisions, market limits, and trade memory.</div>
         </div>
-        <button style={styles.refreshButton} onClick={() => void refresh()} disabled={refreshing}>
-          {refreshing ? "Refreshing…" : "Refresh market"}
-        </button>
+        <div style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap"}}>
+          {operatorToken ? (
+            <button
+              type="button"
+              style={{...styles.refreshButton,background:"#273754"}}
+              onClick={() => {
+                try { window.sessionStorage.removeItem("zobiris.operatorToken.v1"); } catch {}
+                setOperatorToken("");
+                setAccount(null);
+              }}
+            >
+              Lock private portfolio
+            </button>
+          ) : (
+            <button
+              type="button"
+              style={{...styles.refreshButton,background:"#273754"}}
+              onClick={() => {
+                const value = window.prompt("Enter the ZOBIRIS operator token")?.trim() ?? "";
+                if (!value) return;
+                try { window.sessionStorage.setItem("zobiris.operatorToken.v1", value); } catch {}
+                setOperatorToken(value);
+              }}
+            >
+              Unlock private portfolio
+            </button>
+          )}
+          <button style={styles.refreshButton} onClick={() => void refresh()} disabled={refreshing}>
+            {refreshing ? "Refreshing…" : "Refresh market"}
+          </button>
+        </div>
       </header>
 
       <nav aria-label="Dashboard" style={styles.nav}>
@@ -795,7 +829,7 @@ export function App() {
           </section>
 
           <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
-          <ProfitProtection />
+          <ProfitProtection operatorToken={operatorToken} />
           <section style={styles.card}>
             <div style={styles.sectionHead}>
               <div>
@@ -875,7 +909,7 @@ export function App() {
               <h2 style={styles.h2}>What matters now</h2>
               <DecisionLine title="Market posture" value={regime} detail={regime.toLowerCase().includes("break") ? "Use limits. Do not chase. Keep new entries small." : "Use staged limits and keep cash available."} />
               {strongestHoldingAction ? <DecisionLine title="Best harvest candidate" value={strongestHoldingAction.symbol + " " + pct(strongestHoldingAction.upl)} detail={strongestHoldingAction.action} /> : null}
-              <DecisionLine title="New-entry guardrail" value="Max 2 new positions" detail="Your Sep 5 cluster of four rapid market buys is now treated as a risk pattern." />
+              <DecisionLine title="New-entry guardrail" value="Max 2 new positions" detail="Avoid clustered entries; stage new exposure and preserve cash for better locations." />
             </div>
           </section>
         </main>
