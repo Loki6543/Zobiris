@@ -78,7 +78,7 @@ async function verifySimpleUi(origin) {
     const response = await fetch(new URL(src, origin), { signal: AbortSignal.timeout(15000) });
     bundle += await response.text();
   }
-  for (const required of ["ZOBIRIS CORE", "Market Today", "History / Learning", "Current positions", "BEST FIRST COURSE OF ACTION", "SELL / HARVEST LADDER", "BUY / RE-ENTRY RANGE", "DEFENSIVE REDUCTION", "Why Zobiris learned this:", "Kraken execution gate passed", "funded cash added", "Maneuver capital", "Current snapshot order:", "POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM", "Pilot mode: new capital only goes to 30d + 90d laggards with a fresh 7d recovery"]) {
+  for (const required of ["ZOBIRIS CORE", "Market Today", "History / Learning", "Current positions", "BEST FIRST COURSE OF ACTION", "SELL / HARVEST LADDER", "BUY / RE-ENTRY RANGE", "DEFENSIVE REDUCTION", "Why Zobiris learned this:", "Kraken execution gate passed", "Unlock private portfolio", "Private account is locked on the public view", "Maneuver capital", "Current snapshot order:", "POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM", "Pilot mode: new capital only goes to 30d + 90d laggards with a fresh 7d recovery"]) {
     if (!bundle.includes(required)) throw new Error("candidate simplified UI is missing " + required);
   }
   for (const forbidden of ["Research thesis + falsifiers", "Break conditions:", "Not yet measured:", " · thesis "]) {
@@ -197,7 +197,9 @@ async function verifyCandidate() {
     if (!afterIdentity.id || afterIdentity.id === beforeIdentity.id) throw new Error('candidate snapshot id did not advance after refresh');
     console.log('PASS candidate snapshot advanced after browser refresh');
     const list = await jsonCheck(localOrigin, '/api/snapshots?limit=1', {}, [200], 'candidate snapshot list consistency');
-    const strategy = await jsonCheck(localOrigin, '/api/strategy21', {}, [200], 'candidate strategy account context');
+    const strategy = await jsonCheck(localOrigin, '/api/strategy21', {
+      headers: { Authorization: `Bearer ${token}` },
+    }, [200], 'candidate authenticated strategy account context');
     if (list.payload.snapshots?.[0]?.id !== afterIdentity.id || strategy.payload.asOf !== new Date(afterIdentity.asOf).toISOString()) throw new Error('snapshot endpoints disagree');
     const account = strategy.payload.strategy21;
     if (account?.recommendationMode !== 'DELAYED_ROTATION_PILOT_V1') throw new Error('delayed-rotation pilot recommendation mode is not active');
@@ -219,7 +221,10 @@ async function verifyCandidate() {
       }
     }
     console.log(`PASS candidate delayed-rotation pilot calibrated ${rotationCalibration.sampleSize} watchlist assets; market=${rotationCalibration.marketStatus}; qualified=${qualifiedRotationAssets.length} [${qualifiedRotationAssets.join(',')}]; authorized=${authorizedRotationAssets.length} [${authorizedRotationAssets.join(',')}]`);
-    const liveAccount = (await jsonCheck(localOrigin, '/api/account', {}, [200], 'candidate synchronized holdings')).payload.account;
+    await jsonCheck(localOrigin, '/api/account', {}, [401, 403], 'candidate anonymous account rejected');
+    const liveAccount = (await jsonCheck(localOrigin, '/api/account', {
+      headers: { Authorization: `Bearer ${token}` },
+    }, [200], 'candidate authenticated synchronized holdings')).payload.account;
     if (!liveAccount?.privateAccountSynced || !Array.isArray(liveAccount.holdings)) throw new Error('candidate private holdings are not synchronized');
     const exposure = account?.portfolioDependency?.grossCurrentExposureUsd;
     if (!Number.isFinite(exposure) || exposure < 0) throw new Error('account exposure invalid in Strategy 2.1');
