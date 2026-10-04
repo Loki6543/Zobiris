@@ -180,7 +180,7 @@ export function publicRssResearchAdapter(fetcher: typeof fetch = fetch): Researc
           }
         }
       }
-      return rows;
+      return rows.slice(0, 100);
     },
   };
 }
