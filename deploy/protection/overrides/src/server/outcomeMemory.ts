@@ -1,6 +1,16 @@
 import {entryReference} from '../shared/entryPlan.js';
 import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { assertBound, loadRegistry, stampEpisode, statusLabel, structuralBreakFlags } from "./policy/zobirisPolicyBinding.js";
+
+const OUTCOME_POLICY_REGISTRY = (() => {
+  try {
+    return loadRegistry(fileURLToPath(new URL("./policy/zobiris-policy-registry-v3.1.json", import.meta.url)));
+  } catch {
+    return null;
+  }
+})();
 
 export type OutcomeHorizon = "1H" | "4H" | "1D" | "3D" | "7D";
 
@@ -17,6 +27,18 @@ export interface OutcomeEvaluation {
 
 export interface DecisionOutcomeRecord {
   measurementVersion?: "episodes-v2";
+  decisionTime?: string;
+  registryVersion?: string;
+  policyHash?: string;
+  evidenceClass?: string;
+  feeScheduleVersion?: string;
+  accountFeeTierAssumption?: string;
+  makerTakerPath?: string;
+  structuralBreakFlags?: string[];
+  setupFamily?: string;
+  sizeTier?: string;
+  liquidityTier?: string;
+  metadataProvenance?: string;
   proposedLimitUsd?:number|null;
   sampledTouchAt?:string|null;
   actualFill?:null;
@@ -120,8 +142,9 @@ function seedToRecord(seed: NonNullable<NonNullable<NonNullable<SnapshotLike["ra
   const referencePriceUsd = finitePositive(seed.referencePriceUsd);
   if (!seed.outcomeId || !seed.symbol || !seed.generatedAt || !referencePriceUsd || !seed.thesisId) return null;
   const horizons = Array.isArray(seed.horizons) ? seed.horizons : [];
-  return {
-    measurementVersion:"episodes-v2",
+  const base = {
+    measurementVersion:"episodes-v2" as const,
+    decisionTime: seed.generatedAt,
     proposedLimitUsd:entryReference(referencePriceUsd,seed.recommendedPullbackPct),
     sampledTouchAt:null,actualFill:null,
     outcomeId: seed.outcomeId,
@@ -149,6 +172,17 @@ function seedToRecord(seed: NonNullable<NonNullable<NonNullable<SnapshotLike["ra
       returnPct: null,
     })),
   };
+  if (!OUTCOME_POLICY_REGISTRY) return null;
+  const proposed = OUTCOME_POLICY_REGISTRY.registry.feeSchedule?.sidecarPolicyProposed ?? {};
+  const stamped = stampEpisode(OUTCOME_POLICY_REGISTRY, base, {
+    evidenceClass: "QUOTE_OUTCOME_ONLY",
+    feeScheduleVersion: OUTCOME_POLICY_REGISTRY.registry.feeSchedule?.scheduleId ?? "UNKNOWN",
+    accountFeeTierAssumption: proposed.accountFeeTierAssumption ?? "UNKNOWN",
+    makerTakerPath: "MAKER_TAKER",
+    structuralBreakFlags: structuralBreakFlags(OUTCOME_POLICY_REGISTRY, seed.generatedAt),
+  });
+  assertBound(stamped);
+  return stamped as DecisionOutcomeRecord;
 }
 
 export interface OutcomeQuote { symbol: string; priceUsd: number; observedAt: string }
@@ -287,7 +321,8 @@ export function pilotScorecard(data:OutcomeFile,now=Date.now()){
  };
  const qualified=group(episodes.filter(r=>r.symbol!=='BTC'&&r.strategyStatus==='QUALIFIED'));
  const nonqualifying=group(episodes.filter(r=>r.symbol!=='BTC'&&r.strategyStatus&&r.strategyStatus!=='QUALIFIED'&&r.strategyStatus!=='DATA_INSUFFICIENT'));
- return {status:'SHADOW_ONLY_NO_VERDICT',updatedAt:data.updatedAt,qualified,nonqualifying,benchmark:group(episodes.filter(r=>r.symbol==='BTC')),
+ const evidenceClass='QUOTE_OUTCOME_ONLY';
+ return {status:'SHADOW_ONLY_NO_VERDICT',statusLabel:statusLabel('SHADOW_ONLY_NO_VERDICT',evidenceClass),evidenceClass,registryVersion:OUTCOME_POLICY_REGISTRY?.registryVersion??null,policyHash:OUTCOME_POLICY_REGISTRY?.registrySha256??null,updatedAt:data.updatedAt,qualified,nonqualifying,benchmark:group(episodes.filter(r=>r.symbol==='BTC')),
   legacyExcluded:data.records.length-episodes.length,archivedRecordCount:data.archivedRecordCount??0,
   actualFills:null,fillProbability:null,missedFillRegret:null,
   limitations:['Seven-day nonoverlapping episodes per symbol reduce duplicate snapshots; correlated coins are not statistically independent.',
