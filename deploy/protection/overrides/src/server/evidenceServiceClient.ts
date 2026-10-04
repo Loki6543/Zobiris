@@ -11,12 +11,30 @@ export interface ShadowOrderInput {
   regime?: string;
 }
 
+export interface ActualFill {
+  shadowOrderId?: string;
+  symbol: string;
+  side: 'buy' | 'sell';
+  price: number;
+  qty: number;
+  time: string;
+  feeUsd?: number;
+  liquidity?: 'maker' | 'taker' | 'unknown';
+  source: 'kraken_readonly_trade_history' | 'manual_entry';
+  externalRef?: string;
+  orderId?: string;
+  pairVerified?: boolean;
+  cost?: number;
+  feeCurrency?: string;
+  feeAmount?: number;
+}
+
 type FetchLike = typeof fetch;
 
 export class ZobirisEvidenceClient {
   constructor(
     private readonly baseUrl = process.env.ZOBIRIS_EVIDENCE_URL ?? '',
-    private readonly token = process.env.ZOBIRIS_EVIDENCE_TOKEN ?? '',
+    private readonly token = process.env.ZOBIRIS_EVIDENCE_TOKEN ?? process.env.ZOBIRIS_OPERATOR_TOKEN ?? '',
     private readonly timeoutMs = 1500,
     private readonly fetchImpl: FetchLike = fetch,
   ) {}
@@ -26,7 +44,7 @@ export class ZobirisEvidenceClient {
   }
 
   private async call<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
-    if (!this.configured()) throw new Error('ZOBIRIS_EVIDENCE_URL / ZOBIRIS_EVIDENCE_TOKEN not configured');
+    if (!this.configured()) throw new Error('ZOBIRIS_EVIDENCE_URL / evidence token not configured');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), this.timeoutMs);
     try {
@@ -50,6 +68,14 @@ export class ZobirisEvidenceClient {
 
   registerShadowOrder(order: ShadowOrderInput) {
     return this.call<{ ok: boolean; shadowOrderId: string; finalizeAt: string; duplicate?: boolean }>('POST', '/execution/shadow-orders', order);
+  }
+
+  reconcileFills(fills: ActualFill[]) {
+    return this.call<{ results: unknown[] }>('POST', '/execution/fills', fills);
+  }
+
+  executionStats() {
+    return this.call<Record<string, unknown>>('GET', '/execution/stats');
   }
 }
 
