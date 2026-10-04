@@ -342,8 +342,8 @@ export function buildZobirisWatchlist({
     const byAsset = new Map(assets.map((asset) => [asset.symbol, asset]));
     const gateState: PortfolioState = {
       asOf: String(account.capturedAt ?? ""),
-      cashUsd: number(account.cashUsd) ?? Number.NaN,
-      cashBasis: "TOTAL",
+      cashUsd: validCash ?? Number.NaN,
+      cashBasis: "NET_OF_OPEN_ORDERS",
       holdings: list(account.holdings).map((holding) => {
         const symbol = String(holding.symbol ?? "").toUpperCase();
         const quantity = number(holding.quantity);
