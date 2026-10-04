@@ -668,7 +668,7 @@ const API: ApiRouter = {
       errorResponse(res, 503, error);
     }
   },
-  "GET /api/zobiris/watchlist": async (_req,res)=>{
+  "GET /api/zobiris/watchlist": async (req,res)=>{
     res.setHeader('Cache-Control','no-store');
     const storage=openStorage({path:DEFAULT_DB});
     try {
@@ -702,7 +702,19 @@ const API: ApiRouter = {
       } catch {
         // Positioning enrichment is shadow-only and must never take down this feed.
       }
-      jsonResponse(res,200,buildZobirisWatchlist({snapshot,watchlist,account:getAccountView(),rules,rewardRemaining,socialIntelligence,perpPositioning}));
+      const personalized = isAuthenticated(req, SECURITY);
+      const account = personalized ? getAccountView() : {
+        privateAccountSynced: false,
+        source: "user-provided Kraken snapshot",
+        capturedAt: "",
+        cashUsd: 0,
+        freeCashUsd: 0,
+        holdings: [],
+        openOrders: [],
+        trades: [],
+        lastError: "AUTH_REQUIRED_FOR_ACCOUNT_CONTEXT",
+      };
+      jsonResponse(res,200,buildZobirisWatchlist({snapshot,watchlist,account,rules,rewardRemaining:personalized?rewardRemaining:null,socialIntelligence,perpPositioning}));
     } catch { jsonResponse(res,503,{error:'Zobiris decision-state feed unavailable'}); }
     finally {storage.close();}
   },
@@ -722,13 +734,15 @@ const API: ApiRouter = {
     try { jsonResponse(res, 200, await marketBrief()); }
     catch(e) { errorResponse(res, 503, e); }
   },
-  "GET /api/profit-protection": (_req, res) => {
+  "GET /api/profit-protection": (req, res) => {
+    if (!isAuthenticated(req, SECURITY)) return send401(res, "portfolio protection requires Bearer auth");
     let db: ReturnType<typeof openProtection> | undefined;
     try { db = openProtection(DEFAULT_DB); jsonResponse(res, 200, readProtection(db)); }
     catch (e) { errorResponse(res, 503, e); }
     finally { db?.close(); }
   },
-  "GET /api/account": async (_req, res) => {
+  "GET /api/account": async (req, res) => {
+    if (!isAuthenticated(req, SECURITY)) return send401(res, "account data requires Bearer auth");
     try {
       await refreshAccountContextFromKraken();
       jsonResponse(res, 200, { account: getAccountView() });
@@ -804,7 +818,7 @@ const API: ApiRouter = {
       })),
     });
   },
-  "GET /api/snapshot/latest": (_req, res) => {
+  "GET /api/snapshot/latest": (req, res) => {
     const storage = openStorage({ path: DEFAULT_DB });
     try {
       const recent = getRecentSnapshots(storage.db, 1);
@@ -812,7 +826,10 @@ const API: ApiRouter = {
         return jsonResponse(res, 404, { error: "no snapshots yet" });
       const snap = getSnapshotById(storage.db, recent[0]!.id);
       const session = snap ? getSessionById(storage.db, snap.sessionId) : null;
-      jsonResponse(res, 200, { snapshot: snap, session });
+      const safeSnapshot = snap && !isAuthenticated(req, SECURITY)
+        ? { ...snap, portfolioDependency: null }
+        : snap;
+      jsonResponse(res, 200, { snapshot: safeSnapshot, session });
     } finally {
       storage.close();
     }
@@ -825,7 +842,10 @@ const API: ApiRouter = {
       const snap = getSnapshotById(storage.db, id);
       if (!snap) return notFound(res, "snapshot not found");
       const session = getSessionById(storage.db, snap.sessionId);
-      jsonResponse(res, 200, { snapshot: snap, session });
+      const safeSnapshot = !isAuthenticated(req, SECURITY)
+        ? { ...snap, portfolioDependency: null }
+        : snap;
+      jsonResponse(res, 200, { snapshot: safeSnapshot, session });
     } finally {
       storage.close();
     }
@@ -1029,7 +1049,8 @@ const API: ApiRouter = {
     if (!/^[A-Z0-9]{2,15}$/.test(symbol)) return jsonResponse(res, 400, { error: "valid symbol required" });
     jsonResponse(res, 200, { mode: "SHADOW", authority: "ABSTAIN", forecasts: readShadowForecasts(DEFAULT_DB, `${symbol}/USD`, 100) });
   },
-  "GET /api/strategy21": (_req, res) => {
+  "GET /api/strategy21": (req, res) => {
+    const personalized = isAuthenticated(req, SECURITY);
     const storage = openStorage({ path: DEFAULT_DB });
     try {
       const recent = getRecentSnapshots(storage.db, 1);
@@ -1049,11 +1070,22 @@ const API: ApiRouter = {
           enteredAt: strategy21.marketEnteredAt,
           minimumDwellUntil: strategy21.minimumDwellUntil,
           maneuverCapitalUsd: accountCapital.maneuverNavUsd,
-          ...accountProvenance,
+          ...(personalized ? accountProvenance : {
+            source: "AUTH_REQUIRED_FOR_ACCOUNT_CONTEXT",
+            capturedAt: null,
+            privateAccountSynced: false,
+            fundedCashUsd: null,
+            reservedBuysUsd: null,
+            freeCashUsd: null,
+            syncMode: null,
+            websocketConnected: null,
+            lastError: null,
+            dangerousPermissionsDetected: [],
+          }),
           strategicReserveTargetUsd: 1800,
           eventualPortfolioTargetUsd: 3000,
           nextDollarReadyAssets: ranked.filter((a: any) => a?.strategy21?.nextDollarRank != null).length,
-          portfolioDependency: snap.portfolioDependency ? JSON.parse(snap.portfolioDependency) : null,
+          portfolioDependency: personalized && snap.portfolioDependency ? JSON.parse(snap.portfolioDependency) : null,
           researchIntegrityVersion: "1.0",
           capabilityManifest: CAPABILITY_MANIFEST,
           narrativeResearchPolicy: NARRATIVE_RESEARCH_POLICY,
@@ -1124,8 +1156,9 @@ const API: ApiRouter = {
       storage.close();
     }
   },
-  "GET /api/audit": (_req, res) => {
-    const url = new URL(_req.url ?? "/", "http://localhost");
+  "GET /api/audit": (req, res) => {
+    if (!isAuthenticated(req, SECURITY)) return send401(res, "audit data requires Bearer auth");
+    const url = new URL(req.url ?? "/", "http://localhost");
     const limit = Math.min(Number(url.searchParams.get("limit") ?? "50"), 200);
     const storage = openStorage({ path: DEFAULT_DB });
     try {
@@ -1136,7 +1169,8 @@ const API: ApiRouter = {
       storage.close();
     }
   },
-  "GET /api/db-info": (_req, res) => {
+  "GET /api/db-info": (req, res) => {
+    if (!isAuthenticated(req, SECURITY)) return send401(res, "database diagnostics require Bearer auth");
     const storage = openStorage({ path: DEFAULT_DB });
     try {
       jsonResponse(res, 200, getDbInfo(storage.db, DEFAULT_DB));

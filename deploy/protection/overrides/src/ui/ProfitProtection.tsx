@@ -6,9 +6,9 @@ const usd=(n:number|null)=>n==null?'Unavailable':n.toLocaleString('en-US',{style
 const pct=(n:number|null)=>n==null?'Unavailable':n.toFixed(2)+'%';
 const card={maxWidth:1280,margin:'0 auto 16px',padding:18,background:'#111e36',border:'1px solid #35476d',borderRadius:14};
 function Datum({label,value}:{label:string;value:string}){return <div><div className="protection-label">{label}</div><strong>{value}</strong></div>;}
-export function ProfitProtection(){
+export function ProfitProtection({operatorToken=""}:{operatorToken?:string}){
  const [data,setData]=useState<Tracking|null>(null),[error,setError]=useState(false);
- useEffect(()=>{const controller=new AbortController();let active=true;const load=async()=>{try{const r=await fetch('/api/profit-protection',{signal:controller.signal});if(!r.ok)throw new Error();const d=await r.json();if(!d||!Array.isArray(d.positions)||!Array.isArray(d.missingPrices))throw new Error();if(active){setData(d);setError(false);}}catch{if(active)setError(true);}};void load();const timer=setInterval(()=>void load(),60000);return()=>{active=false;controller.abort();clearInterval(timer);};},[]);
+ useEffect(()=>{const controller=new AbortController();let active=true;const load=async()=>{try{const r=await fetch('/api/profit-protection',{signal:controller.signal,headers:operatorToken?{Authorization:'Bearer '+operatorToken}:{}});if(!r.ok)throw new Error();const d=await r.json();if(!d||!Array.isArray(d.positions)||!Array.isArray(d.missingPrices))throw new Error();if(active){setData(d);setError(false);}}catch{if(active)setError(true);}};void load();const timer=setInterval(()=>void load(),60000);return()=>{active=false;controller.abort();clearInterval(timer);};},[operatorToken]);
  const p=data?.portfolio;
  return <section aria-label="Profit protection" style={card}>
   <div className="protection-heading"><div><h2 style={{fontSize:18,fontWeight:700}}>Profit protection</h2><p className="protection-label">Peak → drawdown → recovery · observed history, separate from entry quality</p></div><span className="protection-badge">{error?'UNAVAILABLE':data?.status?.replaceAll('_',' ')??'LOADING'}</span></div>

@@ -16,6 +16,11 @@ export type KrakenSyncedOrder = {
   side: Side;
   symbol: string;
   name: string;
+  pair: string | null;
+  quoteCurrency: string | null;
+  pairVerified: boolean;
+  targetPriceQuote: number;
+  quoteNotional: number;
   targetPriceUsd: number;
   amountUsd: number;
   quantity: number;
@@ -28,12 +33,19 @@ export type KrakenSyncedTrade = {
   at: string;
   symbol: string;
   side: Side;
+  pair: string | null;
+  quoteCurrency: string | null;
+  pairVerified: boolean;
+  orderId: string | null;
   quantity: number;
+  costQuote: number | null;
+  feeAmount: number | null;
+  feeCurrency: string | null;
   usd: number | null;
   feeUsd: number | null;
   priceUsd: number | null;
   orderType: "MARKET" | "LIMIT" | "INSTANT" | "INSTANT_MICRO";
-  source: "Kraken private API";
+  source: "Kraken private API" | "Kraken trades export" | "Kraken ledger screenshot";
 };
 
 export type KrakenAccountState = {
@@ -78,6 +90,11 @@ function fallbackState(): KrakenAccountState {
     openOrders: FALLBACK_ORDERS.map((o, index) => ({
       id: `manual-${index}`,
       ...o,
+      pair: null,
+      quoteCurrency: "USD",
+      pairVerified: false,
+      targetPriceQuote: o.targetPriceUsd,
+      quoteNotional: o.amountUsd,
       quantity: o.targetPriceUsd > 0 ? o.amountUsd / o.targetPriceUsd : 0,
       remainingQuantity: o.targetPriceUsd > 0 ? o.amountUsd / o.targetPriceUsd : 0,
       status: "open",
@@ -86,7 +103,14 @@ function fallbackState(): KrakenAccountState {
     openOrdersParsedCount: FALLBACK_ORDERS.length,
     trades: FALLBACK_TRADES.map((t) => ({
       ...t,
-      source: "Kraken private API" as const,
+      pair: null,
+      quoteCurrency: t.usd != null ? "USD" : null,
+      pairVerified: false,
+      orderId: null,
+      costQuote: t.usd,
+      feeAmount: null,
+      feeCurrency: null,
+      source: t.source,
       feeUsd: null,
       priceUsd: t.usd != null && t.quantity > 0 ? t.usd / t.quantity : null,
     })),
@@ -176,19 +200,30 @@ function normalizeAssetCode(raw: string): string {
   return direct[code] ?? code;
 }
 
-function symbolFromPair(rawPair: string): string {
-  const pair = String(rawPair ?? "").toUpperCase();
-  if (pair.includes("/")) return normalizeAssetCode(pair.split("/")[0]!);
-  let clean = pair.replace(/[^A-Z0-9]/g, "");
-  const quotes = ["ZUSD", "USDT", "USDC", "USD", "ZEUR", "EUR", "XXBT", "XBT", "BTC"];
+export function krakenPairIdentity(rawPair: string): { symbol: string; quoteCurrency: string | null; pair: string | null; pairVerified: boolean } {
+  const raw = String(rawPair ?? "").toUpperCase();
+  if (raw.includes("/")) {
+    const [baseRaw, quoteRaw] = raw.split("/");
+    const symbol = normalizeAssetCode(baseRaw ?? "");
+    const quoteCurrency = normalizeAssetCode(quoteRaw ?? "");
+    const ok = Boolean(symbol && quoteCurrency);
+    return { symbol, quoteCurrency: ok ? quoteCurrency : null, pair: ok ? symbol + "/" + quoteCurrency : null, pairVerified: ok };
+  }
+  let clean = raw.replace(/[^A-Z0-9]/g, "");
+  const quotes = ["USDT", "USDC", "ZUSD", "USD", "ZEUR", "EUR", "XXBT", "XBT", "BTC"];
+  let quoteCurrency: string | null = null;
   for (const quote of quotes) {
     if (clean.endsWith(quote) && clean.length > quote.length) {
       clean = clean.slice(0, -quote.length);
+      quoteCurrency = normalizeAssetCode(quote);
       break;
     }
   }
-  return normalizeAssetCode(clean);
+  const symbol = normalizeAssetCode(clean);
+  const ok = Boolean(symbol && quoteCurrency);
+  return { symbol, quoteCurrency, pair: ok ? symbol + "/" + quoteCurrency : null, pairVerified: ok };
 }
+
 
 function nameFor(symbol: string): string {
   return NAMES.get(symbol) ?? symbol;
@@ -212,19 +247,27 @@ function parseOpenOrders(raw: any): KrakenSyncedOrder[] {
     const descr = order?.descr ?? {};
     const side = String(descr.type ?? order.type ?? "").toUpperCase();
     if (side !== "BUY" && side !== "SELL") return [];
-    const targetPriceUsd = Number(descr.price ?? order.price ?? 0);
+    const targetPriceQuote = Number(descr.price ?? order.price ?? 0);
     const quantity = Number(order.vol ?? 0);
     const executed = Number(order.vol_exec ?? 0);
     const remainingQuantity = Math.max(0, quantity - (Number.isFinite(executed) ? executed : 0));
-    const symbol = symbolFromPair(String(descr.pair ?? order.pair ?? ""));
-    if (!symbol || !Number.isFinite(targetPriceUsd) || targetPriceUsd <= 0) return [];
+    const identity = krakenPairIdentity(String(descr.pair ?? order.pair ?? ""));
+    const symbol = identity.symbol;
+    if (!symbol || !Number.isFinite(targetPriceQuote) || targetPriceQuote <= 0) return [];
+    const quoteNotional = targetPriceQuote * remainingQuantity;
+    const isUsd = identity.quoteCurrency === "USD";
     return [{
       id,
       side: side as Side,
       symbol,
       name: nameFor(symbol),
-      targetPriceUsd,
-      amountUsd: targetPriceUsd * remainingQuantity,
+      pair: identity.pair,
+      quoteCurrency: identity.quoteCurrency,
+      pairVerified: identity.pairVerified,
+      targetPriceQuote,
+      quoteNotional,
+      targetPriceUsd: isUsd ? targetPriceQuote : 0,
+      amountUsd: isUsd ? quoteNotional : 0,
       quantity,
       remainingQuantity,
       status: String(order.status ?? "open"),
@@ -243,17 +286,28 @@ function parseTrades(raw: any): KrakenSyncedTrade[] {
     const fee = Number(trade.fee ?? 0);
     const price = Number(trade.price ?? 0);
     const seconds = Number(trade.time ?? 0);
-    const symbol = symbolFromPair(String(trade.pair ?? ""));
+    const identity = krakenPairIdentity(String(trade.pair ?? ""));
+    const symbol = identity.symbol;
     if (!symbol || !Number.isFinite(quantity) || quantity <= 0) return [];
+    const explicitFeeCurrencyRaw = trade.fee_currency ?? trade.fee_ccy ?? null;
+    const feeCurrency = explicitFeeCurrencyRaw ? normalizeAssetCode(String(explicitFeeCurrencyRaw)) : null;
+    const isUsd = identity.quoteCurrency === "USD";
     return [{
       id,
       at: Number.isFinite(seconds) && seconds > 0 ? new Date(seconds * 1000).toISOString() : new Date().toISOString(),
       symbol,
       side: side as Side,
+      pair: identity.pair,
+      quoteCurrency: identity.quoteCurrency,
+      pairVerified: identity.pairVerified,
+      orderId: typeof trade.ordertxid === "string" && trade.ordertxid ? trade.ordertxid : null,
       quantity,
-      usd: Number.isFinite(cost) ? cost : null,
-      feeUsd: Number.isFinite(fee) ? fee : null,
-      priceUsd: Number.isFinite(price) ? price : null,
+      costQuote: Number.isFinite(cost) ? cost : null,
+      feeAmount: Number.isFinite(fee) ? fee : null,
+      feeCurrency,
+      usd: isUsd && Number.isFinite(cost) ? cost : null,
+      feeUsd: isUsd && feeCurrency === "USD" && Number.isFinite(fee) ? fee : null,
+      priceUsd: isUsd && Number.isFinite(price) ? price : null,
       orderType: String(trade.ordertype ?? "").toLowerCase().includes("limit") ? "LIMIT" as const : "MARKET" as const,
       source: "Kraken private API" as const,
     }];

@@ -4,6 +4,16 @@ import {
   type StrategyValidationEpisode,
   type StrategyValidationReport,
 } from "../strategy21/research/strategyValidation.js";
+import { fileURLToPath } from "node:url";
+import { loadRegistry, statusLabel } from "./policy/zobirisPolicyBinding.js";
+
+const VALIDATION_POLICY_REGISTRY = (() => {
+  try {
+    return loadRegistry(fileURLToPath(new URL("./policy/zobiris-policy-registry-v3.1.json", import.meta.url)));
+  } catch {
+    return null;
+  }
+})();
 
 const VALID_HORIZONS: OutcomeHorizon[] = ["1H", "4H", "1D", "3D", "7D"];
 
@@ -55,6 +65,7 @@ export function buildOutcomeValidationLab(
 ) {
   const horizon = options.horizon ?? "7D";
   const symbol = options.symbol?.trim().toUpperCase();
+  const feePolicy = VALIDATION_POLICY_REGISTRY?.registry.feeSchedule?.sidecarPolicyProposed ?? null;
   const feeBps = Number.isFinite(options.feeBps) ? Math.max(0, options.feeBps ?? 0) : 0;
   const slippageBps = Number.isFinite(options.slippageBps) ? Math.max(0, options.slippageBps ?? 0) : 0;
 
@@ -73,17 +84,23 @@ export function buildOutcomeValidationLab(
   const reports: Array<{
     strategyTag: string;
     resolvedEpisodes: number;
-    report: StrategyValidationReport;
+    report: StrategyValidationReport & { evidenceClass: string; statusLabel?: string };
   }> = [];
   for (const strategyTag of tags) {
     const episodes = eligible
       .filter((record) => record.strategyTag === strategyTag)
       .map((record) => toEpisode(record, horizon, feeBps, slippageBps))
       .filter((episode): episode is StrategyValidationEpisode => episode != null);
+    const report = validateStrategyEpisodes(episodes);
+    const classification = (report as any)?.certification?.classification ?? (report as any)?.status ?? "SHADOW";
     reports.push({
       strategyTag,
       resolvedEpisodes: episodes.length,
-      report: validateStrategyEpisodes(episodes),
+      report: {
+        ...report,
+        evidenceClass: "QUOTE_OUTCOME_ONLY",
+        statusLabel: statusLabel(String(classification), "QUOTE_OUTCOME_ONLY"),
+      },
     });
   }
 
@@ -91,15 +108,30 @@ export function buildOutcomeValidationLab(
     version: "outcome-validation-lab-v1",
     authority: "SHADOW_ONLY",
     liveOrderAuthority: false,
+    evidenceClass: "QUOTE_OUTCOME_ONLY",
+    registryVersion: VALIDATION_POLICY_REGISTRY?.registryVersion ?? null,
+    policyHash: VALIDATION_POLICY_REGISTRY?.registrySha256 ?? null,
     source: "forward outcome memory",
     horizon,
     symbol: symbol ?? null,
     strategyTag: options.strategyTag ?? null,
     costAssumptions: {
+      feeScheduleVersion: VALIDATION_POLICY_REGISTRY?.registry.feeSchedule?.scheduleId ?? null,
+      accountFeeTierAssumption: feePolicy?.accountFeeTierAssumption ?? "TIER_1_UNKNOWN_ACCOUNT_TIER",
+      selectedPath: "MAKER_TAKER",
       feeBpsPerSide: feeBps,
       slippageBpsPerSide: slippageBps,
+      roundTripFeeBpsByPath: feePolicy ? {
+        MAKER_MAKER: Number(feePolicy.makerBps) * 2,
+        MAKER_TAKER: Number(feePolicy.makerBps) + Number(feePolicy.takerBps),
+        TAKER_TAKER: Number(feePolicy.takerBps) * 2,
+      } : { MAKER_MAKER: 80, MAKER_TAKER: 120, TAKER_TAKER: 160 },
       source: "MODELED_ASSUMPTION",
-      note: "fee/slippage are research assumptions only; outcome memory does not prove executable fills",
+      referenceTier1MakerBps: feePolicy ? Number(feePolicy.makerBps) : 40,
+      referenceTier1TakerBps: feePolicy ? Number(feePolicy.takerBps) : 80,
+      note: feeBps === 0 && options.feeBps === undefined
+        ? "Legacy main-lab arithmetic remains zero-cost unless the caller supplies feeBps; the evidence sidecar separately enforces the Tier-1 fallback cost model."
+        : "fee/slippage are caller-supplied research assumptions only; outcome memory does not prove executable fills",
     },
     executionEvidence: {
       l2FillReconciled: false,

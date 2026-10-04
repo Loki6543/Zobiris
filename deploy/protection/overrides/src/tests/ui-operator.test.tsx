@@ -2,10 +2,12 @@
 import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../ui/App";
-import { OPEN_ORDERS, TRADE_MEMORY } from "../ui/simplePortfolioData";
+import { CASH_USD, HOLDINGS, OPEN_ORDERS, PORTFOLIO_CAPTURED_AT, TRADE_MEMORY } from "../ui/simplePortfolioData";
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
+  sessionStorage.setItem("zobiris.operatorToken.v1", "test-refresh-token");
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     if (url.includes("/api/snapshot/latest")) {
@@ -13,6 +15,20 @@ beforeEach(() => {
     }
     if (url.includes("/api/watchlist")) {
       return new Response(JSON.stringify({ watchlist: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.includes("/api/account")) {
+      return new Response(JSON.stringify({ account: {
+        privateAccountSynced: true,
+        source: "Kraken private API",
+        syncMode: "poll",
+        capturedAt: PORTFOLIO_CAPTURED_AT,
+        cashUsd: CASH_USD,
+        freeCashUsd: CASH_USD - OPEN_ORDERS.filter(order => order.side === "BUY").reduce((sum, order) => sum + order.amountUsd, 0),
+        holdings: HOLDINGS,
+        openOrders: OPEN_ORDERS,
+        trades: TRADE_MEMORY,
+        rewards: [],
+      } }), { status: 200, headers: { "content-type": "application/json" } });
     }
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
   }) as typeof fetch;

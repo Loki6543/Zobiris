@@ -5,19 +5,20 @@ import { WatchlistPage } from './WatchlistPage';
 import { MarketBrief } from './MarketBrief';
 import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
-  CASH_INFLOW_USD,
-  CASH_UPDATED_AT,
-  CASH_USD,
-  HOLDINGS,
   MANEUVER_CAPITAL_USD,
   PROBE_MAX_USD,
   PROBE_TYPICAL_USD,
-  LEARNING_RULES,
-  OPEN_ORDERS,
-  PORTFOLIO_CAPTURED_AT,
-  TRADE_MEMORY,
+  type HoldingSeed,
+  type OrderSeed,
   type TradeMemory,
 } from "./simplePortfolioData";
+
+const LEARNING_RULES = [
+  { title: "Prefer planned limits to clustered market buys", detail: "Stage new entries instead of stacking correlated risk." },
+  { title: "Use partial harvesting as a research scenario", detail: "Preserve optionality rather than treating every winner as all-in or all-out." },
+  { title: "Re-entry requires a fresh pullback", detail: "A recent exit is not itself evidence that immediate re-entry is attractive." },
+  { title: "Limit-order discipline gets extra weight", detail: "New-position ideas default to reviewed limits rather than implied market orders." },
+];
 
 import { PortfolioVisuals } from "./PortfolioVisuals";
 import { ProfitProtection } from "./ProfitProtection";
@@ -274,6 +275,10 @@ function krakenLimitPurchaseGate(detail: any) {
 export function App() {
   const [nowMs, setNowMs] = useState(Date.now);
   useEffect(() => { const timer = window.setInterval(() => setNowMs(Date.now()), 30000); return () => window.clearInterval(timer); }, []);
+  const [operatorToken, setOperatorToken] = useState(() => {
+    try { return window.sessionStorage.getItem("zobiris.operatorToken.v1") ?? ""; }
+    catch { return ""; }
+  });
   const [view, setView] = useState<View>("portfolio");
   const [showAllRankings, setShowAllRankings] = useState(false);
   const [analysisSymbol, setAnalysisSymbol] = useState("BTC");
@@ -293,15 +298,19 @@ export function App() {
   const [assetDetailLoading, setAssetDetailLoading] = useState<Record<string, boolean>>({});
   const [form, setForm] = useState({ symbol: "", side: "BUY", quantity: "", usd: "", orderType: "LIMIT" });
 
+  const authHeaders: Record<string, string> = operatorToken
+    ? { Authorization: `Bearer ${operatorToken}` }
+    : {};
+
   async function loadData() {
     void fetch("/api/entry-rules").then(async r=>{if(!r.ok)throw new Error();setInstrumentRules((await r.json()).rules??{});}).catch(()=>setInstrumentRules({}));
     setLoading(true);
     setError(null);
     try {
       const [snapshotResponse, watchlistResponse, accountResponse] = await Promise.all([
-        fetch("/api/snapshot/latest"),
+        fetch("/api/snapshot/latest", { headers: authHeaders }),
         fetch("/api/watchlist"),
-        fetch("/api/account"),
+        fetch("/api/account", { headers: authHeaders }),
       ]);
       if (!snapshotResponse.ok) throw new Error(`Snapshot load failed (HTTP ${snapshotResponse.status}).`);
       if (!watchlistResponse.ok) throw new Error(`Watchlist load failed (HTTP ${watchlistResponse.status}).`);
@@ -324,12 +333,12 @@ export function App() {
     }
   }
 
-  useEffect(() => { void loadData(); }, []);
+  useEffect(() => { void loadData(); }, [operatorToken]);
   useEffect(() => {
     let cancelled = false;
     const pollAccount = async () => {
       try {
-        const response = await fetch("/api/account");
+        const response = await fetch("/api/account", { headers: authHeaders });
         if (!response.ok || cancelled) return;
         const data = await response.json();
         if (!cancelled) setAccount(data?.account ?? null);
@@ -339,22 +348,19 @@ export function App() {
     };
     const timer = window.setInterval(() => { void pollAccount(); }, 15_000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, []);
+  }, [operatorToken]);
 
   const accountSynced = Boolean(account?.privateAccountSynced);
-  const LIVE_HOLDINGS: typeof HOLDINGS = accountSynced && Array.isArray(account?.holdings)
-    ? account.holdings.map((holding: any) => {
-        const fallback = HOLDINGS.find((item) => item.symbol === String(holding?.symbol ?? "").toUpperCase());
-        return {
-          symbol: String(holding?.symbol ?? "").toUpperCase(),
-          name: String(holding?.name ?? fallback?.name ?? holding?.symbol ?? ""),
-          quantity: Number(holding?.quantity ?? 0),
-          avgPriceUsd: holding?.avgPriceUsd == null ? (fallback?.avgPriceUsd ?? null) : Number(holding.avgPriceUsd),
-          fallbackPriceUsd: Number(holding?.fallbackPriceUsd ?? fallback?.fallbackPriceUsd ?? 0),
-        };
-      })
-    : HOLDINGS;
-  const LIVE_OPEN_ORDERS: typeof OPEN_ORDERS = accountSynced && Array.isArray(account?.openOrders)
+  const LIVE_HOLDINGS: HoldingSeed[] = accountSynced && Array.isArray(account?.holdings)
+    ? account.holdings.map((holding: any) => ({
+        symbol: String(holding?.symbol ?? "").toUpperCase(),
+        name: String(holding?.name ?? holding?.symbol ?? ""),
+        quantity: Number(holding?.quantity ?? 0),
+        avgPriceUsd: holding?.avgPriceUsd == null ? null : Number(holding.avgPriceUsd),
+        fallbackPriceUsd: Number(holding?.fallbackPriceUsd ?? 0),
+      }))
+    : [];
+  const LIVE_OPEN_ORDERS: OrderSeed[] = accountSynced && Array.isArray(account?.openOrders)
     ? account.openOrders.map((order: any) => ({
         side: String(order?.side ?? "").toUpperCase() === "SELL" ? "SELL" as const : "BUY" as const,
         symbol: String(order?.symbol ?? "").toUpperCase(),
@@ -362,13 +368,13 @@ export function App() {
         targetPriceUsd: Number(order?.targetPriceUsd ?? 0),
         amountUsd: Number(order?.amountUsd ?? 0),
       }))
-    : OPEN_ORDERS;
+    : [];
   const LIVE_CASH_USD = accountSynced && Number.isFinite(Number(account?.cashUsd))
     ? Number(account.cashUsd)
-    : CASH_USD;
+    : 0;
   const LIVE_CAPTURED_AT = accountSynced && account?.capturedAt
     ? String(account.capturedAt)
-    : PORTFOLIO_CAPTURED_AT;
+    : "";
   const LIVE_TRADE_MEMORY: TradeMemory[] = accountSynced && Array.isArray(account?.trades) && account.trades.length
     ? account.trades.map((trade: any) => ({
         id: String(trade?.id ?? [trade?.at, trade?.symbol, trade?.side, trade?.quantity].join(":")) ,
@@ -380,7 +386,7 @@ export function App() {
         orderType: String(trade?.orderType ?? "").toUpperCase() === "LIMIT" ? "LIMIT" : "MARKET",
         source: "Kraken trades export",
       }))
-    : TRADE_MEMORY;
+    : [];
 
   async function refresh() {
     setRefreshing(true);
@@ -388,7 +394,7 @@ export function App() {
     try {
       const response = await fetch("/api/refresh", {
         method: "POST",
-        headers: { "X-Zobiris-Refresh": "1", "Content-Type": "application/json" },
+        headers: { "X-Zobiris-Refresh": "1", "Content-Type": "application/json", ...authHeaders },
         body: "{}",
       });
       if (response.status === 202) throw new Error("Refresh is still running. Wait and refresh again.");
@@ -763,9 +769,37 @@ export function App() {
           <div aria-label="ZOBIRIS CORE" style={styles.brand}><span className="brand-mark" aria-hidden="true">Z</span> ZOBIRIS <span className="brand-core">CORE</span></div>
           <div style={styles.subtle}>Portfolio decisions, market limits, and trade memory.</div>
         </div>
-        <button style={styles.refreshButton} onClick={() => void refresh()} disabled={refreshing}>
-          {refreshing ? "Refreshing…" : "Refresh market"}
-        </button>
+        <div style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap"}}>
+          {operatorToken ? (
+            <button
+              type="button"
+              style={{...styles.refreshButton,background:"#273754"}}
+              onClick={() => {
+                try { window.sessionStorage.removeItem("zobiris.operatorToken.v1"); } catch {}
+                setOperatorToken("");
+                setAccount(null);
+              }}
+            >
+              Lock private portfolio
+            </button>
+          ) : (
+            <button
+              type="button"
+              style={{...styles.refreshButton,background:"#273754"}}
+              onClick={() => {
+                const value = window.prompt("Enter the ZOBIRIS operator token")?.trim() ?? "";
+                if (!value) return;
+                try { window.sessionStorage.setItem("zobiris.operatorToken.v1", value); } catch {}
+                setOperatorToken(value);
+              }}
+            >
+              Unlock private portfolio
+            </button>
+          )}
+          <button style={styles.refreshButton} onClick={() => void refresh()} disabled={refreshing}>
+            {refreshing ? "Refreshing…" : "Refresh market"}
+          </button>
+        </div>
       </header>
 
       <nav aria-label="Dashboard" style={styles.nav}>
@@ -782,7 +816,7 @@ export function App() {
         ))}
       </nav>
 
-      <div style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. {accountSynced ? `Kraken account synced ${account?.syncMode === "websocket+poll" ? "live by WebSocket + REST reconciliation" : "by automatic REST polling"} · account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}.` : "Account is using the last user-provided Kraken snapshot until private sync succeeds."}</div>
+      <div style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. {accountSynced ? `Kraken account synced ${account?.syncMode === "websocket+poll" ? "live by WebSocket + REST reconciliation" : "by automatic REST polling"} · account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}.` : "Private Kraken account data is locked on the public view."}</div>
       {error ? <div role="alert" style={styles.notice}>{error}</div> : null}
       {loading && !snapshot ? <div style={styles.notice}>Loading live Zobiris market data…</div> : null}
 
@@ -790,19 +824,19 @@ export function App() {
         <main>
           <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
             <Metric label="Portfolio" value={money(total)} />
-            <Metric label="Cash" value={money(LIVE_CASH_USD)} note={"+" + money(CASH_INFLOW_USD) + " funded cash added " + CASH_UPDATED_AT + " · " + Math.round(LIVE_CASH_USD / total * 100) + "% of portfolio"} />
+            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Private account is locked on the public view"} />
             <Metric label="Reserved buys" value={money(reservedBuys)} />
             <Metric label="Free cash" value={money(freeCash)} />
             <Metric label="Maneuver capital" value={money(MANEUVER_CAPITAL_USD)} note={"Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD)} />
           </section>
 
           <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
-          <ProfitProtection />
+          <ProfitProtection operatorToken={operatorToken} />
           <section style={styles.card}>
             <div style={styles.sectionHead}>
               <div>
                 <h2 style={styles.h2}>Current positions</h2>
-                <div style={styles.subtle}>Kraken account snapshot {new Date(LIVE_CAPTURED_AT).toLocaleString()}; prices refresh from the live Zobiris engine.</div>
+                <div style={styles.subtle}>{accountSynced ? `Kraken account snapshot ${new Date(LIVE_CAPTURED_AT).toLocaleString()}; prices refresh from the live Zobiris engine.` : "Private Kraken account snapshot is hidden; market prices still refresh from the live Zobiris engine."}</div>
               </div>
             </div>
             <div style={styles.tableWrap}>
@@ -877,7 +911,7 @@ export function App() {
               <h2 style={styles.h2}>What matters now</h2>
               <DecisionLine title="Market posture" value={regime} detail={regime.toLowerCase().includes("break") ? "Use limits. Do not chase. Keep new entries small." : "Use staged limits and keep cash available."} />
               {strongestHoldingAction ? <DecisionLine title="Best harvest candidate" value={strongestHoldingAction.symbol + " " + pct(strongestHoldingAction.upl)} detail={strongestHoldingAction.action} /> : null}
-              <DecisionLine title="New-entry guardrail" value="Max 2 new positions" detail="Your Sep 5 cluster of four rapid market buys is now treated as a risk pattern." />
+              <DecisionLine title="New-entry guardrail" value="Max 2 new positions" detail="Avoid clustered entries; stage new exposure and preserve cash for better locations." />
             </div>
           </section>
         </main>
@@ -1067,7 +1101,7 @@ export function App() {
       ) : null}
 
       <footer style={styles.footer}>
-        {accountSynced ? "Portfolio quantities, cash, fills, and open orders are synchronized read-only from Kraken. " : "Portfolio quantities and open orders are using the last manual Kraken snapshot. "}Live market prices and rankings come from the Zobiris Kraken/CMC engine. This is decision support, not automatic execution.
+        {accountSynced ? "Portfolio quantities, cash, fills, and open orders are synchronized read-only from Kraken. " : "Private portfolio quantities, cash, fills, and open orders are not exposed on the public view. "}Live market prices and rankings come from the Zobiris Kraken/CMC engine. This is decision support, not automatic execution.
       </footer>
     </div>
   );
