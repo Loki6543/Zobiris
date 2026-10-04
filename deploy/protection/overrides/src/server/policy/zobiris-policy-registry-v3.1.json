@@ -1,0 +1,1361 @@
+{
+  "$schema": "zobiris-policy-registry/1.0",
+  "registryVersion": "3.1.0-draft",
+  "policyVersion": "3.1-draft",
+  "asOf": "2026-10-03",
+  "deploymentStatus": "DRAFT_NOT_DEPLOYED",
+  "registryEnforcement": "NOT_ENFORCED_BY_PRODUCTION",
+  "statusSemantics": "Two different things are recorded here. deploymentStatus and registryEnforcement describe this registry: it is a draft that production does not read. Each authorityScopes[].status describes a feature's observed production behavior as recorded in the Release and Experiment Log (DEPLOYED means the code runs in production within that scope), not enforcement by this registry. A DEPLOYED feature therefore runs under its own embedded conventions until production reads this registry and stamps its hash on decisions.",
+  "purpose": "Single machine-readable source for authority scopes, controlled vocabularies, fee schedule and decision-affecting parameters. Prose documents reference keys here instead of restating numbers. Values marked DEPLOYED describe production as recorded in whitepaper revision 2.9 and must be re-verified against source before this registry is wired into code.",
+  "invariants": {
+    "mayWriteExchange": false,
+    "automaticPromotion": false,
+    "automaticLiveAuthority": false,
+    "automaticDemotion": "ALLOWED_FOR_RESEARCH_STATUS_ONLY",
+    "unknownIsNotNeutral": true,
+    "priceTouchIsNotFill": true,
+    "l2DoesNotEstablishQueuePosition": true
+  },
+  "enums": {
+    "featureStatus": {
+      "DEPLOYED": "Observed running in production within the stated scope (behavior recorded in the Release Log, not enforcement by this registry)",
+      "POLICY_ONLY": "Human evaluation rule; not universally enforced in code",
+      "SHADOW_ONLY": "Captured or computed for measurement; no decision authority",
+      "PROPOSED": "Specified, not implemented or not wired into production",
+      "RETIRED": "No longer used; kept for history"
+    },
+    "activation": {
+      "ACTIVE": "Running and producing data",
+      "INACTIVE_MISSING_CREDENTIALS": "Code deployed; provider credentials absent",
+      "NOT_WIRED": "Code exists; production does not call it",
+      "NOT_BUILT": "No implementation"
+    },
+    "sizingAuthority": {
+      "NONE": "Cannot affect size",
+      "CAP_ONLY": "Can bound size by configured caps; cannot raise it",
+      "ROUND_DOWN_ONLY": "Exchange rounding and minimums only"
+    },
+    "evidenceClass": {
+      "QUOTE_OUTCOME_ONLY": "Forward price outcome from sampled quotes; no fill reconstruction",
+      "L2_EXECUTION_ESTIMATED": "Point-in-time L2 book and trade capture or replay; queue position unknown",
+      "L3_QUEUE_INFORMED": "L3 order-level state bounds queue dynamics; a hypothetical order's queue position remains unknown",
+      "RECONCILED_REAL_FILL": "Linked to a submitted order and a verified exchange fill with pair, side, quantity, fee and time",
+      "PORTFOLIO_REALIZED": "Actual fees, partial fills, realized exits and portfolio interactions reconciled"
+    },
+    "setupFamily": {
+      "RECOVERING_LAGGARD": "Previously weak or lagging asset showing stabilization, easing selling pressure and improving relative behavior",
+      "STRONG_COIN_PULLBACK": "Asset with a defensible broader trend retracing toward support with evidence of stabilization",
+      "OTHER_OR_UNCLASSIFIED": "Insufficient evidence to classify at decision time"
+    },
+    "reviewState": [
+      "HOLD",
+      "WAIT_IN_CASH",
+      "KEEP_EXISTING_ORDER",
+      "PAUSE_OR_VERIFY_EXISTING_ORDER",
+      "REVIEW_QUALIFIED_ENTRY",
+      "REVIEW_REDUCTION_OR_HARVEST",
+      "RESEARCH_REQUIRED"
+    ],
+    "existingOrderDisposition": [
+      "KEEP",
+      "MOVE",
+      "PAUSE",
+      "VERIFY"
+    ],
+    "orderGoal": [
+      "ACCUMULATE",
+      "HARVEST",
+      "PROTECT",
+      "ROTATE",
+      "LEARN"
+    ],
+    "promotionStage": [
+      "1_POINT_IN_TIME_CAPTURE",
+      "2_SHADOW_MEASUREMENT_VS_BASELINE",
+      "3_CHRONOLOGICAL_OOS_AND_VAULT",
+      "4_REALISTIC_FEE_AND_SLIPPAGE_ROBUSTNESS",
+      "5_EXECUTION_EVIDENCE_REVIEW",
+      "6_EXPLICIT_POLICY_APPROVAL_AND_DEPLOYMENT"
+    ],
+    "makerTakerPath": [
+      "MAKER_MAKER",
+      "MAKER_TAKER",
+      "TAKER_TAKER"
+    ],
+    "accountFeeTierAssumption": {
+      "TIER_1": "Read from the account; Tier 1 rates",
+      "TIER_2": "Read from the account; Tier 2 rates",
+      "TIER_3": "Read from the account; Tier 3 rates",
+      "TIER_4": "Read from the account; Tier 4 rates",
+      "TIER_5": "Read from the account; Tier 5 rates",
+      "TIER_6": "Read from the account; Tier 6 rates",
+      "TIER_1_UNKNOWN_ACCOUNT_TIER": "Tier not read from the account; Tier 1 rates applied as the fallback"
+    },
+    "fillLinkage": {
+      "VERIFIED": "Linked to a registered shadow order with matching pair, side and time window, an exchange order ID and a verified pair",
+      "PARTIAL": "Linked to a shadow order but missing an order ID, pair verification or the time window",
+      "UNLINKED": "No shadow order reference"
+    },
+    "metadataProvenance": {
+      "LIVE": "Recorded at decision time from data available then",
+      "RECONSTRUCTED": "Assigned after the decision; excluded from certification and vault use",
+      "UNKNOWN": "Not recorded; never defaulted to a value"
+    }
+  },
+  "authorityScopes": [
+    {
+      "featureId": "delayed_rotation_screen",
+      "title": "Delayed-rotation pilot screen (DELAYED_ROTATION_PILOT_V1)",
+      "policyVersion": "3.1-draft",
+      "status": "DEPLOYED",
+      "authorityLabel": "AUTHORITATIVE_DECISION_INPUT",
+      "mayAffectQualification": true,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": true,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "QUOTE_OUTCOME_ONLY"
+      ],
+      "blockingConditions": [
+        "DATA_INSUFFICIENT",
+        "MARKET_NOT_BULLISH",
+        "STALE_OBSERVATION"
+      ],
+      "specSection": "Strategy Spec 2",
+      "notes": "Establishes QUALIFIED screen status only; downstream gates still apply."
+    },
+    {
+      "featureId": "strategy21_gates",
+      "title": "Strategy 2.1 market, asset, research-integrity, capital and dependency gates",
+      "policyVersion": "3.1-draft",
+      "status": "DEPLOYED",
+      "authorityLabel": "AUTHORITATIVE_DECISION_INPUT",
+      "mayAffectQualification": true,
+      "mayAffectReferenceLimit": true,
+      "sizingAuthority": "CAP_ONLY",
+      "mayAffectSizing": true,
+      "mayAffectOrderRecommendation": true,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "QUOTE_OUTCOME_ONLY"
+      ],
+      "blockingConditions": [
+        "RESEARCH_INTEGRITY_BLOCK",
+        "LIFECYCLE_BLOCK",
+        "ACCOUNT_STATE_UNKNOWN",
+        "CAPITAL_UNAVAILABLE"
+      ],
+      "specSection": "Strategy Spec 4",
+      "notes": "Can change the reference limit only through approved production logic."
+    },
+    {
+      "featureId": "production_entry_reference",
+      "title": "Baseline pullback discount and re-entry adjustment",
+      "policyVersion": "3.1-draft",
+      "status": "DEPLOYED",
+      "authorityLabel": "AUTHORITATIVE_DECISION_INPUT",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": true,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": true,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "QUOTE_OUTCOME_ONLY"
+      ],
+      "blockingConditions": [
+        "NON_FINITE_BASELINE"
+      ],
+      "specSection": "Strategy Spec 3",
+      "notes": "Not shown to be optimal; a starting prior."
+    },
+    {
+      "featureId": "kraken_execution_validation",
+      "title": "Kraken instrument identity, status, tick, lot, minimums and freshness validator",
+      "policyVersion": "3.1-draft",
+      "status": "DEPLOYED",
+      "authorityLabel": "AUTHORITATIVE_EXECUTION_GATE",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": true,
+      "sizingAuthority": "ROUND_DOWN_ONLY",
+      "mayAffectSizing": true,
+      "mayAffectOrderRecommendation": true,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "QUOTE_OUTCOME_ONLY"
+      ],
+      "blockingConditions": [
+        "AMBIGUOUS_PAIR",
+        "PAIR_NOT_ONLINE",
+        "STALE_REFERENCE",
+        "BELOW_MINIMUM"
+      ],
+      "specSection": "Strategy Spec 3.3",
+      "notes": "Limit changes are exchange rounding only."
+    },
+    {
+      "featureId": "portfolio_constraints",
+      "title": "Holding count, meaningful-action floor, combined commitments",
+      "policyVersion": "3.1-draft",
+      "status": "POLICY_ONLY",
+      "authorityLabel": "EVALUATION_CONSTRAINT",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "CAP_ONLY",
+      "mayAffectSizing": true,
+      "mayAffectOrderRecommendation": true,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [
+        "HOLDING_CAP_REACHED",
+        "BELOW_MEANINGFUL_ACTION"
+      ],
+      "specSection": "Operating Policy 7",
+      "notes": "Universal enforcement in every software path is not established. A shared veto-or-reduce gate exists in sidecar v0.2 (sidecar_portfolio_gate); production does not call it yet."
+    },
+    {
+      "featureId": "evidence_reassessment_flags",
+      "title": "REVIEW_REQUIRED, THESIS_RISK, EVIDENCE_INCOMPLETE flags",
+      "policyVersion": "3.1-draft",
+      "status": "DEPLOYED",
+      "authorityLabel": "REVIEW_FLAG",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 7.1",
+      "notes": "Directs investigation; grants nothing."
+    },
+    {
+      "featureId": "outcome_memory_episodes_v2",
+      "title": "Forward outcome episodes and independent five-minute collector",
+      "policyVersion": "3.1-draft",
+      "status": "DEPLOYED",
+      "authorityLabel": "MEASUREMENT",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "QUOTE_OUTCOME_ONLY"
+      ],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 8",
+      "notes": ""
+    },
+    {
+      "featureId": "pilot_scorecard",
+      "title": "Pilot scorecard",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "SHADOW_ONLY_NO_VERDICT",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "QUOTE_OUTCOME_ONLY"
+      ],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 8.2",
+      "notes": ""
+    },
+    {
+      "featureId": "cross_asset_graph",
+      "title": "Cross-asset graph and residual-opportunity shadow",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "SHADOW_ONLY_NO_ENTRY_SCORE_CHANGE",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "QUOTE_OUTCOME_ONLY"
+      ],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 6.1",
+      "notes": "May compute a lower-only research reference when the production entry is unblocked; never substituted for the production limit."
+    },
+    {
+      "featureId": "cryptobert_sentiment",
+      "title": "CryptoBERT social-intelligence layer",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "SHADOW_ONLY_NO_TRADING_AUTHORITY",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 6.2",
+      "notes": "Activation INACTIVE_MISSING_CREDENTIALS (Hugging Face token and Stocktwits Firestream)."
+    },
+    {
+      "featureId": "stocktwits_adapter",
+      "title": "Stocktwits normalized volume and sentiment adapter",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "SHADOW_ONLY_NO_TRADING_AUTHORITY",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 6.3",
+      "notes": ""
+    },
+    {
+      "featureId": "strategy_validation_lab",
+      "title": "Strategy Validation Lab",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "SHADOW_ONLY",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "QUOTE_OUTCOME_ONLY"
+      ],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 9",
+      "notes": "Reports liveOrderAuthority: false."
+    },
+    {
+      "featureId": "signal_certification_v1",
+      "title": "Signal Certification v1",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "SHADOW_ONLY",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "QUOTE_OUTCOME_ONLY"
+      ],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 9.3",
+      "notes": "l2FillReconciled, queuePositionKnown and executableFillCertified are false."
+    },
+    {
+      "featureId": "evidence_sidecar",
+      "title": "ZOBIRIS Evidence Sidecar (zobiris-evidence-v01)",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "SHADOW_ONLY_EXECUTION_EVIDENCE",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "L2_EXECUTION_ESTIMATED"
+      ],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 10",
+      "notes": "Failure-isolated; fee policy stale (see feeSchedule.sidecarPolicyAssumption)."
+    },
+    {
+      "featureId": "sidecar_trial_registry_dsr_pbo",
+      "title": "Sidecar trial registry, Deflated Sharpe Ratio and PBO endpoints",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "VETO_OR_DOWNGRADE_RESEARCH_ONLY",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 9.4",
+      "notes": "Activation NOT_WIRED: production validation does not call it."
+    },
+    {
+      "featureId": "sidecar_cross_venue_and_loss_at_stop",
+      "title": "Sidecar OKX cross-venue reference and loss-at-stop ceiling",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "ADVISORY_REDUCE_ONLY",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 10.3",
+      "notes": "Activation NOT_WIRED; if ever wired, CAP_ONLY."
+    },
+    {
+      "featureId": "sidecar_portfolio_gate",
+      "title": "Sidecar shared portfolio gate (holding cap, commitments, free cash, $8 floor)",
+      "policyVersion": "3.1-draft",
+      "status": "PROPOSED",
+      "authorityLabel": "VETO_OR_REDUCE_ONLY",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [
+        "HOLDINGS_MAX_REACHED",
+        "BELOW_MEANINGFUL_ACTION_FLOOR",
+        "ACCOUNT_STATE_STALE"
+      ],
+      "specSection": "Strategy Spec 10.5",
+      "notes": "Built and tested in sidecar v0.2, not deployed. Once every recommendation path calls it, it becomes CAP_ONLY with block authority; it can never raise a size."
+    },
+    {
+      "featureId": "profit_protection_scenarios",
+      "title": "Profit-protection scenarios (UNVALIDATED_SCENARIOS)",
+      "policyVersion": "3.1-draft",
+      "status": "SHADOW_ONLY",
+      "authorityLabel": "SCENARIO_ONLY_EXECUTION_DISABLED",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 11",
+      "notes": ""
+    },
+    {
+      "featureId": "setup_family_classification",
+      "title": "Mandatory setupFamily field at decision time",
+      "policyVersion": "3.1-draft",
+      "status": "PROPOSED",
+      "authorityLabel": "MEASUREMENT",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Operating Policy 4",
+      "notes": "Activation NOT_BUILT."
+    },
+    {
+      "featureId": "size_liquidity_tiering",
+      "title": "Size tier and Kraken liquidity tier tags",
+      "policyVersion": "3.1-draft",
+      "status": "PROPOSED",
+      "authorityLabel": "MEASUREMENT",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 12.1",
+      "notes": "Activation NOT_BUILT."
+    },
+    {
+      "featureId": "fee_path_reporting",
+      "title": "Fee tier and maker/taker path reporting",
+      "policyVersion": "3.1-draft",
+      "status": "PROPOSED",
+      "authorityLabel": "MEASUREMENT",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Operating Policy 5",
+      "notes": "Activation NOT_BUILT."
+    },
+    {
+      "featureId": "social_attention_x_counts",
+      "title": "X post-count abnormal-attention capture",
+      "policyVersion": "3.1-draft",
+      "status": "PROPOSED",
+      "authorityLabel": "SHADOW_ONLY_NO_TRADING_AUTHORITY",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 12.3",
+      "notes": "Deferred until hypothesis, capture contract, marginal-value test and budget ceiling are approved."
+    },
+    {
+      "featureId": "unlock_window_flag",
+      "title": "UNLOCK_WINDOW review flag",
+      "policyVersion": "3.1-draft",
+      "status": "PROPOSED",
+      "authorityLabel": "REVIEW_FLAG",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 12.4",
+      "notes": "Deferred under the same rule as paid data."
+    },
+    {
+      "featureId": "regime_context_panel",
+      "title": "Regime context panel by evidence family",
+      "policyVersion": "3.1-draft",
+      "status": "PROPOSED",
+      "authorityLabel": "CONTEXT_ONLY",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 12.5",
+      "notes": ""
+    },
+    {
+      "featureId": "kraken_l3_collection",
+      "title": "Kraken L3 order-level capture via read-only key",
+      "policyVersion": "3.1-draft",
+      "status": "PROPOSED",
+      "authorityLabel": "SHADOW_ONLY_EXECUTION_EVIDENCE",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "L3_QUEUE_INFORMED"
+      ],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 12.6",
+      "notes": "Never inside the credential-free sidecar."
+    },
+    {
+      "featureId": "historical_l2_replay",
+      "title": "Purchased historical Kraken L2 replay",
+      "policyVersion": "3.1-draft",
+      "status": "PROPOSED",
+      "authorityLabel": "SHADOW_ONLY_EXECUTION_EVIDENCE",
+      "mayAffectQualification": false,
+      "mayAffectReferenceLimit": false,
+      "sizingAuthority": "NONE",
+      "mayAffectSizing": false,
+      "mayAffectOrderRecommendation": false,
+      "mayWriteExchange": false,
+      "requiredEvidenceClass": [
+        "L2_EXECUTION_ESTIMATED"
+      ],
+      "blockingConditions": [],
+      "specSection": "Strategy Spec 12.6",
+      "notes": "Vendor gaps imported as explicit gaps."
+    }
+  ],
+  "feeSchedule": {
+    "venue": "Kraken spot",
+    "effectiveDate": "2026-07-09",
+    "verifiedOn": "2026-10-03",
+    "scheduleId": "kraken-spot-2026-07-09",
+    "basis": "Best of 30-day spot volume or assets on platform (AoP)",
+    "defaultTierWhenUnknown": 1,
+    "tiers": [
+      {
+        "tier": 1,
+        "volumeUsd": 0,
+        "aopUsd": null,
+        "makerPct": 0.4,
+        "takerPct": 0.8
+      },
+      {
+        "tier": 2,
+        "volumeUsd": 2500,
+        "aopUsd": null,
+        "makerPct": 0.3,
+        "takerPct": 0.6
+      },
+      {
+        "tier": 3,
+        "volumeUsd": 10000,
+        "aopUsd": 20000,
+        "makerPct": 0.22,
+        "takerPct": 0.38
+      },
+      {
+        "tier": 4,
+        "volumeUsd": 25000,
+        "aopUsd": 50000,
+        "makerPct": 0.2,
+        "takerPct": 0.35
+      },
+      {
+        "tier": 5,
+        "volumeUsd": 50000,
+        "aopUsd": 100000,
+        "makerPct": 0.15,
+        "takerPct": 0.3
+      },
+      {
+        "tier": 6,
+        "volumeUsd": 100000,
+        "aopUsd": 200000,
+        "makerPct": 0.12,
+        "takerPct": 0.25
+      }
+    ],
+    "tier1RoundTripPct": {
+      "MAKER_MAKER": 0.8,
+      "MAKER_TAKER": 1.2,
+      "TAKER_TAKER": 1.6
+    },
+    "sidecarPolicyAssumption": {
+      "policyVersion": "2026-10-03.evidence-v0.1",
+      "sha256Prefix": "a88819f2bd08",
+      "makerBps": 25,
+      "takerBps": 40,
+      "validationFeeBpsPerSide": 25,
+      "status": "STALE_VS_TIER_1"
+    },
+    "sidecarPolicyProposed": {
+      "policyVersion": "2026-10-03.evidence-v0.2",
+      "serviceVersion": "0.2.0",
+      "sha256": "b3cd7d5496d63dd31a23b39bc7d1340fe9f6a9b45a9dcbeff7b3dcbb8848d25a",
+      "feeScheduleVersion": "kraken-spot-2026-07-09",
+      "accountFeeTierAssumption": "TIER_1_UNKNOWN_ACCOUNT_TIER",
+      "makerBps": 40,
+      "takerBps": 80,
+      "validationFeePath": "MAKER_TAKER",
+      "validationFeeBpsPerSide": 60,
+      "status": "PROPOSED_TESTED_99_OF_99_NOT_DEPLOYED",
+      "condition": "Valid for the unknown-tier fallback only. Once the tier is read, the label, rates and hash change; the service refuses to load if label and rates disagree.",
+      "supersedes": [
+        {
+          "sha256": "52b52ae432408955eb4acf359398f7ecbdd18ae5f0121b76aa14fe05248a21c6",
+          "reason": "Policy-only draft without a fee label; never deployed"
+        },
+        {
+          "sha256": "1adf279019e13f6579aa9e6bcfcc8ae50ab9c716765393042f3fdb5340f22762",
+          "reason": "Candidate before the portfolio section was added; never deployed"
+        }
+      ]
+    },
+    "note": "Fees are a percentage of trade value with no fixed per-trade fee, so the fee percentage does not depend on order size; account tier does."
+  },
+  "requiredEpisodeFields": [
+    "decisionTime",
+    "setupFamily",
+    "sizeTier",
+    "liquidityTier",
+    "evidenceClass",
+    "feeScheduleVersion",
+    "accountFeeTierAssumption",
+    "makerTakerPath",
+    "policyHash",
+    "structuralBreakFlags",
+    "metadataProvenance"
+  ],
+  "requiredReconciledFillFields": [
+    "verifiedExchangePair",
+    "side",
+    "orderId",
+    "quantity",
+    "cost",
+    "feeCurrency",
+    "feeAmount",
+    "fillTime",
+    "linkageConfidence"
+  ],
+  "structuralBreaks": [
+    {
+      "date": "2026-01-15",
+      "id": "X_INFOFI_BAN",
+      "affects": [
+        "social_attention_x_counts",
+        "cryptobert_sentiment"
+      ]
+    },
+    {
+      "date": "2026-07-09",
+      "id": "KRAKEN_CROSS_PLATFORM_FEE_TIERS",
+      "affects": [
+        "fee_path_reporting",
+        "strategy_validation_lab",
+        "evidence_sidecar"
+      ]
+    },
+    {
+      "date": "2026-07-10",
+      "id": "KRAKEN_V2_SYMBOLS_IN_VENDOR_HISTORY",
+      "affects": [
+        "historical_l2_replay"
+      ]
+    },
+    {
+      "date": "2026-10-02",
+      "id": "DELAYED_ROTATION_RANGE_BROADENING",
+      "affects": [
+        "delayed_rotation_screen",
+        "strategy_validation_lab"
+      ]
+    }
+  ],
+  "parameters": {
+    "delayedRotation.market.minComparableAssets": {
+      "value": 10,
+      "unit": "assets",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.1"
+    },
+    "delayedRotation.market.btc30dMinExclusivePct": {
+      "value": 0,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.1"
+    },
+    "delayedRotation.market.btc90dMinExclusivePct": {
+      "value": 0,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.1"
+    },
+    "delayedRotation.market.breadth7dMinPct": {
+      "value": 40,
+      "unit": "pct of comparable assets positive",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.1"
+    },
+    "delayedRotation.market.breadth30dMinPct": {
+      "value": 45,
+      "unit": "pct of comparable assets positive",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.1"
+    },
+    "delayedRotation.asset.r7MinExclusivePct": {
+      "value": 0,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.2"
+    },
+    "delayedRotation.asset.r7MaxInclusivePct": {
+      "value": 12,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.2"
+    },
+    "delayedRotation.asset.r24ChaseGuardAbovePct": {
+      "value": 8,
+      "unit": "pct, one-sided",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.2"
+    },
+    "delayedRotation.asset.r30RangePct": {
+      "value": [
+        -35,
+        45
+      ],
+      "unit": "pct inclusive",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.2"
+    },
+    "delayedRotation.asset.r90RangePct": {
+      "value": [
+        -70,
+        55
+      ],
+      "unit": "pct inclusive",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.2"
+    },
+    "delayedRotation.asset.structural30BelowPct": {
+      "value": -35,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.3"
+    },
+    "delayedRotation.asset.structural90BelowPct": {
+      "value": -70,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.3"
+    },
+    "delayedRotation.nearRotation.lag30Pp": {
+      "value": -8,
+      "unit": "pp vs BTC, signed",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.3"
+    },
+    "delayedRotation.nearRotation.lag90Pp": {
+      "value": -20,
+      "unit": "pp vs BTC, signed",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.3"
+    },
+    "delayedRotation.ranking.weights": {
+      "value": {
+        "recovery": 0.3,
+        "lag30": 0.2,
+        "lag90": 0.2,
+        "calm24h": 0.15,
+        "turnover": 0.15
+      },
+      "unit": "weights",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.4"
+    },
+    "delayedRotation.ranking.recoveryCenter7dPct": {
+      "value": 5,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.4"
+    },
+    "delayedRotation.ranking.lag30CenterPct": {
+      "value": -12,
+      "unit": "pct, approximate",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.4"
+    },
+    "delayedRotation.ranking.lag90CenterPct": {
+      "value": -30,
+      "unit": "pct, approximate",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.4"
+    },
+    "delayedRotation.ranking.turnoverNeutralWhenMissing": {
+      "value": 0.5,
+      "unit": "component score",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 2.4"
+    },
+    "entry.baseline.basePct": {
+      "value": 4,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.1"
+    },
+    "entry.baseline.k7": {
+      "value": 0.15,
+      "unit": "pct per pct of positive 7d return",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.1"
+    },
+    "entry.baseline.lag30Bonus": {
+      "value": {
+        "thresholdPct": -20,
+        "bonusPct": 0.5
+      },
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.1"
+    },
+    "entry.baseline.lag90Bonus": {
+      "value": {
+        "thresholdPct": -50,
+        "bonusPct": 0.5
+      },
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.1"
+    },
+    "entry.baseline.clampPct": {
+      "value": [
+        4,
+        8
+      ],
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.1"
+    },
+    "entry.baseline.roundingDecimals": {
+      "value": 2,
+      "unit": "decimals, applied once",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.1"
+    },
+    "entry.reentry.addPct": {
+      "value": 2,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.2"
+    },
+    "entry.reentry.capPct": {
+      "value": 10,
+      "unit": "pct",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.2"
+    },
+    "entry.reentry.flagWindowDays": {
+      "value": 7,
+      "unit": "days, sell then buy",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.2"
+    },
+    "kraken.validation.maxObservationAgeMin": {
+      "value": 30,
+      "unit": "minutes",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.3"
+    },
+    "kraken.validation.metadataCacheMin": {
+      "value": 15,
+      "unit": "minutes",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.3"
+    },
+    "ui.cashBufferDivisor": {
+      "value": 1.01,
+      "unit": "divisor",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.4",
+      "note": "Covers one Tier 1 taker fee plus 0.20%."
+    },
+    "capital.tacticalReferenceUsd": {
+      "value": 1850,
+      "unit": "USD, configuration reference",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.4"
+    },
+    "capital.typicalProbeUsd": {
+      "value": 37,
+      "unit": "USD (2%)",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.4"
+    },
+    "capital.maxProbeReferenceUsd": {
+      "value": 46.25,
+      "unit": "USD (2.5%)",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 3.4"
+    },
+    "portfolio.intentionalHoldingsTarget": {
+      "value": [
+        5,
+        6
+      ],
+      "unit": "holdings",
+      "status": "POLICY_ONLY",
+      "specSection": "Operating Policy 7"
+    },
+    "portfolio.intentionalHoldingsMax": {
+      "value": 7,
+      "unit": "holdings",
+      "status": "POLICY_ONLY",
+      "specSection": "Operating Policy 7"
+    },
+    "portfolio.meaningfulActionFloorUsd": {
+      "value": 8,
+      "unit": "USD",
+      "status": "DEPLOYED",
+      "specSection": "Operating Policy 7",
+      "note": "UI partial-sale floor."
+    },
+    "graph.peerMaxAgeMin": {
+      "value": 30,
+      "unit": "minutes",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "graph.minUsableAssets": {
+      "value": 4,
+      "unit": "assets",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "graph.edgeWeights": {
+      "value": {
+        "medLongSimilarity": 0.72,
+        "weeklySimilarity": 0.18,
+        "ecosystemPriorMax": 0.1
+      },
+      "unit": "weights",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "graph.ecosystemEdgeMin": {
+      "value": 0.74,
+      "unit": "edge weight",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "graph.genericEdgeDiscardBelow": {
+      "value": 0.55,
+      "unit": "edge weight",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "graph.maxNeighbors": {
+      "value": 5,
+      "unit": "neighbors",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "graph.minNeighbors": {
+      "value": 2,
+      "unit": "neighbors",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "graph.materiality24h": {
+      "value": "clamp(0.35 x cross-sectional 24h sd, 0.75, 3.5)",
+      "unit": "pp",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "graph.minConfidence": {
+      "value": 0.4,
+      "unit": "score",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "graph.shadowAdjustment": {
+      "value": "clamp(0.20 x |24h residual|, 0.25, 2.00)",
+      "unit": "pp, lower-only",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.1"
+    },
+    "cryptobert.windows": {
+      "value": [
+        "30m",
+        "1.5h",
+        "8h",
+        "24h",
+        "3d",
+        "7d"
+      ],
+      "unit": "aggregation windows",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.2"
+    },
+    "social.stocktwits.maxObservationAgeH": {
+      "value": 24,
+      "unit": "hours",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.3"
+    },
+    "social.accelerationBaselinePeriods": {
+      "value": 7,
+      "unit": "comparable periods",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 6.3"
+    },
+    "evidence.collector.assetsPerTick": {
+      "value": 5,
+      "unit": "assets",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 7.1"
+    },
+    "evidence.collector.providerBudgetSec": {
+      "value": 10,
+      "unit": "seconds per tick",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 7.1"
+    },
+    "evidence.import.maxRecords": {
+      "value": 100,
+      "unit": "records",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 7.1"
+    },
+    "evidence.import.maxBodyKb": {
+      "value": 64,
+      "unit": "KB",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 7.1"
+    },
+    "outcomes.horizons": {
+      "value": [
+        "1H",
+        "4H",
+        "1D",
+        "3D",
+        "7D"
+      ],
+      "unit": "horizons",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 8.1"
+    },
+    "outcomes.resolutionToleranceFraction": {
+      "value": 0.25,
+      "unit": "fraction of horizon",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 8.1"
+    },
+    "outcomes.episodeSpacingDays": {
+      "value": 7,
+      "unit": "days per symbol",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 8.1"
+    },
+    "outcomes.maxActiveRecords": {
+      "value": 5000,
+      "unit": "records before archive",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 8.1"
+    },
+    "outcomes.collectorIntervalMin": {
+      "value": 5,
+      "unit": "minutes",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 8.1"
+    },
+    "scorecard.minResolvedPerGroup": {
+      "value": 30,
+      "unit": "episodes",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 8.2"
+    },
+    "scorecard.maxUnresolvedFraction": {
+      "value": 0.1,
+      "unit": "fraction",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 8.2"
+    },
+    "validation.split": {
+      "value": {
+        "research": 0.6,
+        "oos": 0.25,
+        "vault": 0.15
+      },
+      "unit": "fractions",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 9.1"
+    },
+    "validation.minOosEpisodes": {
+      "value": 30,
+      "unit": "episodes",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 9.1"
+    },
+    "validation.minVaultEpisodes": {
+      "value": 15,
+      "unit": "episodes",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 9.1"
+    },
+    "validation.gates": {
+      "value": {
+        "meanNetPctGt": 0,
+        "medianNetPctGte": 0,
+        "hitRateGte": 0.5,
+        "profitFactorGte": 1.05,
+        "maxDrawdownPctLte": 20,
+        "btcCoverageGte": 0.6,
+        "excessVsBtcPctGt": 0
+      },
+      "unit": "gates",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 9.2"
+    },
+    "validation.vaultEligibility": {
+      "value": "decisionTime after the candidate's freeze (trial registration) time",
+      "unit": "rule",
+      "status": "PROPOSED",
+      "specSection": "Strategy Spec 9.1",
+      "note": "Outcomes already viewed are research data, never vault."
+    },
+    "learning.budgetCeilingUsd": {
+      "value": null,
+      "unit": "USD",
+      "status": "PROPOSED",
+      "specSection": "Operating Policy 8",
+      "note": "Set by the user before the first LEARN order; there is no default."
+    },
+    "learning.maxOpenLearnOrders": {
+      "value": null,
+      "unit": "orders",
+      "status": "PROPOSED",
+      "specSection": "Operating Policy 8",
+      "note": "Set by the user before the first LEARN order; there is no default."
+    },
+    "portfolio.maxAccountDataAgeMin": {
+      "value": 30,
+      "unit": "minutes",
+      "status": "PROPOSED",
+      "specSection": "Strategy Spec 10.5",
+      "note": "Account state older than this blocks the portfolio gate."
+    },
+    "validation.walkForward": {
+      "value": {
+        "folds": 3,
+        "minPassing": 2
+      },
+      "unit": "folds",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 9.2"
+    },
+    "validation.regimeBreakdownMinObs": {
+      "value": 5,
+      "unit": "observations",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 9.2"
+    },
+    "certification.stresses": {
+      "value": [
+        {
+          "id": "COST_PLUS_5",
+          "extraBpsPerSide": 5,
+          "edgeHaircut": 0
+        },
+        {
+          "id": "COST_PLUS_10",
+          "extraBpsPerSide": 10,
+          "edgeHaircut": 0
+        },
+        {
+          "id": "EDGE_HAIRCUT_25",
+          "extraBpsPerSide": 0,
+          "edgeHaircut": 0.25
+        },
+        {
+          "id": "COMBINED",
+          "extraBpsPerSide": 10,
+          "edgeHaircut": 0.25
+        }
+      ],
+      "unit": "stress set",
+      "status": "DEPLOYED",
+      "specSection": "Strategy Spec 9.3"
+    },
+    "certification.feePathScenarios": {
+      "value": [
+        "MAKER_MAKER",
+        "MAKER_TAKER",
+        "TAKER_TAKER"
+      ],
+      "unit": "fee paths at account tier (Tier 1 if unknown)",
+      "status": "PROPOSED",
+      "specSection": "Strategy Spec 9.3"
+    },
+    "protection.drawdownReviewLevelsPct": {
+      "value": [
+        5,
+        8,
+        12,
+        15
+      ],
+      "unit": "pct",
+      "status": "SHADOW_ONLY",
+      "specSection": "Strategy Spec 11"
+    },
+    "protection.peakProfitGivebackPct": {
+      "value": 30,
+      "unit": "pct",
+      "status": "SHADOW_ONLY",
+      "specSection": "Strategy Spec 11"
+    },
+    "protection.illustrativeLadder": {
+      "value": [
+        [
+          25,
+          10
+        ],
+        [
+          50,
+          15
+        ],
+        [
+          75,
+          15
+        ],
+        [
+          100,
+          20
+        ],
+        [
+          150,
+          15
+        ],
+        [
+          200,
+          10
+        ]
+      ],
+      "unit": "[gain pct, pct of original position]",
+      "status": "SHADOW_ONLY",
+      "specSection": "Strategy Spec 11",
+      "note": "Leaves a 15% runner."
+    },
+    "protection.recoveryFlag": {
+      "value": {
+        "minDrawdownPct": 10,
+        "reboundToPeakFraction": 0.9
+      },
+      "unit": "review marker",
+      "status": "SHADOW_ONLY",
+      "specSection": "Strategy Spec 11"
+    },
+    "rewards.confirmedBabyRewardLotMax": {
+      "value": 0.00523,
+      "unit": "BABY",
+      "status": "DEPLOYED",
+      "specSection": "Operating Policy 7"
+    },
+    "unlockWindow.minSupplyPct": {
+      "value": 1,
+      "unit": "pct of circulating supply (team or investor cliff)",
+      "status": "PROPOSED",
+      "specSection": "Strategy Spec 12.4",
+      "note": "Hypothesis, not calibrated."
+    },
+    "unlockWindow.lookaheadDays": {
+      "value": 30,
+      "unit": "days",
+      "status": "PROPOSED",
+      "specSection": "Strategy Spec 12.4",
+      "note": "Hypothesis, not calibrated."
+    },
+    "attention.abnormalLookbackDays": {
+      "value": 30,
+      "unit": "days",
+      "status": "PROPOSED",
+      "specSection": "Strategy Spec 12.3"
+    },
+    "attention.crowdingZ": {
+      "value": 2,
+      "unit": "standard deviations",
+      "status": "PROPOSED",
+      "specSection": "Strategy Spec 12.3",
+      "note": "Hypothesis, not calibrated."
+    }
+  }
+}
