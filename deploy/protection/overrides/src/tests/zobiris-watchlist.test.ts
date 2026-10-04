@@ -108,7 +108,9 @@ describe("Unity watchlist projection", () => {
     expect(buildZobirisWatchlist(f).assets[0].price).toBe(0.0000035628);
   });
   it("preserves missing rows and null values instead of fabricated zero", () => {
-    const r = buildZobirisWatchlist(fixture());
+    const input = fixture();
+    const r = buildZobirisWatchlist(input);
+    expect(r.assets).toHaveLength(input.watchlist.length);
     expect(r.assets[1].state).toBe("DATA_INSUFFICIENT");
     expect(r.assets[1].price).toBeNull();
     expect(r.assets[1].scores.rotation).toBeNull();
