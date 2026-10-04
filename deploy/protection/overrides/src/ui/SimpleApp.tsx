@@ -298,7 +298,9 @@ export function App() {
   const [assetDetailLoading, setAssetDetailLoading] = useState<Record<string, boolean>>({});
   const [form, setForm] = useState({ symbol: "", side: "BUY", quantity: "", usd: "", orderType: "LIMIT" });
 
-  const authHeaders = operatorToken ? { Authorization: `Bearer ${operatorToken}` } : {};
+  const authHeaders: Record<string, string> = operatorToken
+    ? { Authorization: `Bearer ${operatorToken}` }
+    : {};
 
   async function loadData() {
     void fetch("/api/entry-rules").then(async r=>{if(!r.ok)throw new Error();setInstrumentRules((await r.json()).rules??{});}).catch(()=>setInstrumentRules({}));
