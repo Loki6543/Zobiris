@@ -5,19 +5,20 @@ import { WatchlistPage } from './WatchlistPage';
 import { MarketBrief } from './MarketBrief';
 import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
-  CASH_INFLOW_USD,
-  CASH_UPDATED_AT,
-  CASH_USD,
-  HOLDINGS,
   MANEUVER_CAPITAL_USD,
   PROBE_MAX_USD,
   PROBE_TYPICAL_USD,
-  LEARNING_RULES,
-  OPEN_ORDERS,
-  PORTFOLIO_CAPTURED_AT,
-  TRADE_MEMORY,
+  type HoldingSeed,
+  type OrderSeed,
   type TradeMemory,
 } from "./simplePortfolioData";
+
+const LEARNING_RULES = [
+  { title: "Prefer planned limits to clustered market buys", detail: "Stage new entries instead of stacking correlated risk." },
+  { title: "Use partial harvesting as a research scenario", detail: "Preserve optionality rather than treating every winner as all-in or all-out." },
+  { title: "Re-entry requires a fresh pullback", detail: "A recent exit is not itself evidence that immediate re-entry is attractive." },
+  { title: "Limit-order discipline gets extra weight", detail: "New-position ideas default to reviewed limits rather than implied market orders." },
+];
 
 import { PortfolioVisuals } from "./PortfolioVisuals";
 import { ProfitProtection } from "./ProfitProtection";
@@ -342,19 +343,16 @@ export function App() {
   }, []);
 
   const accountSynced = Boolean(account?.privateAccountSynced);
-  const LIVE_HOLDINGS: typeof HOLDINGS = accountSynced && Array.isArray(account?.holdings)
-    ? account.holdings.map((holding: any) => {
-        const fallback = HOLDINGS.find((item) => item.symbol === String(holding?.symbol ?? "").toUpperCase());
-        return {
-          symbol: String(holding?.symbol ?? "").toUpperCase(),
-          name: String(holding?.name ?? fallback?.name ?? holding?.symbol ?? ""),
-          quantity: Number(holding?.quantity ?? 0),
-          avgPriceUsd: holding?.avgPriceUsd == null ? (fallback?.avgPriceUsd ?? null) : Number(holding.avgPriceUsd),
-          fallbackPriceUsd: Number(holding?.fallbackPriceUsd ?? fallback?.fallbackPriceUsd ?? 0),
-        };
-      })
-    : HOLDINGS;
-  const LIVE_OPEN_ORDERS: typeof OPEN_ORDERS = accountSynced && Array.isArray(account?.openOrders)
+  const LIVE_HOLDINGS: HoldingSeed[] = accountSynced && Array.isArray(account?.holdings)
+    ? account.holdings.map((holding: any) => ({
+        symbol: String(holding?.symbol ?? "").toUpperCase(),
+        name: String(holding?.name ?? holding?.symbol ?? ""),
+        quantity: Number(holding?.quantity ?? 0),
+        avgPriceUsd: holding?.avgPriceUsd == null ? null : Number(holding.avgPriceUsd),
+        fallbackPriceUsd: Number(holding?.fallbackPriceUsd ?? 0),
+      }))
+    : [];
+  const LIVE_OPEN_ORDERS: OrderSeed[] = accountSynced && Array.isArray(account?.openOrders)
     ? account.openOrders.map((order: any) => ({
         side: String(order?.side ?? "").toUpperCase() === "SELL" ? "SELL" as const : "BUY" as const,
         symbol: String(order?.symbol ?? "").toUpperCase(),
@@ -362,13 +360,13 @@ export function App() {
         targetPriceUsd: Number(order?.targetPriceUsd ?? 0),
         amountUsd: Number(order?.amountUsd ?? 0),
       }))
-    : OPEN_ORDERS;
+    : [];
   const LIVE_CASH_USD = accountSynced && Number.isFinite(Number(account?.cashUsd))
     ? Number(account.cashUsd)
-    : CASH_USD;
+    : 0;
   const LIVE_CAPTURED_AT = accountSynced && account?.capturedAt
     ? String(account.capturedAt)
-    : PORTFOLIO_CAPTURED_AT;
+    : "";
   const LIVE_TRADE_MEMORY: TradeMemory[] = accountSynced && Array.isArray(account?.trades) && account.trades.length
     ? account.trades.map((trade: any) => ({
         id: String(trade?.id ?? [trade?.at, trade?.symbol, trade?.side, trade?.quantity].join(":")) ,
@@ -380,7 +378,7 @@ export function App() {
         orderType: String(trade?.orderType ?? "").toUpperCase() === "LIMIT" ? "LIMIT" : "MARKET",
         source: "Kraken trades export",
       }))
-    : TRADE_MEMORY;
+    : [];
 
   async function refresh() {
     setRefreshing(true);
@@ -790,7 +788,7 @@ export function App() {
         <main>
           <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
             <Metric label="Portfolio" value={money(total)} />
-            <Metric label="Cash" value={money(LIVE_CASH_USD)} note={"+" + money(CASH_INFLOW_USD) + " funded cash added " + CASH_UPDATED_AT + " · " + Math.round(LIVE_CASH_USD / total * 100) + "% of portfolio"} />
+            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Private account is locked on the public view"} />
             <Metric label="Reserved buys" value={money(reservedBuys)} />
             <Metric label="Free cash" value={money(freeCash)} />
             <Metric label="Maneuver capital" value={money(MANEUVER_CAPITAL_USD)} note={"Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD)} />
