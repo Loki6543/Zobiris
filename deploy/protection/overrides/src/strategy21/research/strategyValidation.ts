@@ -77,6 +77,7 @@ export interface CertificationStressScenario {
 
 export interface StrategyCertification {
   version: "signal-certification-v1";
+  evidenceClass: "QUOTE_OUTCOME_ONLY";
   classification: StrategyCertificationClass;
   score: number;
   stable: boolean;
@@ -127,6 +128,7 @@ export interface WalkForwardFold {
 
 export interface StrategyValidationReport {
   version: "strategy-validation-v1";
+  evidenceClass: "QUOTE_OUTCOME_ONLY";
   authority: "SHADOW_ONLY";
   liveOrderAuthority: false;
   status: StrategyValidationStatus;
@@ -412,6 +414,7 @@ function buildCertification(
 
   return {
     version: "signal-certification-v1",
+    evidenceClass: "QUOTE_OUTCOME_ONLY",
     classification,
     score,
     stable: classification === "CERTIFIED_SHADOW",
@@ -470,6 +473,7 @@ export function validateStrategyEpisodes(
 
   return {
     version: "strategy-validation-v1",
+    evidenceClass: "QUOTE_OUTCOME_ONLY",
     authority: "SHADOW_ONLY",
     liveOrderAuthority: false,
     status,
