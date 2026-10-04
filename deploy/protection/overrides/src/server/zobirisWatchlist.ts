@@ -390,11 +390,13 @@ export function buildZobirisWatchlist({
         };
       }
       if (gate.decision === "REDUCE") {
-        const ref = entryReference(
-          asset.entry.referencePrice,
-          asset.entry.baselineDiscountPct,
-          asset.entry.reentry === true,
-        );
+        const ref = typeof asset.entry.referencePrice === "number"
+          ? entryReference(
+              asset.entry.referencePrice,
+              asset.entry.baselineDiscountPct,
+              asset.entry.reentry === true,
+            )
+          : null;
         const checked = validateEntry(ref, gate.allowedUsd, rules[asset.symbol], now);
         if (!checked.valid) {
           return {
