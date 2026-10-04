@@ -76,6 +76,17 @@ describe("v0.4.13 watchlist-only HTTP boundary", () => {
     expect(health.researchProvenance).toEqual({ version: '0.3.0', status: 'AWAITING_EVIDENCE' });
   });
 
+  it("protects private account and diagnostic endpoints", async () => {
+    for (const path of ["/api/account", "/api/profit-protection", "/api/audit", "/api/db-info"]) {
+      const anonymous = await fetch(`${baseUrl}${path}`);
+      expect(anonymous.status).toBe(401);
+      const authorized = await fetch(`${baseUrl}${path}`, {
+        headers: { authorization: "Bearer test-refresh-token" },
+      });
+      expect(authorized.status).not.toBe(401);
+    }
+  });
+
   it("keeps shadow diagnostics behind the operator token", async () => {
     const anonymous = await fetch(`${baseUrl}/api/prediction/shadow?symbol=SOL`);
     expect(anonymous.status).toBe(401);
@@ -99,7 +110,14 @@ describe("v0.4.13 watchlist-only HTTP boundary", () => {
     });
     expect(first.outboxIds).toHaveLength(1);
 
-    const latestResponse = await fetch(`${baseUrl}/api/snapshot/latest`);
+    const anonymousLatest = await fetch(`${baseUrl}/api/snapshot/latest`);
+    expect(anonymousLatest.status).toBe(200);
+    const anonymousSnapshot = (await anonymousLatest.json()) as JsonRecord;
+    expect(anonymousSnapshot.snapshot.portfolioDependency).toBeNull();
+
+    const latestResponse = await fetch(`${baseUrl}/api/snapshot/latest`, {
+      headers: { authorization: "Bearer test-refresh-token" },
+    });
     expect(latestResponse.status).toBe(200);
     const latest = (await latestResponse.json()) as JsonRecord;
     expect(latest.snapshot.id).toBe(first.snapshotId);
@@ -109,7 +127,15 @@ describe("v0.4.13 watchlist-only HTTP boundary", () => {
     expect(dependency.grossCurrentExposureUsd).toBeGreaterThan(200);
     expect(dependency.assets.map((a: any) => a.symbol)).toEqual(expect.arrayContaining(["BTC", "SOL", "ETH", "AAVE", "KAS", "EGLD", "LINK", "QNT", "HBAR", "XRP"]));
     expect(dependency.grossPostFillExposureUsd).toBeCloseTo(dependency.grossCurrentExposureUsd + 102, 2);
-    const strategyResponse = await fetch(`${baseUrl}/api/strategy21`);
+    const publicStrategyResponse = await fetch(`${baseUrl}/api/strategy21`);
+    expect(publicStrategyResponse.status).toBe(200);
+    const publicStrategy = await publicStrategyResponse.json() as JsonRecord;
+    expect(publicStrategy.strategy21.portfolioDependency).toBeNull();
+    expect(publicStrategy.strategy21.privateAccountSynced).toBe(false);
+
+    const strategyResponse = await fetch(`${baseUrl}/api/strategy21`, {
+      headers: { authorization: "Bearer test-refresh-token" },
+    });
     const strategy = await strategyResponse.json() as JsonRecord;
     expect(strategy.asOf).toBe(new Date(latest.snapshot.asOf).toISOString());
     expect(strategy.strategy21.fundedCashUsd).toBe(713.74);
