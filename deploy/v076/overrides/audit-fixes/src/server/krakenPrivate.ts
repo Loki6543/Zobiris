@@ -90,6 +90,11 @@ function fallbackState(): KrakenAccountState {
     openOrders: FALLBACK_ORDERS.map((o, index) => ({
       id: `manual-${index}`,
       ...o,
+      pair: null,
+      quoteCurrency: "USD",
+      pairVerified: false,
+      targetPriceQuote: o.targetPriceUsd,
+      quoteNotional: o.amountUsd,
       quantity: o.targetPriceUsd > 0 ? o.amountUsd / o.targetPriceUsd : 0,
       remainingQuantity: o.targetPriceUsd > 0 ? o.amountUsd / o.targetPriceUsd : 0,
       status: "open",
@@ -219,9 +224,6 @@ function pairIdentity(rawPair: string): { symbol: string; quoteCurrency: string 
   return { symbol, quoteCurrency, pair: ok ? symbol + "/" + quoteCurrency : null, pairVerified: ok };
 }
 
-function symbolFromPair(rawPair: string): string {
-  return pairIdentity(rawPair).symbol;
-}
 
 function nameFor(symbol: string): string {
   return NAMES.get(symbol) ?? symbol;
