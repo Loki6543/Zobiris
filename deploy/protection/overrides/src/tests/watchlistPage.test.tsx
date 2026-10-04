@@ -17,3 +17,14 @@ it('withholds readiness and unusable quote coverage',()=>{
  render(<WatchlistPage rows={[{symbol:'BTC',asset,confidence:80,rotationScore:90,move:'Delayed-rotation limit',reason:'test',ready:true}]} now={now} snapshotFresh={false} onAnalyze={()=>{}}/>);
  expect(screen.getByText('0 with current CMC data')).toBeTruthy();expect(screen.getByText('Entry readiness unavailable — refresh')).toBeTruthy();
 });
+
+it('shows explicit full-refresh coverage for every watchlist row',()=>{
+ const now=Date.now();
+ const rows=[{symbol:'SOL',asset:null,confidence:0,rotationScore:0,move:'Wait',reason:'Missing quote',ready:false}];
+ const research=[{symbol:'SOL',review:{status:'EVIDENCE_INCOMPLETE'},refreshAssessment:{coverage:'COMPLETE_WITH_GAPS',reviewStatus:'EVIDENCE_INCOMPLETE',newsStatus:'AVAILABLE',socialStatus:'UNAVAILABLE',providerFailures:[],providersNotConfigured:['cryptobert-stocktwits']}}];
+ render(<WatchlistPage rows={rows} research={research} refreshSummary={{requestedAssets:1,evaluatedAssets:1,allRowsEvaluated:true}} now={now} snapshotFresh={true} onAnalyze={()=>{}}/>);
+ expect(screen.getByText('1/1 evaluated on last refresh')).toBeTruthy();
+ expect(screen.getByText('COMPLETE WITH GAPS')).toBeTruthy();
+ fireEvent.click(screen.getByText('Why this rank'));
+ expect(screen.getByText(/news AVAILABLE · social UNAVAILABLE/)).toBeTruthy();
+});

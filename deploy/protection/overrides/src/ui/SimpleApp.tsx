@@ -290,6 +290,7 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastRefreshEvaluation, setLastRefreshEvaluation] = useState<any>(null);
   const [showAllTrades, setShowAllTrades] = useState(false);
   const [customTrades, setCustomTrades] = useState<TradeMemory[]>(loadCustomTrades);
   const [recordOpen, setRecordOpen] = useState(false);
@@ -399,6 +400,8 @@ export function App() {
       });
       if (response.status === 202) throw new Error("Refresh is still running. Wait and refresh again.");
       if (!response.ok) throw new Error(`Refresh failed (HTTP ${response.status}). Previous market data is still shown.`);
+      const refreshBody = await response.json();
+      setLastRefreshEvaluation(refreshBody?.fullWatchlistEvaluation ?? null);
       await loadData();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Refresh failed. Previous market data is still shown.");
@@ -917,7 +920,7 @@ export function App() {
         </main>
       ) : null}
 
-      {view === "watchlist" ? <WatchlistPage research={researchEvidence.data?.assets??[]} rows={watchlistRankings} now={nowMs} snapshotFresh={snapshotFresh} onAnalyze={symbol=>{setAnalysisSymbol(symbol);setView("compare");}} /> : null}
+      {view === "watchlist" ? <WatchlistPage research={researchEvidence.data?.assets??[]} refreshSummary={lastRefreshEvaluation} rows={watchlistRankings} now={nowMs} snapshotFresh={snapshotFresh} onAnalyze={symbol=>{setAnalysisSymbol(symbol);setView("compare");}} /> : null}
 
       {view === "market" ? (
         <main>
