@@ -4,6 +4,12 @@ import {openResearchEvidence} from './researchEvidence.js';
 import {collectResearchTick,importResearchEvidence,researchAdapters,type ResearchAsset} from './researchCollection.js';
 import {researchView,startResearchTimers,snapshotFreshness,fetchOutcomeQuotes} from './researchRuntime.js';
 import {collectOutcomeTick} from './outcomeCollector.js';
+import {
+  collectFullWatchlistResearch,
+  publicRssResearchAdapter,
+  readLatestFullWatchlistResearch,
+  type RefreshResearchSweep,
+} from "./watchlistRefreshResearch.js";
 import {entryRules} from './entryRules.js';
 import {buildZobirisWatchlist} from './zobirisWatchlist.js';
 import { reportShadowEntryPlans } from './evidenceServiceClient.js';
@@ -127,7 +133,20 @@ function researchAssets():ResearchAsset[]{
  try{return listAllCanonical(storage.db).filter(a=>a.mappingStatus==='verified'&&a.mappingConfidence>=0.8).map(a=>({id:a.id,symbol:a.symbol,name:a.name,cmcId:(typeof a.providerIds==='string'?JSON.parse(a.providerIds):a.providerIds)?.cmcNumericId}));}finally{storage.close();}
 }
 function researchRepository(assets=researchAssets()){return openResearchEvidence(RESEARCH_DB,new Map(assets.map(a=>[a.symbol,a.id])));}
-function currentResearch(symbol?:string){const assets=researchAssets().filter(a=>!symbol||a.symbol===symbol);const repo=researchRepository(assets);try{return researchView(repo,assets);}finally{repo.close();}}
+function currentResearch(symbol?:string){
+ const assets=researchAssets().filter(a=>!symbol||a.symbol===symbol);
+ const repo=researchRepository(assets);
+ try{
+  const view=researchView(repo,assets);
+  const refreshSweep=readLatestFullWatchlistResearch(repo);
+  const refreshMap=new Map((refreshSweep?.assets??[]).map(asset=>[asset.symbol,asset]));
+  return {
+   ...view,
+   refreshSweep,
+   assets:view.assets.map(asset=>({...asset,refreshAssessment:refreshMap.get(asset.symbol)??null})),
+  };
+ }finally{repo.close();}
+}
 const WATCHLIST_SOURCE_URL =
   "https://coinmarketcap.com/?type=coins&tableRankBy=watchlist&watchListId=6a9a95c387e5a45cc1f40d5e";
 
@@ -422,6 +441,24 @@ async function runRefreshHandler(
     } finally {
       storage.close();
     }
+    let refreshResearch: RefreshResearchSweep | null = null;
+    try {
+      const activeSymbols = new Set(watchlist.map((asset) => asset.symbol.toUpperCase()));
+      const assets = researchAssets().filter((asset) => activeSymbols.has(asset.symbol.toUpperCase()));
+      const repo = researchRepository(assets);
+      try {
+        refreshResearch = await collectFullWatchlistResearch(
+          repo,
+          live ? [publicRssResearchAdapter(), ...researchAdapters(process.env)] : [],
+          assets,
+          Date.now(),
+        );
+      } finally {
+        repo.close();
+      }
+    } catch (error) {
+      console.warn("Full-watchlist research sweep degraded:", error instanceof Error ? error.message : String(error));
+    }
     const firstStrategy = (result.snapshot.rankedAssets as unknown as Array<{ strategy21?: { marketState?: string; marketEnteredAt?: string; minimumDwellUntil?: string } }>).find((a) => a.strategy21)?.strategy21;
     if (firstStrategy?.marketState && firstStrategy.marketEnteredAt && firstStrategy.minimumDwellUntil) {
       try {
@@ -439,6 +476,7 @@ async function runRefreshHandler(
     } catch (error) {
       console.warn("Outcome memory update failed:", error instanceof Error ? error.message : String(error));
     }
+    let fullWatchlistEvaluation: any[] = [];
     try {
       const swarmRules = await entryRules().catch(() => ({}));
       let swarmSocial = new Map<string, any>();
@@ -487,6 +525,36 @@ async function runRefreshHandler(
         socialIntelligence: swarmSocial,
         perpPositioning: swarmPositioning,
       });
+      const researchBySymbol = new Map((refreshResearch?.assets ?? []).map((asset) => [asset.symbol, asset]));
+      fullWatchlistEvaluation = watchlist.map((item) => {
+        const symbol = item.symbol.toUpperCase();
+        const decision = swarmDecision.assets.find((asset) => asset.symbol === symbol) ?? null;
+        const research = researchBySymbol.get(symbol) ?? null;
+        const positioning = swarmPositioning.get(symbol) ?? null;
+        return {
+          symbol,
+          evaluated: true,
+          strategyState: decision?.state ?? "DATA_INSUFFICIENT",
+          blockedReason: decision?.blockedReason ?? null,
+          entryReferenceLimit: decision?.entry?.referenceLimit ?? null,
+          rotationScore: decision?.scores?.rotation ?? null,
+          researchCoverage: research?.coverage ?? "EVIDENCE_INCOMPLETE",
+          researchReviewStatus: research?.reviewStatus ?? "EVIDENCE_INCOMPLETE",
+          newsStatus: research?.newsStatus ?? "UNAVAILABLE",
+          socialStatus: research?.socialStatus ?? "UNAVAILABLE",
+          researchProviderFailures: research?.providerFailures ?? [],
+          researchProvidersNotConfigured: research?.providersNotConfigured ?? [],
+          perpPositioning: positioning
+            ? {
+                crowdingState: positioning.crowdingState,
+                flowState: positioning.flowState,
+                confidence: positioning.confidence,
+              }
+            : null,
+          swarmIntegrity: decision?.swarmShadow?.integrity?.status ?? "FAIL_CLOSED",
+          swarmAuthority: decision?.swarmShadow?.authority ?? "SHADOW_ONLY_NO_TRADING_AUTHORITY",
+        };
+      });
       if (live) {
         const evidenceReport = await reportShadowEntryPlans({
           decisionId: persisted.snapshotId,
@@ -534,6 +602,23 @@ async function runRefreshHandler(
       outboxIds: persisted.outboxIds,
       providerHealth: result.providerHealthUpdates,
       attentionCollection,
+      researchSweep: refreshResearch
+        ? {
+            version: refreshResearch.version,
+            requestedAssets: refreshResearch.requestedAssets,
+            assessedAssets: refreshResearch.assessedAssets,
+            evaluatedAt: refreshResearch.evaluatedAt,
+            providerStatuses: refreshResearch.providerStatuses,
+            trial: refreshResearch.trial,
+            authority: refreshResearch.authority,
+          }
+        : null,
+      fullWatchlistEvaluation: {
+        requestedAssets: watchlist.length,
+        evaluatedAssets: fullWatchlistEvaluation.length,
+        allRowsEvaluated: fullWatchlistEvaluation.length === watchlist.length,
+        assets: fullWatchlistEvaluation,
+      },
       elapsedMs,
       live,
     });
