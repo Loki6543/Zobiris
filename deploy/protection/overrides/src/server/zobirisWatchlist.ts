@@ -8,6 +8,17 @@ import { priceSentimentShadow, type SocialIntelligenceSummary } from "./socialIn
 import { buildCrossAssetGraph } from "./crossAssetGraph.js";
 import { evaluateSwarmShadow } from "../strategy21/swarm.js";
 import type { HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
+import { fileURLToPath } from "node:url";
+import { evaluatePortfolioBatch, type PortfolioState } from "./policy/portfolioGate.js";
+import { bindDecision, loadRegistry, portfolioPolicyFromRegistry } from "./policy/zobirisPolicyBinding.js";
+
+const POLICY_REGISTRY = (() => {
+  try {
+    return loadRegistry(fileURLToPath(new URL("./policy/zobiris-policy-registry-v3.1.json", import.meta.url)));
+  } catch {
+    return null;
+  }
+})();
 
 // Presentation only: consume production strategy outputs; never recalculate qualification.
 const states = new Set([
@@ -186,6 +197,7 @@ export function buildZobirisWatchlist({
       (v) => typeof v === "string",
     );
     const reasons: string[] = [];
+    if (!POLICY_REGISTRY) reasons.push("POLICY_REGISTRY_UNAVAILABLE");
     if (!snapshotFresh || !fresh(observed, now, 30 * 60000))
       reasons.push("Market observation is stale, missing or future-dated");
     if (marketGate.pass !== true)
@@ -325,15 +337,93 @@ export function buildZobirisWatchlist({
       observationMs: observed,
     };
   });
+  let gatedAssets = assets;
+  if (POLICY_REGISTRY && accountFresh) {
+    const byAsset = new Map(assets.map((asset) => [asset.symbol, asset]));
+    const gateState: PortfolioState = {
+      asOf: String(account.capturedAt ?? ""),
+      cashUsd: number(account.cashUsd) ?? Number.NaN,
+      cashBasis: "TOTAL",
+      holdings: list(account.holdings).map((holding) => {
+        const symbol = String(holding.symbol ?? "").toUpperCase();
+        const quantity = number(holding.quantity);
+        const mark = byAsset.get(symbol)?.price ?? null;
+        const valueUsd = quantity !== null && quantity >= 0 && typeof mark === "number" && mark > 0
+          ? quantity * mark
+          : Number.NaN;
+        const intentionalHolding = symbol !== "BABY"
+          || rewardRemaining == null
+          || (quantity ?? 0) - rewardRemaining > 1e-12;
+        return { symbol, valueUsd, intentional: intentionalHolding };
+      }),
+      openOrders: list(account.openOrders).map((order) => ({
+        symbol: String(order.symbol ?? "").toUpperCase(),
+        side: String(order.side ?? "").toUpperCase() === "SELL" ? "sell" as const : "buy" as const,
+        notionalUsd: number(order.amountUsd) ?? Number.NaN,
+      })),
+      pendingSellProceedsUsd: 0,
+    };
+    const candidates = assets
+      .filter((asset) => asset.entry.referenceLimit != null && asset.entry.requestedNotionalUsd != null)
+      .map((asset) => ({
+        symbol: asset.symbol,
+        action: asset.position.held ? "ADD" as const : "NEW_BUY" as const,
+        requestedUsd: asset.entry.requestedNotionalUsd as number,
+      }));
+    const gateResults = evaluatePortfolioBatch(
+      gateState,
+      candidates,
+      portfolioPolicyFromRegistry(POLICY_REGISTRY),
+      now,
+    );
+    const byGate = new Map(gateResults.map((result) => [result.symbol, result]));
+    gatedAssets = assets.map((asset) => {
+      const gate = byGate.get(asset.symbol);
+      if (!gate) return { ...asset, portfolioGate: null };
+      if (gate.decision === "BLOCK") {
+        const reason = ["PORTFOLIO_GATE_BLOCK", ...gate.reasons].join(":");
+        return {
+          ...asset,
+          blockedReason: [asset.blockedReason, reason].filter(Boolean).join("; "),
+          entry: { ...asset.entry, referenceLimit: null, requestedNotionalUsd: null },
+          portfolioGate: gate,
+        };
+      }
+      if (gate.decision === "REDUCE") {
+        const ref = entryReference(
+          asset.entry.referencePrice,
+          asset.entry.baselineDiscountPct,
+          asset.entry.reentry === true,
+        );
+        const checked = validateEntry(ref, gate.allowedUsd, rules[asset.symbol], now);
+        if (!checked.valid) {
+          return {
+            ...asset,
+            blockedReason: [asset.blockedReason, "PORTFOLIO_GATE_REVALIDATION_FAILED:" + checked.reason].filter(Boolean).join("; "),
+            entry: { ...asset.entry, referenceLimit: null, requestedNotionalUsd: null },
+            portfolioGate: gate,
+          };
+        }
+        return {
+          ...asset,
+          entry: { ...asset.entry, referenceLimit: checked.limit, requestedNotionalUsd: checked.notional },
+          portfolioGate: gate,
+        };
+      }
+      return { ...asset, portfolioGate: gate };
+    });
+  }
+
   const asOf = time(snapshot?.asOf);
-  return {
+  const output = {
     asOf: asOf === null ? null : new Date(asOf).toISOString(),
     marketGate,
     portfolio: {
       holdings: accountFresh ? intentional.length : null,
-      maxHoldings: 7,
+      maxHoldings: POLICY_REGISTRY ? portfolioPolicyFromRegistry(POLICY_REGISTRY).intentionalHoldingsMax : 7,
       freeCash: validCash,
     },
-    assets,
+    assets: gatedAssets,
   };
+  return POLICY_REGISTRY ? bindDecision(POLICY_REGISTRY, output) : output;
 }
