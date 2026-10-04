@@ -780,7 +780,7 @@ export function App() {
         ))}
       </nav>
 
-      <div style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. {accountSynced ? `Kraken account synced ${account?.syncMode === "websocket+poll" ? "live by WebSocket + REST reconciliation" : "by automatic REST polling"} · account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}.` : "Account is using the last user-provided Kraken snapshot until private sync succeeds."}</div>
+      <div style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. {accountSynced ? `Kraken account synced ${account?.syncMode === "websocket+poll" ? "live by WebSocket + REST reconciliation" : "by automatic REST polling"} · account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}.` : "Private Kraken account data is locked on the public view."}</div>
       {error ? <div role="alert" style={styles.notice}>{error}</div> : null}
       {loading && !snapshot ? <div style={styles.notice}>Loading live Zobiris market data…</div> : null}
 
@@ -800,7 +800,7 @@ export function App() {
             <div style={styles.sectionHead}>
               <div>
                 <h2 style={styles.h2}>Current positions</h2>
-                <div style={styles.subtle}>Kraken account snapshot {new Date(LIVE_CAPTURED_AT).toLocaleString()}; prices refresh from the live Zobiris engine.</div>
+                <div style={styles.subtle}>{accountSynced ? `Kraken account snapshot ${new Date(LIVE_CAPTURED_AT).toLocaleString()}; prices refresh from the live Zobiris engine.` : "Private Kraken account snapshot is hidden; market prices still refresh from the live Zobiris engine."}</div>
               </div>
             </div>
             <div style={styles.tableWrap}>
@@ -1065,7 +1065,7 @@ export function App() {
       ) : null}
 
       <footer style={styles.footer}>
-        {accountSynced ? "Portfolio quantities, cash, fills, and open orders are synchronized read-only from Kraken. " : "Portfolio quantities and open orders are using the last manual Kraken snapshot. "}Live market prices and rankings come from the Zobiris Kraken/CMC engine. This is decision support, not automatic execution.
+        {accountSynced ? "Portfolio quantities, cash, fills, and open orders are synchronized read-only from Kraken. " : "Private portfolio quantities, cash, fills, and open orders are not exposed on the public view. "}Live market prices and rankings come from the Zobiris Kraken/CMC engine. This is decision support, not automatic execution.
       </footer>
     </div>
   );
