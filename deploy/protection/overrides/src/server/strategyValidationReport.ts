@@ -66,12 +66,7 @@ export function buildOutcomeValidationLab(
   const horizon = options.horizon ?? "7D";
   const symbol = options.symbol?.trim().toUpperCase();
   const feePolicy = VALIDATION_POLICY_REGISTRY?.registry.feeSchedule?.sidecarPolicyProposed ?? null;
-  const defaultFeeBps = feePolicy
-    ? (Number(feePolicy.makerBps) + Number(feePolicy.takerBps)) / 2
-    : 60;
-  const feeBps = options.feeBps === undefined
-    ? defaultFeeBps
-    : Number.isFinite(options.feeBps) ? Math.max(0, options.feeBps) : defaultFeeBps;
+  const feeBps = Number.isFinite(options.feeBps) ? Math.max(0, options.feeBps ?? 0) : 0;
   const slippageBps = Number.isFinite(options.slippageBps) ? Math.max(0, options.slippageBps ?? 0) : 0;
 
   const eligible = records.filter((record) =>
@@ -132,7 +127,11 @@ export function buildOutcomeValidationLab(
         TAKER_TAKER: Number(feePolicy.takerBps) * 2,
       } : { MAKER_MAKER: 80, MAKER_TAKER: 120, TAKER_TAKER: 160 },
       source: "MODELED_ASSUMPTION",
-      note: "fee/slippage are research assumptions only; outcome memory does not prove executable fills",
+      referenceTier1MakerBps: feePolicy ? Number(feePolicy.makerBps) : 40,
+      referenceTier1TakerBps: feePolicy ? Number(feePolicy.takerBps) : 80,
+      note: feeBps === 0 && options.feeBps === undefined
+        ? "Legacy main-lab arithmetic remains zero-cost unless the caller supplies feeBps; the evidence sidecar separately enforces the Tier-1 fallback cost model."
+        : "fee/slippage are caller-supplied research assumptions only; outcome memory does not prove executable fills",
     },
     executionEvidence: {
       l2FillReconciled: false,
