@@ -200,7 +200,7 @@ function normalizeAssetCode(raw: string): string {
   return direct[code] ?? code;
 }
 
-function pairIdentity(rawPair: string): { symbol: string; quoteCurrency: string | null; pair: string | null; pairVerified: boolean } {
+export function krakenPairIdentity(rawPair: string): { symbol: string; quoteCurrency: string | null; pair: string | null; pairVerified: boolean } {
   const raw = String(rawPair ?? "").toUpperCase();
   if (raw.includes("/")) {
     const [baseRaw, quoteRaw] = raw.split("/");
@@ -251,7 +251,7 @@ function parseOpenOrders(raw: any): KrakenSyncedOrder[] {
     const quantity = Number(order.vol ?? 0);
     const executed = Number(order.vol_exec ?? 0);
     const remainingQuantity = Math.max(0, quantity - (Number.isFinite(executed) ? executed : 0));
-    const identity = pairIdentity(String(descr.pair ?? order.pair ?? ""));
+    const identity = krakenPairIdentity(String(descr.pair ?? order.pair ?? ""));
     const symbol = identity.symbol;
     if (!symbol || !Number.isFinite(targetPriceQuote) || targetPriceQuote <= 0) return [];
     const quoteNotional = targetPriceQuote * remainingQuantity;
@@ -286,7 +286,7 @@ function parseTrades(raw: any): KrakenSyncedTrade[] {
     const fee = Number(trade.fee ?? 0);
     const price = Number(trade.price ?? 0);
     const seconds = Number(trade.time ?? 0);
-    const identity = pairIdentity(String(trade.pair ?? ""));
+    const identity = krakenPairIdentity(String(trade.pair ?? ""));
     const symbol = identity.symbol;
     if (!symbol || !Number.isFinite(quantity) || quantity <= 0) return [];
     const explicitFeeCurrencyRaw = trade.fee_currency ?? trade.fee_ccy ?? null;
