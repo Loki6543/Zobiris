@@ -191,3 +191,46 @@ test("verified 59-asset appendix reproduces the 24/10/13/12 cohort counts and RS
   assert.ok((c.breadth7dPositive ?? 1) < 0.40);
   assert.equal(c.marketBullish, true);
 });
+
+
+test("60d BTC-relative evidence is diagnostic-only and does not alter the verified 90d base gate", () => {
+  const claims = [...bullishClaims(), claim("LAG60", 5, 16, 15, -1, 0.016)];
+  claims.forEach((row) => {
+    const payload = JSON.parse(row.claim!);
+    payload.change60dPct = row.symbol === "BTC" ? 30 : row.symbol === "LAG60" ? -10 : 10;
+    row.claim = JSON.stringify(payload);
+    row.claimOrigin = "provider";
+    row.dataMode = "live";
+  });
+  const result = evaluateDelayedRotation("LAG60", claims);
+  assert.equal(result.status, "QUALIFIED");
+  assert.equal(result.change60dPct, -10);
+  assert.equal(result.relative60dVsBtcPct, -40);
+  assert.equal(result.dataProvenance, "PROVIDER_LIVE");
+  assert.equal(result.authorityEffect, "DEMOTE_OR_FLAG_ONLY");
+  assert.equal(result.canIncreaseAuthority, false);
+});
+
+test("missing daily volume history stays missing instead of receiving fabricated confirmation", () => {
+  const noHistory = evaluateDelayedRotation("NOVOL", [...bullishClaims(), claim("NOVOL", 5, 16, 15, -1, 0.016)]);
+  const lowHistory = evaluateDelayedRotation(
+    "LOWVOL",
+    [...bullishClaims(), claim("LOWVOL", 5, 16, 15, -1, 0.016, [400_000_000,400_000_000,400_000_000,400_000_000,400_000_000,400_000_000,400_000_000])],
+  );
+  assert.equal(noHistory.volumeEvidenceStatus, "UNAVAILABLE");
+  assert.equal(noHistory.volumeConfirmedResearchPrior, null);
+  assert.equal(lowHistory.volumeEvidenceStatus, "AVAILABLE");
+  assert.equal(lowHistory.volumeConfirmedResearchPrior, false);
+  assert.ok(noHistory.score > lowHistory.score);
+});
+
+test("snapshot or fallback provider evidence never presents as live provenance", () => {
+  const claims = [...bullishClaims(), claim("LAGP", 5, 16, 15, -1, 0.016)];
+  for (const row of claims) {
+    row.claimOrigin = "provider";
+    row.dataMode = "live";
+  }
+  claims.at(-1)!.dataMode = "fallback";
+  const result = evaluateDelayedRotation("LAGP", claims);
+  assert.equal(result.dataProvenance, "PROVIDER_SNAPSHOT_OR_FALLBACK");
+});
