@@ -236,10 +236,13 @@ export function calibrateDelayedRotationMarket(claims: RotationEvidenceClaim[]):
   const breadth7dPositive = ratio(comparable.filter((row) => row.change7dPct > 0).length, comparable.length);
   const breadth30dPositive = ratio(comparable.filter((row) => row.change30dPct > 0).length, comparable.length);
   const enoughData = comparable.length >= 10 && btc != null && breadth7dPositive != null && breadth30dPositive != null;
+  // The watchlist is deliberately laggard-heavy, so 7d breadth is diagnostic
+  // rather than a regime veto. Hard-gating on 7d breadth would make the screen
+  // self-defeating on the verified 2026-10-04 sample, where only 35.6% of the
+  // 59 names were positive over 7d while BTC and the 30d structure were positive.
   const marketBullish = Boolean(enoughData
     && btc!.change30dPct > 0
     && btc!.change90dPct > 0
-    && breadth7dPositive! >= 0.40
     && breadth30dPositive! >= 0.45);
 
   const base = btc ? comparable.filter((row) => passesVerifiedBase(row, btc)) : [];
