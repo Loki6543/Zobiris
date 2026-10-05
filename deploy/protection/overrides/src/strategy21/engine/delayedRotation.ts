@@ -37,7 +37,7 @@ export interface RotationMarketRow {
   change24hPct: number;
   change7dPct: number;
   change30dPct: number;
-  change60dPct: number | null;
+  change60dPct?: number | null;
   change90dPct: number;
   marketCapUsd: number | null;
   volume24hUsd: number | null;
@@ -91,9 +91,6 @@ export interface DelayedRotationCalibration {
   diagnostics: DelayedRotationSnapshotDiagnostics;
   volumeAccelMedianLog: number | null;
   evidenceAuthority: "RESEARCH_PRIOR_ONLY";
-  authorityEffect: "DEMOTE_OR_FLAG_ONLY";
-  canIncreaseAuthority: false;
-  dataProvenance: "PROVIDER_LIVE" | "PROVIDER_SNAPSHOT_OR_FALLBACK" | "UNKNOWN";
   prospectiveValidationStart: "2026-10-05";
 }
 
@@ -106,6 +103,9 @@ export interface DelayedRotationProfile {
   scoreLabel: "RESEARCH_PRIOR_SCORE";
   validatedAlpha: false;
   evidenceAuthority: "RESEARCH_PRIOR_ONLY";
+  authorityEffect: "DEMOTE_OR_FLAG_ONLY";
+  canIncreaseAuthority: false;
+  dataProvenance: "PROVIDER_LIVE" | "PROVIDER_SNAPSHOT_OR_FALLBACK" | "UNKNOWN";
   prospectiveValidationStart: "2026-10-05";
   symbol: string;
   observedAt: string | null;
