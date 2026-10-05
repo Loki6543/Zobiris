@@ -24,6 +24,10 @@ The 7-day state is then separated instead of blended:
 
 The descriptive pullback cohort remains the broader 7d < 0 definition for paper reproduction; the bounded -8% rule is the prospective decision variant. GHST at -8.65% is therefore descriptive-pullback but not prospective-pullback.
 
+## Market-regime gate
+
+Because the watchlist is intentionally enriched for laggards, 7-day watchlist breadth is **diagnostic only**. Using it as a hard bullish-market veto would make the specialist self-defeating: the verified 2026-10-04 sample had only 21/59 positive 7-day returns even while BTC and the 30-day structure were positive. The active regime gate therefore requires positive BTC 30-day and 90-day returns plus at least 45% positive 30-day watchlist breadth. The reported 7-day breadth remains visible for context but does not determine market eligibility.
+
 ## Measurement changes
 
 Model-facing BTC-relative measurements use additive log-relative returns. Percentage-point gaps remain available for UI explanation.
