@@ -124,7 +124,7 @@ test("delayed rotation may demote baseline authority but cannot manufacture a hi
 
   assert.equal(rotationLag.delayedRotation.status, "QUALIFIED");
   assert.ok(rotationLag.positionAuthority.maxNextOrderUsd <= legacyLag.positionAuthority.maxNextOrderUsd);
-  assert.equal(rotationLag.nextDollarScore, rotationLag.opportunity.score);
+  assert.equal(rotationLag.nextDollarScore, legacyLag.nextDollarScore);
   assert.notEqual(rotationLag.nextDollarScore, rotationLag.delayedRotation.score);
 });
 
