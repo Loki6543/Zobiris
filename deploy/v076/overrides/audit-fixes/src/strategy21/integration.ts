@@ -436,9 +436,17 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
         covarianceAcceptable: dependencyRisk?.covarianceAcceptable === true,
       },
     });
-    const pilotQualified = recommendationMode !== DELAYED_ROTATION_MODE || delayedRotation.qualifiesForNewCapital;
+    // Delayed Rotation is an unvalidated research-prior overlay. It may
+    // demote/block an otherwise eligible baseline decision, but it must never
+    // create or increase order authority. "qualifiesForNewCapital" is retained
+    // as an API-compatibility screen-pass flag; the actual capital authority
+    // still originates from the baseline decision and existing risk/liquidity
+    // gates.
+    const pilotRetainsBaselineAuthority =
+      recommendationMode !== DELAYED_ROTATION_MODE
+      || delayedRotation.qualifiesForNewCapital;
     const pilotOrderCapUsd = Math.round(ledger.maneuverNavUsd * 0.02 * 100) / 100;
-    const positionAuthority: ZobirisDecision['authority'] = pilotQualified
+    const positionAuthority: ZobirisDecision['authority'] = pilotRetainsBaselineAuthority
       ? {
           ...decision.authority,
           maxNextOrderUsd: recommendationMode === DELAYED_ROTATION_MODE
@@ -449,10 +457,11 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
     const nextDollarScore = (eligibility.status === 'ACTIVE_ELIGIBLE' || eligibility.status === 'CONDITIONAL_PROBE_ELIGIBLE')
       && positionAuthority.maxNextOrderUsd > 0
       && opp.eligibleForRanking
-      && pilotQualified
-      ? (recommendationMode === DELAYED_ROTATION_MODE
-          ? Math.round((0.65 * delayedRotation.score + 0.35 * opp.score) * 100) / 100
-          : opp.score)
+      && pilotRetainsBaselineAuthority
+      // Do not blend an unvalidated delayed-rotation score into the production
+      // next-dollar rank. The specialist may demote, while the established
+      // opportunity heuristic remains the ranking authority.
+      ? opp.score
       : null;
     const dataReadiness: Strategy21AssetView['dataReadiness'] = !identityVerified ? 'IDENTITY_BLOCKED' : liq && eligibility.status !== 'WATCH_ONLY' ? 'READY' : 'KRAKEN_WARMUP';
     const researchIntegrity = buildResearchIntegrity({
