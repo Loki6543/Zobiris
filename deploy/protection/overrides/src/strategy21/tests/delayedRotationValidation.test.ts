@@ -10,7 +10,7 @@ import {
 test("synthetic validation can never emit a support verdict", () => {
   const verdict = validationVerdict(0.95, 1, "synthetic");
   assert.match(verdict, /^SELF_TEST_ONLY:/);
-  assert.doesNotMatch(verdict, /^SUPPORTED/);
+  assert.equal(verdict.startsWith("SUPPORTED"), false);
 });
 
 test("real point-in-time evidence is incomplete until every required layer is present", () => {
