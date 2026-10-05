@@ -126,7 +126,7 @@ export function researchView(
     },
     attentionIgnition: attention,
     assets: rows,
-    providers: ["parallel-news", "stocktwits", "cryptobert-stocktwits"].map(
+    providers: ["parallel-news", "stocktwits", "cryptobert-stocktwits", "brightdata-mcp-search"].map(
       (p) =>
         repo.getState("provider:" + p) ?? {
           provider: p,
