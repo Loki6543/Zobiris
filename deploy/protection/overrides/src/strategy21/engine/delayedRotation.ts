@@ -26,6 +26,8 @@ export interface RotationEvidenceClaim {
   receivedAt?: string;
   providerIds?: string[];
   source?: string;
+  dataMode?: string;
+  claimOrigin?: string;
 }
 
 export interface RotationMarketRow {
@@ -35,6 +37,7 @@ export interface RotationMarketRow {
   change24hPct: number;
   change7dPct: number;
   change30dPct: number;
+  change60dPct: number | null;
   change90dPct: number;
   marketCapUsd: number | null;
   volume24hUsd: number | null;
@@ -61,6 +64,7 @@ export interface DelayedRotationCalibration {
   btc: {
     change7dPct: number | null;
     change30dPct: number | null;
+    change60dPct: number | null;
     change90dPct: number | null;
   };
   breadth7dPositive: number | null;
@@ -87,6 +91,9 @@ export interface DelayedRotationCalibration {
   diagnostics: DelayedRotationSnapshotDiagnostics;
   volumeAccelMedianLog: number | null;
   evidenceAuthority: "RESEARCH_PRIOR_ONLY";
+  authorityEffect: "DEMOTE_OR_FLAG_ONLY";
+  canIncreaseAuthority: false;
+  dataProvenance: "PROVIDER_LIVE" | "PROVIDER_SNAPSHOT_OR_FALLBACK" | "UNKNOWN";
   prospectiveValidationStart: "2026-10-05";
 }
 
@@ -106,11 +113,14 @@ export interface DelayedRotationProfile {
   change24hPct: number | null;
   change7dPct: number | null;
   change30dPct: number | null;
+  change60dPct: number | null;
   change90dPct: number | null;
   relative30dVsBtcPct: number | null;
+  relative60dVsBtcPct: number | null;
   relative90dVsBtcPct: number | null;
   logRelative7dVsBtc: number | null;
   logRelative30dVsBtc: number | null;
+  logRelative60dVsBtc: number | null;
   logRelative90dVsBtc: number | null;
   rsa7_30: number | null;
   rsa30_90: number | null;
@@ -119,6 +129,7 @@ export interface DelayedRotationProfile {
   volumeAccel: number | null;
   relativeVolumeAccelLog: number | null;
   volumeEvidenceStatus: "AVAILABLE" | "UNAVAILABLE";
+  volumeConfirmedResearchPrior: boolean | null;
   verifiedBaseFilterPassed: boolean;
   recommendedPullbackPct: number | null;
   reasonCodes: string[];
@@ -162,6 +173,7 @@ function parseMarketRow(claim: RotationEvidenceClaim): RotationMarketRow | null 
   const change24hPct = finite(payload?.change24hPct ?? payload?.percent_change_24h);
   const change7dPct = finite(payload?.change7dPct ?? payload?.percent_change_7d);
   const change30dPct = finite(payload?.change30dPct ?? payload?.percent_change_30d);
+  const change60dPct = finite(payload?.change60dPct ?? payload?.percent_change_60d);
   const change90dPct = finite(payload?.change90dPct ?? payload?.percent_change_90d);
   if (!symbol || [change24hPct, change7dPct, change30dPct, change90dPct].some((value) => value === null)) return null;
   const observedAt = claim.observedAt ?? claim.receivedAt ?? "";
@@ -172,6 +184,7 @@ function parseMarketRow(claim: RotationEvidenceClaim): RotationMarketRow | null 
     change24hPct: change24hPct!,
     change7dPct: change7dPct!,
     change30dPct: change30dPct!,
+    change60dPct,
     change90dPct: change90dPct!,
     marketCapUsd: finite(payload?.marketCapUsd ?? payload?.market_cap),
     volume24hUsd: finite(payload?.volume24hUsd ?? payload?.volume_24h),
@@ -190,6 +203,21 @@ export function extractLatestRotationRows(claims: RotationEvidenceClaim[]): Map<
     if (!prior || !Number.isFinite(priorTime) || (Number.isFinite(nextTime) && nextTime >= priorTime)) rows.set(row.symbol, row);
   }
   return rows;
+}
+
+function evidenceDataProvenance(
+  claims: RotationEvidenceClaim[],
+): "PROVIDER_LIVE" | "PROVIDER_SNAPSHOT_OR_FALLBACK" | "UNKNOWN" {
+  const cmc = claims.filter(isCmc);
+  if (!cmc.length) return "UNKNOWN";
+  if (cmc.some((claim) =>
+    claim.claimOrigin === "synthetic"
+    || claim.dataMode === "snapshot"
+    || claim.dataMode === "fallback"
+  )) return "PROVIDER_SNAPSHOT_OR_FALLBACK";
+  if (cmc.every((claim) => claim.claimOrigin === "provider" && claim.dataMode === "live"))
+    return "PROVIDER_LIVE";
+  return "UNKNOWN";
 }
 
 export function computeVolumeAccel(row: RotationMarketRow): number | null {
@@ -268,6 +296,7 @@ export function calibrateDelayedRotationMarket(claims: RotationEvidenceClaim[]):
     btc: {
       change7dPct: btc?.change7dPct ?? null,
       change30dPct: btc?.change30dPct ?? null,
+      change60dPct: btc?.change60dPct ?? null,
       change90dPct: btc?.change90dPct ?? null,
     },
     breadth7dPositive,
@@ -333,6 +362,9 @@ export function evaluateDelayedRotation(
     reasons: string[],
   ): DelayedRotationProfile => {
     const relative30 = row && btc ? row.change30dPct - btc.change30dPct : null;
+    const relative60 = row && btc && row.change60dPct != null && btc.change60dPct != null
+      ? row.change60dPct - btc.change60dPct
+      : null;
     const relative90 = row && btc ? row.change90dPct - btc.change90dPct : null;
     const t = row ? turnover(row) : null;
     const v = row ? computeVolumeAccel(row) : null;
@@ -349,8 +381,26 @@ export function evaluateDelayedRotation(
       const rsaScore = rel == null ? 0.5 : rel.rsa7_30 > 0 ? 1 : 0.35;
       const entry = clamp(1 - Math.max(0, row.change24hPct) / 8, 0, 1);
       const turnoverScore = t == null ? 0 : clamp(t / 0.08, 0, 1);
-      const volumeScore = v == null ? 0.5 : clamp(v / calibration.verifiedBaseFilters.volumeAccelResearchPrior, 0, 1);
-      score = Math.round((30 * lag + 25 * recovery + 15 * rsaScore + 15 * entry + 10 * turnoverScore + 5 * volumeScore) * 100) / 100;
+      const weighted: Array<[number, number]> = [
+        [30, lag],
+        [25, recovery],
+        [15, rsaScore],
+        [15, entry],
+        [10, turnoverScore],
+      ];
+      // Missing seven-day daily-volume history is missing evidence, not neutral
+      // confirmation. Do not fabricate the v2 research prior into the score.
+      if (v != null) {
+        weighted.push([
+          5,
+          clamp(v / calibration.verifiedBaseFilters.volumeAccelResearchPrior, 0, 1),
+        ]);
+      }
+      const totalWeight = weighted.reduce((sum, [weight]) => sum + weight, 0);
+      score = Math.round(
+        (weighted.reduce((sum, [weight, value]) => sum + weight * value, 0)
+          / totalWeight) * 10000,
+      ) / 100;
     }
 
     return {
@@ -362,6 +412,9 @@ export function evaluateDelayedRotation(
       scoreLabel: "RESEARCH_PRIOR_SCORE",
       validatedAlpha: false,
       evidenceAuthority: "RESEARCH_PRIOR_ONLY",
+      authorityEffect: "DEMOTE_OR_FLAG_ONLY",
+      canIncreaseAuthority: false,
+      dataProvenance: evidenceDataProvenance(claims),
       prospectiveValidationStart: "2026-10-05",
       symbol,
       observedAt: row?.observedAt ?? null,
@@ -369,11 +422,14 @@ export function evaluateDelayedRotation(
       change24hPct: row?.change24hPct ?? null,
       change7dPct: row?.change7dPct ?? null,
       change30dPct: row?.change30dPct ?? null,
+      change60dPct: row?.change60dPct ?? null,
       change90dPct: row?.change90dPct ?? null,
       relative30dVsBtcPct: relative30,
+      relative60dVsBtcPct: relative60,
       relative90dVsBtcPct: relative90,
       logRelative7dVsBtc: rel?.xr7 ?? null,
       logRelative30dVsBtc: rel?.xr30 ?? null,
+      logRelative60dVsBtc: relative60 == null ? null : logRelative(row!.change60dPct!, btc!.change60dPct!),
       logRelative90dVsBtc: rel?.xr90 ?? null,
       rsa7_30: rel?.rsa7_30 ?? null,
       rsa30_90: rel?.rsa30_90 ?? null,
@@ -382,6 +438,9 @@ export function evaluateDelayedRotation(
       volumeAccel: v,
       relativeVolumeAccelLog: relativeV,
       volumeEvidenceStatus: v == null ? "UNAVAILABLE" : "AVAILABLE",
+      volumeConfirmedResearchPrior: v == null
+        ? null
+        : v >= calibration.verifiedBaseFilters.volumeAccelResearchPrior,
       verifiedBaseFilterPassed: basePassed,
       recommendedPullbackPct: null,
       reasonCodes: reasons,
