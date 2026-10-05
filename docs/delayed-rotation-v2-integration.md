@@ -32,6 +32,8 @@ Because the watchlist is intentionally enriched for laggards, 7-day watchlist br
 
 Model-facing BTC-relative measurements use additive log-relative returns. Percentage-point gaps remain available for UI explanation.
 
+The live CMC payload also carries a 60-day return. ZOBIRIS now exposes 60-day BTC-relative percentage-point and log-relative values as **diagnostic context only**. The verified paper's descriptive qualification rule remains the 90-day BTC-relative screen; the 60-day field does not qualify, disqualify, size, or rank a candidate.
+
 Two relative-strength acceleration diagnostics are exposed:
 
 - RSA(7,30) = XR7 / 7 - XR30 / 30
@@ -58,9 +60,26 @@ Every delayed-rotation profile now carries:
 - `evidenceAuthority = RESEARCH_PRIOR_ONLY`
 - `prospectiveValidationStart = 2026-10-05`
 
-The score is a bounded heuristic for ordering already-screened setups. It is not a probability of profit, and it cannot replace identity, Kraken liquidity, spread/depth, structural-veto, or portfolio gates.
+The score is a bounded research heuristic for describing already-screened setups. It is not a probability of profit, and it cannot replace identity, Kraken liquidity, spread/depth, structural-veto, or portfolio gates. Missing seven-day daily-volume history is now treated as missing evidence: no synthetic or neutral volume-confirmation value is injected into the score.
 
-The production mode identifier remains `DELAYED_ROTATION_PILOT_V1` for API compatibility; the implementation behind it is the hardened v2 logic.
+**Production authority is demote-only.** The delayed-rotation specialist may block or retain authority that was already granted by the established Strategy 2.1 opportunity, liquidity, risk, and portfolio gates. It cannot increase `maxNextOrderUsd`, manufacture eligibility, or raise the production next-dollar score. When the pilot screen passes, the production next-dollar score remains the established opportunity score; the delayed-rotation score stays separately visible as research evidence. The legacy `qualifiesForNewCapital` field is retained for API compatibility as a screen-pass flag, not as proof of alpha or an independent source of capital authority.
+
+The production mode identifier remains `DELAYED_ROTATION_PILOT_V1` for API compatibility; the implementation behind it is the hardened v2 logic. Profiles now also expose `authorityEffect = DEMOTE_OR_FLAG_ONLY`, `canIncreaseAuthority = false`, and evidence provenance (`PROVIDER_LIVE`, `PROVIDER_SNAPSHOT_OR_FALLBACK`, or `UNKNOWN`).
+
+
+## Validation-harness hardening
+
+The independent v2 review controls are translated into a TypeScript research-audit helper at `src/strategy21/research/delayedRotationValidation.ts`. It is deliberately separate from production order authority.
+
+The helper enforces:
+
+- provenance-gated verdict language: synthetic data can only return `SELF_TEST_ONLY`;
+- incomplete-layer reporting before any provisional support label;
+- controlled dead-axis detection, so a varied parameter that never changes a score is reported as an unexecuted test;
+- explicit retrospective (`R7d < 0`) versus prospective (`-8% <= R7d < 0`) pullback compliance, with a warning below 80%;
+- an active-policy hash that excludes diagnostic-only knobs such as seven-day breadth.
+
+These controls do not convert the October 4 cross-section into a backtest. A full matched-control, point-in-time historical panel and untouched prospective observations are still required before the hypothesis can be described as economically validated.
 
 ## Source audit findings carried forward
 
@@ -84,6 +103,11 @@ The Strategy 2.1 delayed-rotation test suite now verifies:
 4. controlled versus deep pullback separation at -8%;
 5. exclusion of already-caught-up assets;
 6. VAccel's prior-seven-day denominator;
-7. explicit RSA(30,90) degeneracy reporting.
+7. explicit RSA(30,90) degeneracy reporting;
+8. 60-day BTC-relative diagnostics remain non-authoritative;
+9. missing volume history cannot fabricate confirmation;
+10. synthetic validation cannot emit a support verdict;
+11. dead grid axes are detected by controlled comparison;
+12. delayed rotation cannot increase Strategy 2.1 order authority or production next-dollar rank.
 
 No historical alpha, per-coin catch-up probability, reaction-lag estimate, or account-specific Kraken fee tier is asserted by this change.
