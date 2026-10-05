@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { brightDataMcpResearchAdapter } from "./brightDataMcp.js";
 import { publicSourceUrl, type EvidenceRepo } from "./researchEvidence.js";
 import { evaluateReassessment } from "./reassessment.js";
 import { cryptoBertStocktwitsAdapter } from "./socialIntelligence.js";
@@ -324,5 +325,6 @@ export function researchAdapters(
       },
     },
     cryptoBertStocktwitsAdapter(env, fetcher),
+    brightDataMcpResearchAdapter(env, fetcher),
   ];
 }
