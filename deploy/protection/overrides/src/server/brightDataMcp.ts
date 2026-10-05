@@ -165,7 +165,9 @@ async function callLegacy(
   if (!init.envelope || init.envelope.error)
     throw Error("BRIGHTDATA_MCP_INITIALIZE_FAILED");
   const sessionId = init.response.headers.get("mcp-session-id");
-  const sessionHeaders = sessionId ? { "Mcp-Session-Id": sessionId } : {};
+  const sessionHeaders: Record<string, string> = sessionId
+    ? { "Mcp-Session-Id": sessionId }
+    : {};
   await postRpc(
     endpoint,
     { jsonrpc: "2.0", method: "notifications/initialized", params: {} },
