@@ -14,6 +14,19 @@ type JsonRpcEnvelope = {
   error?: { code?: number; message?: string; data?: unknown };
 };
 
+class McpCompatibilityError extends Error {}
+
+function isCompatibilityHttpError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return [
+    "BRIGHTDATA_MCP_HTTP_400",
+    "BRIGHTDATA_MCP_HTTP_404",
+    "BRIGHTDATA_MCP_HTTP_405",
+    "BRIGHTDATA_MCP_HTTP_415",
+    "BRIGHTDATA_MCP_HTTP_426",
+  ].includes(error.message);
+}
+
 function endpointFor(token: string): URL {
   const url = new URL(BRIGHTDATA_MCP_PATH, BRIGHTDATA_MCP_ORIGIN);
   url.searchParams.set("token", token);
@@ -123,19 +136,31 @@ async function callModern(
       _meta: clientMeta(),
     },
   };
-  const { envelope } = await postRpc(
-    endpoint,
-    body,
-    {
-      "MCP-Protocol-Version": MCP_PROTOCOL,
-      "Mcp-Method": "tools/call",
-      "Mcp-Name": toolName,
-    },
-    signal,
-    fetcher,
-  );
-  if (!envelope || envelope.error)
-    throw Error("BRIGHTDATA_MCP_MODERN_CALL_FAILED");
+  let envelope: JsonRpcEnvelope | null;
+  try {
+    ({ envelope } = await postRpc(
+      endpoint,
+      body,
+      {
+        "MCP-Protocol-Version": MCP_PROTOCOL,
+        "Mcp-Method": "tools/call",
+        "Mcp-Name": toolName,
+      },
+      signal,
+      fetcher,
+    ));
+  } catch (error) {
+    if (isCompatibilityHttpError(error))
+      throw new McpCompatibilityError("BRIGHTDATA_MCP_MODERN_UNSUPPORTED");
+    throw error;
+  }
+  if (!envelope)
+    throw new McpCompatibilityError("BRIGHTDATA_MCP_MODERN_EMPTY");
+  if (envelope.error) {
+    if (envelope.error.code === -32601)
+      throw new McpCompatibilityError("BRIGHTDATA_MCP_MODERN_METHOD_UNSUPPORTED");
+    throw Error("BRIGHTDATA_MCP_TOOL_ERROR");
+  }
   return envelope.result;
 }
 
@@ -219,7 +244,8 @@ export async function callBrightDataMcpTool(
     return resultText(
       await callModern(endpoint, toolName, args, signal, fetcher),
     );
-  } catch {
+  } catch (error) {
+    if (!(error instanceof McpCompatibilityError)) throw error;
     return resultText(
       await callLegacy(endpoint, toolName, args, signal, fetcher),
     );
