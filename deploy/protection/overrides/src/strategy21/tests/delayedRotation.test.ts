@@ -106,8 +106,11 @@ test("7d breadth is diagnostic-only while BTC and 30d breadth remain the market 
   assert.ok((accepted.breadth7dPositive ?? 1) < 0.40);
   assert.equal(accepted.marketBullish, true);
 
-  const weak30d = claims.map((item, index) => index > 10 ? claim(item.symbol, -2, -2, 5) : item);
-  assert.equal(calibrateDelayedRotationMarket(weak30d).marketBullish, false);
+  // Leave only 7 of 20 alts with positive 30d structure (35%), below the 45% gate.
+  const weak30d = claims.map((item, index) => index >= 8 ? claim(item.symbol, -2, -2, 5) : item);
+  const weak = calibrateDelayedRotationMarket(weak30d);
+  assert.ok((weak.breadth30dPositive ?? 1) < 0.45);
+  assert.equal(weak.marketBullish, false);
 });
 
 test("verified 59-asset appendix reproduces the 24/10/13/12 cohort counts and RSA diagnostics", () => {
