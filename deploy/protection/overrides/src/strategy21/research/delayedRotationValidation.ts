@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 export type ValidationDataProvenance = "synthetic" | "provider_point_in_time";
 
 export type PullbackVariant = "descriptive" | "prospective";
@@ -160,6 +158,15 @@ export function pullbackCompliance(
  * Hash only the thresholds that can actually alter qualification/entry-state
  * behavior. Diagnostic-only metadata must not move the provenance anchor.
  */
+function fnv1a32(input: string, seed = 0x811c9dc5): number {
+  let hash = seed >>> 0;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
 export function policyHashForDelayedRotation(
   policy: DelayedRotationActivePolicy,
 ): string {
@@ -173,7 +180,12 @@ export function policyHashForDelayedRotation(
     maxPositive24hPct: policy.maxPositive24hPct,
     minBreadth30dPositive: policy.minBreadth30dPositive,
   };
-  return createHash("sha256").update(stable(active)).digest("hex").slice(0, 16);
+  const payload = stable(active);
+  const left = fnv1a32(payload).toString(16).padStart(8, "0");
+  const right = fnv1a32("zobiris-delayed-rotation:" + payload, 0x9e3779b9)
+    .toString(16)
+    .padStart(8, "0");
+  return left + right;
 }
 
 export function relativeVolumeAcceleration(
