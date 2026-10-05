@@ -99,6 +99,17 @@ test("RSA_30,90 degeneracy is surfaced as a diagnostic and never used as a quali
   assert.equal(calibration.diagnostics.rsa30_90Degenerate, true);
 });
 
+test("7d breadth is diagnostic-only while BTC and 30d breadth remain the market gate", () => {
+  const claims = [claim("BTC", 0.5, 7.7, 37.25)];
+  for (let i = 0; i < 20; i += 1) claims.push(claim(`ALT${i}`, i < 7 ? 2 : -2, i < 10 ? 5 : -1, 5));
+  const accepted = calibrateDelayedRotationMarket(claims);
+  assert.ok((accepted.breadth7dPositive ?? 1) < 0.40);
+  assert.equal(accepted.marketBullish, true);
+
+  const weak30d = claims.map((item, index) => index > 10 ? claim(item.symbol, -2, -2, 5) : item);
+  assert.equal(calibrateDelayedRotationMarket(weak30d).marketBullish, false);
+});
+
 test("verified 59-asset appendix reproduces the 24/10/13/12 cohort counts and RSA diagnostics", () => {
   const rows = [
     ["SCRT", 5.5, 19.48, -86.12, 2.89],
@@ -174,4 +185,6 @@ test("verified 59-asset appendix reproduces the 24/10/13/12 cohort counts and RS
   assert.equal(c.diagnostics.rsa7_30Pass, 8);
   assert.equal(c.diagnostics.rsa30_90Pass, 24);
   assert.equal(c.diagnostics.rsa30_90Degenerate, true);
+  assert.ok((c.breadth7dPositive ?? 1) < 0.40);
+  assert.equal(c.marketBullish, true);
 });
