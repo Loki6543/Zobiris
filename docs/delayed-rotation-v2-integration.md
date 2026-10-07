@@ -51,6 +51,19 @@ The current observation is excluded from its own baseline. Relative VAccel is lo
 
 The 1.15x level is a **research prior**, not a validated threshold. If seven completed historical daily-volume observations are absent, the engine reports volume evidence as unavailable instead of fabricating confirmation. Aggregate turnover remains a permissive research floor and is explicitly not treated as executable liquidity; Kraken spread/depth/impact gates remain authoritative for execution.
 
+### Live volume-history source
+
+The production CMC adapter now performs a **best-effort historical enrichment only when an authenticated CMC API key is available**. After the live latest-quote request succeeds, it requests the prior seven completed UTC daily observations from CMC's historical quotes endpoint and attaches only the observed `volume_24h` series to the normalized quote. The current partial UTC day is excluded by setting the historical end time to the previous completed UTC day.
+
+This enrichment is fail-closed:
+
+- keyless CMC operation does not manufacture a history series;
+- entitlement, rate-limit, network, or historical-endpoint failure does not downgrade an otherwise-valid latest quote;
+- failed history enrichment leaves `priorCompletedDailyVolumesUsd` absent and therefore leaves `volumeEvidenceStatus = UNAVAILABLE`;
+- no fallback fixture, extrapolation, `volume_change_24h`, or synthetic series is accepted as a substitute for the seven completed daily observations.
+
+This makes VAccel an evidence-backed research diagnostic when the required history is genuinely present, while preserving missing-evidence semantics when it is not.
+
 ## Anti-overclaim controls
 
 Every delayed-rotation profile now carries:
@@ -108,6 +121,8 @@ The Strategy 2.1 delayed-rotation test suite now verifies:
 9. missing volume history cannot fabricate confirmation;
 10. synthetic validation cannot emit a support verdict;
 11. dead grid axes are detected by controlled comparison;
-12. delayed rotation cannot increase Strategy 2.1 order authority or production next-dollar rank.
+12. delayed rotation cannot increase Strategy 2.1 order authority or production next-dollar rank;
+13. authenticated CMC history can populate exactly seven prior completed daily volumes for VAccel;
+14. unavailable/unauthorized CMC history leaves the prior-volume field missing rather than substituting synthetic evidence.
 
 No historical alpha, per-coin catch-up probability, reaction-lag estimate, or account-specific Kraken fee tier is asserted by this change.
