@@ -382,7 +382,7 @@
     },
     {
       "featureId": "sidecar_trial_registry_dsr_pbo",
-      "title": "Sidecar trial registry, Deflated Sharpe Ratio and PBO endpoints",
+      "title": "P0 selection-bias diagnostics: DSR/PBO/CPCV evidence",
       "policyVersion": "3.1-draft",
       "status": "SHADOW_ONLY",
       "authorityLabel": "VETO_OR_DOWNGRADE_RESEARCH_ONLY",
@@ -395,7 +395,7 @@
       "requiredEvidenceClass": [],
       "blockingConditions": [],
       "specSection": "Strategy Spec 9.4",
-      "notes": "Activation NOT_WIRED: production validation does not call it."
+      "notes": "Activation WIRED_SHADOW_ONLY: production research-integrity reads persisted P0 selection evidence and computes DSR/PBO diagnostics. CPCV remains WATCH until a ZOBIRIS-specific path threshold is preregistered. This feature has no qualification, sizing, order, or exchange-write authority."
     },
     {
       "featureId": "sidecar_cross_venue_and_loss_at_stop",
