@@ -110,6 +110,10 @@ async function verifyCandidate() {
       ZOBIRIS_ALLOW_LIVE_PROVIDERS: '1',
       ZOBIRIS_ATTENTION_COLLECT_ON_REFRESH: '1',
       ZOBIRIS_STRATEGY21_AUTO_COLLECT: '0',
+      // Bright Data and the other shadow research adapters are separately
+      // covered by build tests. Do not consume provider quota or let optional
+      // external research latency block the deployment gate.
+      ZOBIRIS_PREFLIGHT_SKIP_SHADOW_RESEARCH: '1',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

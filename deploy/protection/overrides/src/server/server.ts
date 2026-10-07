@@ -442,22 +442,24 @@ async function runRefreshHandler(
       storage.close();
     }
     let refreshResearch: RefreshResearchSweep | null = null;
-    try {
-      const activeSymbols = new Set(watchlist.map((asset) => asset.symbol.toUpperCase()));
-      const assets = researchAssets().filter((asset) => activeSymbols.has(asset.symbol.toUpperCase()));
-      const repo = researchRepository(assets);
+    if (process.env.ZOBIRIS_PREFLIGHT_SKIP_SHADOW_RESEARCH !== "1") {
       try {
-        refreshResearch = await collectFullWatchlistResearch(
-          repo,
-          live ? [publicRssResearchAdapter(), ...researchAdapters(process.env)] : [],
-          assets,
-          Date.now(),
-        );
-      } finally {
-        repo.close();
+        const activeSymbols = new Set(watchlist.map((asset) => asset.symbol.toUpperCase()));
+        const assets = researchAssets().filter((asset) => activeSymbols.has(asset.symbol.toUpperCase()));
+        const repo = researchRepository(assets);
+        try {
+          refreshResearch = await collectFullWatchlistResearch(
+            repo,
+            live ? [publicRssResearchAdapter(), ...researchAdapters(process.env)] : [],
+            assets,
+            Date.now(),
+          );
+        } finally {
+          repo.close();
+        }
+      } catch (error) {
+        console.warn("Full-watchlist research sweep degraded:", error instanceof Error ? error.message : String(error));
       }
-    } catch (error) {
-      console.warn("Full-watchlist research sweep degraded:", error instanceof Error ? error.message : String(error));
     }
     const firstStrategy = (result.snapshot.rankedAssets as unknown as Array<{ strategy21?: { marketState?: string; marketEnteredAt?: string; minimumDwellUntil?: string } }>).find((a) => a.strategy21)?.strategy21;
     if (firstStrategy?.marketState && firstStrategy.marketEnteredAt && firstStrategy.minimumDwellUntil) {
@@ -1579,6 +1581,11 @@ export function startZobirisServer(port = PORT, host = HOST) {
     const assets=researchAssets();const repo=researchRepository(assets);
     try{
       applyResearchBundle(repo,releaseResearchBundle);
+      // Deployment preflight must validate the production authority boundary
+      // without spending optional shadow-research provider quota or allowing an
+      // external research provider to block rollout. Production never sets this
+      // flag; the hosted gate sets it only on its local candidate process.
+      if(process.env.ZOBIRIS_PREFLIGHT_SKIP_SHADOW_RESEARCH==='1') return;
       if(process.env.ZOBIRIS_ALLOW_LIVE_PROVIDERS==='1'){
         const outcome=await collectOutcomeTick({path:OUTCOME_MEMORY_PATH,now:Date.now,fetchQuotes:symbols=>fetchOutcomeQuotes(symbols,assets,process.env)});
         const previous=repo.getState('outcomes') as {lastSuccessAt?:string}|null;
