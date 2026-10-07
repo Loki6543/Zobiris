@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import { publicSourceUrl } from "./researchEvidence.js";
 import type { ResearchAdapter, ResearchAsset } from "./researchCollection.js";
+import {
+  buildRawEvidenceArtifact,
+  chooseInvestigationCandidates,
+  extractAtomicClaims,
+} from "./researchInvestigator.js";
 
 const BRIGHTDATA_MCP_ORIGIN = "https://mcp.brightdata.com";
 const BRIGHTDATA_MCP_PATH = "/mcp";
@@ -292,6 +297,19 @@ function geoLocation(env: NodeJS.ProcessEnv): string | undefined {
   return value && /^[a-z]{2}$/.test(value) ? value : undefined;
 }
 
+function scrapeLimitPerAsset(env: NodeJS.ProcessEnv): number {
+  const configured = Number(env.BRIGHTDATA_SCRAPE_MAX_PER_ASSET);
+  if (!Number.isInteger(configured)) return 2;
+  return Math.max(1, Math.min(3, configured));
+}
+
+function evidenceKind(topic: string, polarity: string) {
+  if (topic === "TOKENOMICS_SUPPLY") return "SUPPLY_EVENT" as const;
+  if (topic === "SECURITY_EXPLOIT" && polarity === "NEGATIVE")
+    return "CONTRADICTING_EVIDENCE" as const;
+  return "NEWS" as const;
+}
+
 export function brightDataMcpResearchAdapter(
   env: NodeJS.ProcessEnv,
   fetcher: typeof fetch = fetch,
@@ -325,51 +343,110 @@ export function brightDataMcpResearchAdapter(
       if (!Array.isArray(parsed))
         throw Error("BRIGHTDATA_MCP_SEARCH_SHAPE_INVALID");
 
-      const retrievedAt = new Date().toISOString();
       const rows: unknown[] = [];
+      let selectedSources = 0;
+      let scrapedSources = 0;
       for (const asset of assets) {
         const query = queryFor(asset);
         const batch = parsed.find((row) => row?.query === query);
         if (!batch || batch.error || !Array.isArray(batch.result?.organic))
           continue;
-        for (const result of batch.result.organic.slice(0, 3)) {
-          const sourceUrl = typeof result.link === "string" ? result.link : "";
-          if (!publicSourceUrl(sourceUrl)) continue;
-          const title = typeof result.title === "string" ? result.title.trim() : "";
-          const description =
-            typeof result.description === "string"
-              ? result.description.trim()
-              : "";
-          const combined = title + " " + description;
-          if (!wholeWord(combined, asset.name)) continue;
-          const claim = (description || title).slice(0, 2000);
-          if (!claim) continue;
-          rows.push({
-            canonicalAssetId: asset.id,
-            symbol: asset.symbol,
-            provider: "brightdata-mcp-search",
-            sourceUrl,
-            publishedAt: null,
-            retrievedAt,
-            expiresAt: new Date(
-              Date.parse(retrievedAt) + 12 * 3600000,
-            ).toISOString(),
-            kind: "NEWS",
-            lineageId: createHash("sha256")
-              .update(sourceUrl + "|" + title.toLowerCase().trim())
-              .digest("hex"),
-            summary: (title || description).slice(0, 1000),
-            claim,
-            relevance:
-              "Bright Data MCP Google SERP match to canonical project name. Publication timing, source quality, and token impact remain unverified.",
-            verification: "UNVERIFIED",
-            verificationSourceUrl: null,
-            polarity: "MIXED",
-            material: false,
-            dataMode: "LIVE",
+
+        const discovered = batch.result.organic
+          .slice(0, 6)
+          .flatMap((result) => {
+            const sourceUrl = typeof result.link === "string" ? result.link : "";
+            if (!publicSourceUrl(sourceUrl)) return [];
+            const title =
+              typeof result.title === "string" ? result.title.trim() : "";
+            const description =
+              typeof result.description === "string"
+                ? result.description.trim()
+                : "";
+            const combined = title + " " + description;
+            if (!wholeWord(combined, asset.name)) return [];
+            return [{ sourceUrl, title, description }];
           });
+
+        const selected = chooseInvestigationCandidates(
+          discovered,
+          scrapeLimitPerAsset(env),
+        );
+        selectedSources += selected.length;
+
+        for (const candidate of selected) {
+          let artifact;
+          try {
+            const retrievedAt = new Date().toISOString();
+            const markdown = await callBrightDataMcpTool(
+              token,
+              "scrape_as_markdown",
+              { url: candidate.sourceUrl },
+              signal,
+              fetcher,
+            );
+            artifact = buildRawEvidenceArtifact(
+              candidate.sourceUrl,
+              retrievedAt,
+              markdown,
+            );
+          } catch {
+            continue;
+          }
+
+          scrapedSources += 1;
+          const claims = extractAtomicClaims(
+            artifact.content,
+            asset.name,
+            asset.symbol,
+            candidate.description || candidate.title,
+            2,
+          );
+          for (const [index, claim] of claims.entries()) {
+            rows.push({
+              canonicalAssetId: asset.id,
+              symbol: asset.symbol,
+              provider: "brightdata-mcp-investigator",
+              sourceUrl: candidate.sourceUrl,
+              publishedAt: null,
+              retrievedAt: artifact.retrievedAt,
+              expiresAt: new Date(
+                Date.parse(artifact.retrievedAt) + 24 * 3600000,
+              ).toISOString(),
+              kind: evidenceKind(claim.topic, claim.polarity),
+              lineageId: createHash("sha256")
+                .update(
+                  [
+                    candidate.sourceFamily,
+                    candidate.sourceUrl,
+                    claim.topic,
+                    String(index),
+                  ].join("|"),
+                )
+                .digest("hex"),
+              summary: claim.summary.slice(0, 1000),
+              claim: claim.claim.slice(0, 2000),
+              relevance:
+                "Full source acquired after Bright Data SERP discovery. Evidence remains research-only until corroboration, contradiction review, and entry/execution checks are complete.",
+              verification: "UNVERIFIED",
+              verificationSourceUrl: null,
+              polarity: claim.polarity,
+              material: claim.material,
+              dataMode: "LIVE",
+              sourceFamily: candidate.sourceFamily,
+              sourceAuthorityScore: candidate.sourceAuthorityScore,
+              primarySourceLikely: candidate.primarySourceLikely,
+              claimTopic: claim.topic,
+              extractionMethod: "BRIGHTDATA_FULL_SOURCE_ATOMIC_V1",
+              artifactHash: artifact.contentHash,
+              artifactByteLength: artifact.byteLength,
+              ...(index === 0 ? { rawArtifact: artifact } : {}),
+            });
+          }
         }
       }
+      if (selectedSources > 0 && scrapedSources === 0)
+        throw Error("BRIGHTDATA_MCP_SCRAPE_FAILED");
       return rows;
     },
   };
