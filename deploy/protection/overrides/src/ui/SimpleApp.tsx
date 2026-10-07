@@ -24,7 +24,7 @@ import { PortfolioVisuals } from "./PortfolioVisuals";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
-import { timeOutlookFor } from "./timeOutlook";
+import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
 type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare";
 type RankedAsset = Record<string, any>;
@@ -455,15 +455,20 @@ export function App() {
       ? ((livePrice / holding.avgPriceUsd) - 1) * 100
       : 0;
     const hasSellPlan = LIVE_OPEN_ORDERS.some((order) => order.side === "SELL" && order.symbol === holding.symbol);
+    const longTermProtected = isLongTermProtected(holding.symbol);
     let action = "HOLD";
-    if (hasSellPlan) action = "HARVEST PLAN";
+    if (longTermProtected) action = "L3 CORE HOLD";
+    else if (hasSellPlan) action = "HARVEST PLAN";
     else if (upl >= 15) {
       const trimPct = meaningfulTrimPct(value, upl);
       action = trimPct > 0 ? `TRIM ${trimPct}%` : "HOLD — TOO SMALL TO TRIM";
     }
     else if (String(asset?.action ?? "") === "AVOID") action = "NO ADD";
     else if (upl < -8) action = "REVIEW";
-    return { ...holding, livePrice, value, upl, action: priceAvailable ? action : "VERIFY PRICE", asset, priceAvailable };
+    const displayedAction = priceAvailable
+      ? action
+      : longTermProtected ? "L3 CORE · VERIFY PRICE" : "VERIFY PRICE";
+    return { ...holding, livePrice, value, upl, action: displayedAction, asset, priceAvailable, longTermProtected };
   }), [assetMap, snapshotFresh, nowMs, account, instrumentRules]);
 
   const invested = portfolioRows.reduce((sum, row) => sum + row.value, 0);
@@ -735,7 +740,9 @@ export function App() {
     };
   }), [assetMap, portfolioRows, regime, reentryRisk, freeCash, snapshotFresh, nowMs, account, instrumentRules]);
 
-  const strongestHoldingAction = [...portfolioRows].sort((a, b) => b.upl - a.upl)[0];
+  const strongestHoldingAction = [...portfolioRows]
+    .filter((row) => !isLongTermProtected(row.symbol))
+    .sort((a, b) => b.upl - a.upl)[0];
 
   async function toggleAsset(symbol: string) {
     if (expandedSymbol === symbol) {
