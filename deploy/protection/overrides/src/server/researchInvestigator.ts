@@ -250,7 +250,6 @@ export function extractAtomicClaims(
   markdown: string,
   assetName: string,
   symbol: string,
-  fallbackSummary: string,
   limit = 2,
 ): AtomicClaim[] {
   const clean = cleanMarkdown(markdown);
@@ -274,10 +273,6 @@ export function extractAtomicClaims(
     seen.add(key);
     unique.push(sentence);
     if (unique.length >= Math.max(1, limit)) break;
-  }
-
-  if (!unique.length && fallbackSummary.trim()) {
-    unique.push(fallbackSummary.trim().slice(0, 900));
   }
 
   return unique.map((claim) => {
