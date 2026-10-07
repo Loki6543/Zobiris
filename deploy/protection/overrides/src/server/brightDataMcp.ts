@@ -396,7 +396,6 @@ export function brightDataMcpResearchAdapter(
             artifact.content,
             asset.name,
             asset.symbol,
-            candidate.description || candidate.title,
             2,
           );
           return claims.map((claim, index) => ({
