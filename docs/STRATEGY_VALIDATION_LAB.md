@@ -96,3 +96,20 @@ Historical certification currently admits persisted price/reference timestamps. 
 The correction bundle is treated as a repair specification, not as a greenfield architecture. The current repository already implements the two highest-value ledger repairs: `invalid` is distinct from `inconclusive`, and `nCellsEvaluated` is derived from explicit tested cells with a Bonferroni family-wise gate. The remaining optimization applied here is to make the main validation lab's default cost arithmetic agree with that policy instead of silently evaluating at zero fees.
 
 External validation tools remain evidence inputs, not authority. Purged cross-validation is appropriate for removing overlapping-label training rows and post-test embargo leakage, but it does not by itself prove independence, cost realism, or profitable alpha. Falsification-ledger conformance is useful as a fail-closed preregistration check. Neither component may grant live-order authority.
+
+
+## DSR/PBO statistical certification bridge
+
+The validation lab now reads the persisted P0 statistical evidence ledger and attempts an **exact lineage mapping** from each outcome-memory `strategyTag` to one experiment family. Accepted mapping evidence is limited to an exact persisted match on `family_id`, family `title`, or a candidate `provider_strategy_id`. A query parameter or caller assertion cannot supply the family ID.
+
+`CERTIFIED_SHADOW` now additionally requires all of the following:
+
+- the strategy tag maps to exactly one persisted experiment family;
+- at least one integrity-eligible engine validation exists for that family;
+- the family's selection history is present and not truncated;
+- DSR is `PASS` at the preregistered `>0.95` threshold;
+- PBO is `PASS` at the preregistered `<0.10` threshold.
+
+If DSR or PBO fails, an otherwise certifiable report is demoted to `REJECTED`. If lineage is unmapped/ambiguous, provenance is incomplete, or either statistic is `UNKNOWN/WATCH`, it is demoted to `INSUFFICIENT_DATA`. Statistical evidence can therefore **preserve or reduce** a shadow certification; it can never create one.
+
+CPCV remains descriptive because no ZOBIRIS-specific CPCV promotion threshold has been preregistered. Execution evidence is still capped at `QUOTE_OUTCOME_ONLY`; DSR/PBO does not convert sampled outcomes into fills, resolve queue position, or create exchange-write authority.

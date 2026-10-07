@@ -104,7 +104,7 @@ import { buildOutcomeValidationLab, isOutcomeHorizon } from "./strategyValidatio
 import { startKrakenBookShadow } from "../strategy21/prediction/bookCollector.js";
 import { createShadowFeatureHandler } from "./shadowRuntime.js";
 import { readShadowForecasts } from "./predictionOutcomes.js";
-import { P0_VERSION, openResearchProvenance, readResearchProvenance } from "./researchProvenance.js";
+import { P0_VERSION, openResearchProvenance, readResearchProvenance, readStrategyStatisticalEvidenceBatch } from "./researchProvenance.js";
 import { createAttentionLedgerRepository, getAttentionLedgerStatus, runLiveAttentionCollection, type AttentionFetcher, type StocktwitsFirestreamFetcher } from "../strategy21/attentionLedger/index.js";
 import {
   challengerRequestSchema,
@@ -1318,12 +1318,19 @@ const API: ApiRouter = {
       const feeBps = parseCostBps("feeBps");
       const slippageBps = parseCostBps("slippageBps");
       const memory = await readOutcomeMemory(OUTCOME_MEMORY_PATH, symbol);
+      const strategyTags = [...new Set(
+        memory.records
+          .map((record) => record.strategyTag)
+          .filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0),
+      )];
+      const statisticalEvidenceByTag = readStrategyStatisticalEvidenceBatch(DEFAULT_DB, strategyTags);
       jsonResponse(res, 200, buildOutcomeValidationLab(memory.records, {
         horizon: rawHorizon,
         symbol,
         strategyTag,
         feeBps,
         slippageBps,
+        statisticalEvidenceByTag,
       }));
     } catch (e) {
       errorResponse(res, 503, e);

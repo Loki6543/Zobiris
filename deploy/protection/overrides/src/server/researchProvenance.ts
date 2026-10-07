@@ -70,13 +70,20 @@ type SummaryRow = {
   nObservations: number;
 };
 
-function selections(db: Database.Database): { rows: SelectionRow[]; total: number; truncated: boolean } {
-  const total = Number((db.prepare('SELECT count(*) AS n FROM selection_event').get() as { n: number }).n);
+function selections(db: Database.Database, familyId?: string): { rows: SelectionRow[]; total: number; truncated: boolean } {
+  const family = familyId?.trim() || null;
+  const total = Number((db.prepare(
+    'SELECT count(*) AS n FROM selection_event WHERE (? IS NULL OR family_id=?)',
+  ).get(family, family) as { n: number }).n);
   const rows = db.prepare(`SELECT selection_id AS selectionId, family_id AS familyId,
     selected_candidate_id AS candidateId, selected_split_id AS splitId,
     metric_definition_hash AS metricHash, cost_model_hash AS costHash,
     trial_count_raw AS trialCountRaw, effective_trial_count AS effectiveTrialCount
-    FROM selection_event ORDER BY selected_at DESC, selection_id DESC LIMIT ?`).all(MAX_SELECTIONS_PER_READ) as SelectionRow[];
+    FROM selection_event
+    WHERE (? IS NULL OR family_id=?)
+    ORDER BY selected_at DESC, selection_id DESC LIMIT ?`).all(
+      family, family, MAX_SELECTIONS_PER_READ,
+    ) as SelectionRow[];
   return { rows, total, truncated: total > rows.length };
 }
 
@@ -264,8 +271,8 @@ function evaluateCpcv(db: Database.Database, selected: SelectionRow[]) {
   };
 }
 
-export function evaluateP0StatisticalEvidence(db: Database.Database) {
-  const scan = selections(db);
+export function evaluateP0StatisticalEvidence(db: Database.Database, familyId?: string) {
+  const scan = selections(db, familyId);
   const selected = scan.rows;
   const dsr = evaluateDsr(db, selected);
   const pbo = evaluatePbo(db, selected);
@@ -290,6 +297,178 @@ export function evaluateP0StatisticalEvidence(db: Database.Database) {
     },
     authority: 'SHADOW_ONLY_NO_TRADING_AUTHORITY' as const,
   };
+}
+
+export type StrategyEvidenceMappingStatus = 'MAPPED' | 'UNMAPPED' | 'AMBIGUOUS';
+export type StrategyStatisticalGateStatus = 'PASS' | 'FAIL' | 'WATCH' | 'UNKNOWN';
+
+export interface StrategyStatisticalEvidence {
+  strategyTag: string;
+  authority: 'SHADOW_ONLY_NO_TRADING_AUTHORITY';
+  source: 'PERSISTED_P0_EVIDENCE' | 'UNAVAILABLE';
+  mapping: {
+    status: StrategyEvidenceMappingStatus;
+    familyId: string | null;
+    matchedBy: 'family_id' | 'family_title' | 'provider_strategy_id' | null;
+  };
+  provenanceComplete: boolean;
+  eligibleValidations: number;
+  selectionCount: number;
+  evaluatedSelectionCount: number;
+  truncated: boolean;
+  dsr: StatisticalMetric;
+  pbo: StatisticalMetric;
+  cpcv: StatisticalMetric;
+  gate: {
+    status: StrategyStatisticalGateStatus;
+    reasons: string[];
+  };
+}
+
+function unknownMetric(threshold: string, reason: string): StatisticalMetric {
+  return { status: 'UNKNOWN', value: null, sampleCount: 0, threshold, reasons: [reason] };
+}
+
+function unavailableStrategyEvidence(
+  strategyTag: string,
+  mappingStatus: StrategyEvidenceMappingStatus = 'UNMAPPED',
+  reason = 'No uniquely mapped P0 experiment family is available for this strategy tag.',
+): StrategyStatisticalEvidence {
+  return {
+    strategyTag,
+    authority: 'SHADOW_ONLY_NO_TRADING_AUTHORITY',
+    source: 'UNAVAILABLE',
+    mapping: { status: mappingStatus, familyId: null, matchedBy: null },
+    provenanceComplete: false,
+    eligibleValidations: 0,
+    selectionCount: 0,
+    evaluatedSelectionCount: 0,
+    truncated: false,
+    dsr: unknownMetric(`>${DSR_PASS_THRESHOLD.toFixed(2)}`, reason),
+    pbo: unknownMetric(`<${PBO_PASS_THRESHOLD.toFixed(2)}`, reason),
+    cpcv: unknownMetric('PREREGISTERED_THRESHOLD_REQUIRED', reason),
+    gate: { status: 'UNKNOWN', reasons: [reason] },
+  };
+}
+
+function resolveStrategyFamily(
+  db: Database.Database,
+  strategyTag: string,
+): { status: StrategyEvidenceMappingStatus; familyId: string | null; matchedBy: StrategyStatisticalEvidence['mapping']['matchedBy'] } {
+  const tag = strategyTag.trim();
+  if (!tag) return { status: 'UNMAPPED', familyId: null, matchedBy: null };
+  const rows = db.prepare(`
+    SELECT DISTINCT ef.family_id AS familyId,
+      CASE
+        WHEN ef.family_id = ? COLLATE NOCASE THEN 'family_id'
+        WHEN ef.title = ? COLLATE NOCASE THEN 'family_title'
+        WHEN cs.provider_strategy_id = ? COLLATE NOCASE THEN 'provider_strategy_id'
+        ELSE NULL
+      END AS matchedBy
+    FROM experiment_family ef
+    LEFT JOIN candidate_strategy cs ON cs.family_id=ef.family_id
+    WHERE ef.family_id = ? COLLATE NOCASE
+       OR ef.title = ? COLLATE NOCASE
+       OR cs.provider_strategy_id = ? COLLATE NOCASE
+    ORDER BY ef.family_id
+  `).all(tag, tag, tag, tag, tag, tag) as Array<{ familyId: string; matchedBy: StrategyStatisticalEvidence['mapping']['matchedBy'] }>;
+  const unique = [...new Map(rows.map(row => [row.familyId, row])).values()];
+  if (unique.length === 0) return { status: 'UNMAPPED', familyId: null, matchedBy: null };
+  if (unique.length > 1) return { status: 'AMBIGUOUS', familyId: null, matchedBy: null };
+  return { status: 'MAPPED', familyId: unique[0]!.familyId, matchedBy: unique[0]!.matchedBy };
+}
+
+function eligibleValidationsForFamily(db: Database.Database, familyId: string): number {
+  return Number((db.prepare(`SELECT count(*) AS n FROM engine_validation ev
+    WHERE ev.family_id=?
+      AND ev.eligible_for_integrity_scoring=1
+      AND NOT EXISTS (
+        SELECT 1 FROM engine_validation newer
+        WHERE newer.supersedes_validation_id=ev.validation_id
+          AND newer.candidate_id=ev.candidate_id
+          AND newer.family_id=ev.family_id
+      )`).get(familyId) as { n: number }).n);
+}
+
+function strategyStatisticalEvidence(
+  db: Database.Database,
+  strategyTag: string,
+): StrategyStatisticalEvidence {
+  const mapping = resolveStrategyFamily(db, strategyTag);
+  if (mapping.status !== 'MAPPED' || !mapping.familyId) {
+    return unavailableStrategyEvidence(
+      strategyTag,
+      mapping.status,
+      mapping.status === 'AMBIGUOUS'
+        ? 'Multiple P0 experiment families match this strategy tag; certification refuses an ambiguous mapping.'
+        : 'No P0 experiment family is persistently mapped to this strategy tag.',
+    );
+  }
+
+  const statistics = evaluateP0StatisticalEvidence(db, mapping.familyId);
+  const eligibleValidations = eligibleValidationsForFamily(db, mapping.familyId);
+  const reasons: string[] = [];
+  if (eligibleValidations < 1) reasons.push('No integrity-eligible engine validation exists for the mapped family.');
+  if (statistics.selectionCount < 1) reasons.push('The mapped family has no registered selection event.');
+  if (statistics.truncated) reasons.push('The mapped family statistical read is truncated; offline full-history certification is required.');
+  reasons.push(...statistics.dsr.metric.reasons, ...statistics.pbo.metric.reasons);
+
+  const provenanceComplete = eligibleValidations > 0
+    && statistics.selectionCount > 0
+    && !statistics.truncated;
+  let gateStatus: StrategyStatisticalGateStatus = 'UNKNOWN';
+  if (statistics.dsr.metric.status === 'FAIL' || statistics.pbo.metric.status === 'FAIL') gateStatus = 'FAIL';
+  else if (
+    provenanceComplete
+    && statistics.dsr.metric.status === 'PASS'
+    && statistics.pbo.metric.status === 'PASS'
+  ) gateStatus = 'PASS';
+  else if (
+    statistics.dsr.metric.status === 'WATCH'
+    || statistics.pbo.metric.status === 'WATCH'
+    || statistics.truncated
+  ) gateStatus = 'WATCH';
+
+  return {
+    strategyTag,
+    authority: 'SHADOW_ONLY_NO_TRADING_AUTHORITY',
+    source: 'PERSISTED_P0_EVIDENCE',
+    mapping,
+    provenanceComplete,
+    eligibleValidations,
+    selectionCount: statistics.selectionCount,
+    evaluatedSelectionCount: statistics.evaluatedSelectionCount,
+    truncated: statistics.truncated,
+    dsr: statistics.dsr.metric,
+    pbo: statistics.pbo.metric,
+    cpcv: statistics.cpcv.metric,
+    gate: { status: gateStatus, reasons: [...new Set(reasons)] },
+  };
+}
+
+/**
+ * Resolve DSR/PBO evidence to a strategy tag only through persisted, exact P0
+ * lineage. Caller-supplied family IDs are intentionally not accepted.
+ */
+export function readStrategyStatisticalEvidenceBatch(
+  mainDbPath: string,
+  strategyTags: string[],
+): Record<string, StrategyStatisticalEvidence> {
+  const tags = [...new Set(strategyTags.map(tag => tag.trim()).filter(Boolean))].slice(0, 100);
+  if (!tags.length) return {};
+  let db: Database.Database | null = null;
+  try {
+    db = new Database(resolve(mainDbPath) + '.research-p0.sqlite', { readonly: true, fileMustExist: true, timeout: 100 });
+    validateSchema(db);
+    return Object.fromEntries(tags.map(tag => [tag, strategyStatisticalEvidence(db!, tag)]));
+  } catch {
+    return Object.fromEntries(tags.map(tag => [
+      tag,
+      unavailableStrategyEvidence(tag, 'UNMAPPED', 'P0 statistical provenance is unavailable; certification fails closed.'),
+    ]));
+  } finally {
+    db?.close();
+  }
 }
 
 export function readResearchProvenance(mainDbPath: string) {

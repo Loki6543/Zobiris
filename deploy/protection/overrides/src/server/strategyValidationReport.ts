@@ -6,6 +6,7 @@ import {
 } from "../strategy21/research/strategyValidation.js";
 import { fileURLToPath } from "node:url";
 import { loadRegistry, statusLabel } from "./policy/zobirisPolicyBinding.js";
+import type { StrategyStatisticalEvidence } from "./researchProvenance.js";
 
 const VALIDATION_POLICY_REGISTRY = (() => {
   try {
@@ -27,6 +28,90 @@ export interface OutcomeValidationLabOptions {
   strategyTag?: string;
   feeBps?: number;
   slippageBps?: number;
+  statisticalEvidenceByTag?: Record<string, StrategyStatisticalEvidence>;
+}
+
+export interface StatisticalCertificationView {
+  requiredForCertifiedShadow: true;
+  authority: "SHADOW_ONLY_NO_TRADING_AUTHORITY";
+  source: StrategyStatisticalEvidence["source"] | "UNAVAILABLE";
+  status: "PASS" | "FAIL" | "WATCH" | "UNKNOWN";
+  mappingStatus: "MAPPED" | "UNMAPPED" | "AMBIGUOUS";
+  familyId: string | null;
+  provenanceComplete: boolean;
+  eligibleValidations: number;
+  dsr: StrategyStatisticalEvidence["dsr"] | null;
+  pbo: StrategyStatisticalEvidence["pbo"] | null;
+  cpcv: StrategyStatisticalEvidence["cpcv"] | null;
+  reasons: string[];
+}
+
+function statisticalCertificationFor(
+  strategyTag: string,
+  evidence?: StrategyStatisticalEvidence,
+): StatisticalCertificationView {
+  if (!evidence) {
+    return {
+      requiredForCertifiedShadow: true,
+      authority: "SHADOW_ONLY_NO_TRADING_AUTHORITY",
+      source: "UNAVAILABLE",
+      status: "UNKNOWN",
+      mappingStatus: "UNMAPPED",
+      familyId: null,
+      provenanceComplete: false,
+      eligibleValidations: 0,
+      dsr: null,
+      pbo: null,
+      cpcv: null,
+      reasons: [`No persisted DSR/PBO family mapping is available for ${strategyTag}; certification fails closed.`],
+    };
+  }
+  return {
+    requiredForCertifiedShadow: true,
+    authority: evidence.authority,
+    source: evidence.source,
+    status: evidence.gate.status,
+    mappingStatus: evidence.mapping.status,
+    familyId: evidence.mapping.familyId,
+    provenanceComplete: evidence.provenanceComplete,
+    eligibleValidations: evidence.eligibleValidations,
+    dsr: evidence.dsr,
+    pbo: evidence.pbo,
+    cpcv: evidence.cpcv,
+    reasons: evidence.gate.reasons,
+  };
+}
+
+function applyStatisticalCertification(
+  report: StrategyValidationReport,
+  statistical: StatisticalCertificationView,
+): StrategyValidationReport {
+  const base = report.certification;
+  if (base.classification !== "CERTIFIED_SHADOW") return report;
+
+  let classification: typeof base.classification | "INSUFFICIENT_DATA" | "REJECTED" = base.classification;
+  const reasons = [...base.reasons];
+  if (statistical.status === "FAIL") {
+    classification = "REJECTED";
+    reasons.push("Mapped DSR/PBO evidence fails the preregistered statistical thresholds.");
+  } else if (
+    statistical.status !== "PASS"
+    || statistical.mappingStatus !== "MAPPED"
+    || !statistical.provenanceComplete
+  ) {
+    classification = "INSUFFICIENT_DATA";
+    reasons.push("Mapped, provenance-complete DSR/PBO evidence is required before CERTIFIED_SHADOW.");
+  }
+
+  return {
+    ...report,
+    certification: {
+      ...base,
+      classification,
+      stable: classification === "CERTIFIED_SHADOW",
+      reasons: [...new Set(reasons)],
+    },
+  };
 }
 
 function toEpisode(
@@ -100,8 +185,13 @@ export function buildOutcomeValidationLab(
       .filter((record) => record.strategyTag === strategyTag)
       .map((record) => toEpisode(record, horizon, feeBps, slippageBps))
       .filter((episode): episode is StrategyValidationEpisode => episode != null);
-    const report = validateStrategyEpisodes(episodes);
-    const classification = (report as any)?.certification?.classification ?? (report as any)?.status ?? "SHADOW";
+    const baseReport = validateStrategyEpisodes(episodes);
+    const statisticalCertification = statisticalCertificationFor(
+      strategyTag,
+      options.statisticalEvidenceByTag?.[strategyTag],
+    );
+    const report = applyStatisticalCertification(baseReport, statisticalCertification);
+    const classification = report.certification.classification ?? report.status;
     reports.push({
       strategyTag,
       resolvedEpisodes: episodes.length,
@@ -109,7 +199,8 @@ export function buildOutcomeValidationLab(
         ...report,
         evidenceClass: "QUOTE_OUTCOME_ONLY",
         statusLabel: statusLabel(String(classification), "QUOTE_OUTCOME_ONLY"),
-      },
+        statisticalCertification,
+      } as StrategyValidationReport & { evidenceClass: string; statusLabel?: string; statisticalCertification: StatisticalCertificationView },
     });
   }
 
@@ -182,7 +273,8 @@ export function buildOutcomeValidationLab(
       "The feature timestamp check uses the persisted reference quote timestamp; upstream feature provenance remains separately governed by research-integrity checks.",
       "A sampled limit touch is not a fill. This lab cannot estimate queue position or missed-fill regret without reconciled order/L2 evidence.",
       "Correlated crypto assets are not statistically independent; t-statistics are descriptive and are not promotion gates.",
-      "CERTIFIED_SHADOW means validation plus stress certification passed. It never grants live trading or order authority.",
+      "CERTIFIED_SHADOW requires temporal/OOS/vault/stress gates plus an exact persisted strategy-family mapping whose DSR and PBO both pass. Missing or ambiguous statistical provenance fails closed.",
+      "DSR/PBO evidence is shadow-only and may only preserve or demote certification; it can never create live trading or order authority.",
       "Modeled execution costs are not executable-fill evidence; Kraken L2/fill reconciliation remains a separate required gate.",
     ],
   };

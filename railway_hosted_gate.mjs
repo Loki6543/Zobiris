@@ -293,6 +293,27 @@ async function verifyCandidate() {
     if (!Array.isArray(researchIntegrityBundle.evidenceLedger)) throw new Error('research evidence ledger missing');
     if (!Array.isArray(researchIntegrityBundle.thesis?.falsifiers) || researchIntegrityBundle.thesis.falsifiers.length === 0) throw new Error('research thesis falsifiers missing');
     if (researchIntegrityBundle.evidenceLedger.some(item => item?.pointInTimeValid === false && item?.limitations?.length === 0)) throw new Error('invalid point-in-time evidence lacks limitations');
+    const validationLab = await jsonCheck(localOrigin, '/api/strategy-validation?horizon=7D', {}, [200], 'candidate strategy validation statistical certification');
+    if (validationLab.payload?.liveOrderAuthority !== false) throw new Error('strategy validation gained live order authority');
+    if (validationLab.payload?.evidenceClass !== 'QUOTE_OUTCOME_ONLY') throw new Error('strategy validation evidence-class ceiling changed');
+    if (validationLab.payload?.costAssumptions?.selectedPath !== 'MAKER_TAKER') throw new Error('strategy validation is not using maker/taker validation path');
+    if (Math.abs(Number(validationLab.payload?.costAssumptions?.roundTripFeeBpsByPath?.MAKER_TAKER ?? 0) - 120) > 1e-9) {
+      throw new Error('strategy validation maker/taker round trip is not 120 bps');
+    }
+    for (const entry of validationLab.payload?.reports ?? []) {
+      const certification = entry?.report?.certification;
+      const statistics = entry?.report?.statisticalCertification;
+      if (!statistics || statistics.authority !== 'SHADOW_ONLY_NO_TRADING_AUTHORITY') {
+        throw new Error('strategy validation statistical certification boundary missing');
+      }
+      if (certification?.classification === 'CERTIFIED_SHADOW') {
+        if (statistics.status !== 'PASS' || statistics.mappingStatus !== 'MAPPED' || statistics.provenanceComplete !== true) {
+          throw new Error('CERTIFIED_SHADOW escaped without mapped provenance-complete DSR/PBO PASS');
+        }
+      }
+    }
+    console.log('PASS candidate strategy validation requires mapped DSR/PBO evidence and remains shadow-only');
+
     const outcomes = await jsonCheck(localOrigin, '/api/outcomes?limit=5', {}, [200], 'candidate decision outcome memory');
     if (outcomes.payload?.version !== '1.0' || !Array.isArray(outcomes.payload?.records)) throw new Error('decision outcome memory contract missing');
     if (!outcomes.payload.records.some(record => record?.strategyTag === 'DELAYED_ROTATION_PILOT_V1')) throw new Error('delayed-rotation outcome tagging missing');

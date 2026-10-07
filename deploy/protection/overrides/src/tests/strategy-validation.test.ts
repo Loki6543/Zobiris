@@ -5,6 +5,25 @@ import {
 } from "../strategy21/research/strategyValidation.js";
 import { buildOutcomeValidationLab } from "../server/strategyValidationReport.js";
 import type { DecisionOutcomeRecord } from "../server/outcomeMemory.js";
+import type { StrategyStatisticalEvidence } from "../server/researchProvenance.js";
+
+function passingStatisticalEvidence(strategyTag: string): StrategyStatisticalEvidence {
+  return {
+    strategyTag,
+    authority: "SHADOW_ONLY_NO_TRADING_AUTHORITY",
+    source: "PERSISTED_P0_EVIDENCE",
+    mapping: { status: "MAPPED", familyId: "fam-entry-v1", matchedBy: "family_title" },
+    provenanceComplete: true,
+    eligibleValidations: 1,
+    selectionCount: 1,
+    evaluatedSelectionCount: 1,
+    truncated: false,
+    dsr: { status: "PASS", value: 0.99, sampleCount: 1, threshold: ">0.95", reasons: [] },
+    pbo: { status: "PASS", value: 0.05, sampleCount: 1, threshold: "<0.10", reasons: [] },
+    cpcv: { status: "WATCH", value: 0.75, sampleCount: 1, threshold: "PREREGISTERED_THRESHOLD_REQUIRED", reasons: ["descriptive only"] },
+    gate: { status: "PASS", reasons: [] },
+  };
+}
 
 function episodes(
   count: number,
@@ -167,7 +186,7 @@ describe("strategy validation lab", () => {
           evaluatedAt: dueAt,
           priceObservedAt: dueAt,
           priceUsd: 101,
-          returnPct: 1,
+          returnPct: 2,
           benchmarkReturnPct: 0.2,
         }],
       };
@@ -181,4 +200,51 @@ describe("strategy validation lab", () => {
     expect(lab.factorAudit.find((item) => item.factor === "onchain")?.usedInCertification).toBe(false);
     expect(lab.liveOrderAuthority).toBe(false);
   });
+  it("fails closed when base validation passes but DSR/PBO lineage is unmapped", () => {
+    const base = Date.parse("2025-01-01T00:00:00.000Z");
+    const records: DecisionOutcomeRecord[] = Array.from({ length: 120 }, (_, index) => {
+      const generatedAt = new Date(base + index * 8 * 86400000).toISOString();
+      const dueAt = new Date(base + index * 8 * 86400000 + 7 * 86400000).toISOString();
+      return {
+        measurementVersion: "episodes-v2",
+        outcomeId: "unmapped-" + index,
+        symbol: "SOL",
+        generatedAt,
+        referencePriceObservedAt: generatedAt,
+        action: "BUY",
+        assetState: "CONFIRMED_TREND",
+        regime: "SIDEWAYS",
+        referencePriceUsd: 100,
+        opportunityScore: 0.8,
+        researchScore: 80,
+        evidenceQuality: 0.9,
+        thesisId: "unmapped-t-" + index,
+        strategyTag: "UNMAPPED_MODEL_V1",
+        strategyStatus: "QUALIFIED",
+        recommendedPullbackPct: 5,
+        maxFavorablePct: 4,
+        maxAdversePct: -2,
+        evaluations: [{
+          status: "RESOLVED",
+          horizon: "7D",
+          dueAt,
+          evaluatedAt: dueAt,
+          priceObservedAt: dueAt,
+          priceUsd: 102,
+          returnPct: 2,
+          benchmarkReturnPct: 0.2,
+        }],
+      };
+    });
+    const lab = buildOutcomeValidationLab(records, { horizon: "7D" });
+    expect(lab.reports[0]!.report.status).toBe("SHADOW_VALIDATED");
+    expect(lab.reports[0]!.report.certification.classification).toBe("INSUFFICIENT_DATA");
+    expect((lab.reports[0]!.report as any).statisticalCertification).toMatchObject({
+      status: "UNKNOWN",
+      mappingStatus: "UNMAPPED",
+      provenanceComplete: false,
+    });
+    expect(lab.liveOrderAuthority).toBe(false);
+  });
+
 });
