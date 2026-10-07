@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   brightDataMcpResearchAdapter,
@@ -44,7 +45,11 @@ describe("Bright Data MCP research adapter", () => {
         observedUrl = String(url);
         const body = JSON.parse(String(init?.body));
         const query = body.params.arguments.queries[0].query;
-        return rpcResult(JSON.stringify([{ query, engine: "google", result: { organic: [] } }]));
+        return rpcResult(
+          JSON.stringify([
+            { query, engine: "google", result: { organic: [] } },
+          ]),
+        );
       },
     );
     expect(adapter.minIntervalMs).toBe(3_600_000);
@@ -55,36 +60,50 @@ describe("Bright Data MCP research adapter", () => {
     expect(new URL(observedUrl).searchParams.get("token")).toBe("preferred-token");
   });
 
-  it("uses the hosted MCP batch search and emits unverified provenance-only evidence", async () => {
-    let observedUrl = "";
-    let observedBody: any = null;
+  it("searches, selects high-value sources, scrapes full content, and emits artifact-backed evidence", async () => {
+    const toolCalls: string[] = [];
+    const markdown =
+      "# Solana network update\n\nSolana developers announced a network upgrade with validator changes.";
     const adapter = brightDataMcpResearchAdapter(
       {
         BRIGHTDATA_API_TOKEN: "secret-token",
         BRIGHTDATA_GEO_LOCATION: "us",
+        BRIGHTDATA_SCRAPE_MAX_PER_ASSET: "2",
       },
       async (url, init) => {
-        observedUrl = String(url);
-        observedBody = JSON.parse(String(init?.body));
-        const query = observedBody.params.arguments.queries[0].query;
-        return rpcResult(
-          JSON.stringify([
-            {
-              query,
-              engine: "google",
-              result: {
-                organic: [
-                  {
-                    link: "https://example.com/solana-update",
-                    title: "Solana network update",
-                    description:
-                      "Solana developers published a new network update and risk disclosure.",
-                  },
-                ],
+        const endpoint = new URL(String(url));
+        expect(endpoint.origin).toBe("https://mcp.brightdata.com");
+        expect(endpoint.pathname).toBe("/mcp");
+        expect(endpoint.searchParams.get("token")).toBe("secret-token");
+        const body = JSON.parse(String(init?.body));
+        toolCalls.push(body.params.name);
+        if (body.params.name === "search_engine_batch") {
+          const query = body.params.arguments.queries[0].query;
+          expect(body.params.arguments.queries[0].geo_location).toBe("us");
+          return rpcResult(
+            JSON.stringify([
+              {
+                query,
+                engine: "google",
+                result: {
+                  organic: [
+                    {
+                      link: "https://github.com/solana-labs/solana/releases",
+                      title: "Solana official network upgrade",
+                      description:
+                        "Solana developers published a network upgrade and validator announcement.",
+                    },
+                  ],
+                },
               },
-            },
-          ]),
+            ]),
+          );
+        }
+        expect(body.params.name).toBe("scrape_as_markdown");
+        expect(body.params.arguments.url).toBe(
+          "https://github.com/solana-labs/solana/releases",
         );
+        return rpcResult(markdown);
       },
     );
 
@@ -93,31 +112,33 @@ describe("Bright Data MCP research adapter", () => {
       AbortSignal.timeout(1000),
     )) as any[];
 
-    const endpoint = new URL(observedUrl);
-    expect(endpoint.origin).toBe("https://mcp.brightdata.com");
-    expect(endpoint.pathname).toBe("/mcp");
-    expect(endpoint.searchParams.get("token")).toBe("secret-token");
-    expect(observedBody.method).toBe("tools/call");
-    expect(observedBody.params.name).toBe("search_engine_batch");
-    expect(observedBody.params.arguments.queries[0].geo_location).toBe("us");
-    expect(rows).toHaveLength(1);
+    expect(toolCalls).toEqual(["search_engine_batch", "scrape_as_markdown"]);
+    expect(rows.length).toBeGreaterThan(0);
     expect(rows[0]).toMatchObject({
       canonicalAssetId: "asset-sol",
       symbol: "SOL",
-      provider: "brightdata-mcp-search",
-      sourceUrl: "https://example.com/solana-update",
+      provider: "brightdata-mcp-investigator",
+      sourceUrl: "https://github.com/solana-labs/solana/releases",
       verification: "UNVERIFIED",
-      material: false,
       dataMode: "LIVE",
+      extractionMethod: "BRIGHTDATA_FULL_SOURCE_ATOMIC_V1",
+      claimTopic: "NETWORK_UPGRADE",
+      primarySourceLikely: true,
     });
+    expect(rows[0].artifactHash).toBe(
+      createHash("sha256").update(markdown).digest("hex"),
+    );
+    expect(rows[0].rawArtifact.content).toBe(markdown);
     expect(JSON.stringify(rows[0])).not.toContain("secret-token");
   });
 
-  it("requires the canonical project name, not an unrelated common-word ticker hit", async () => {
+  it("requires the canonical project name before spending a scrape call", async () => {
+    const calls: string[] = [];
     const adapter = brightDataMcpResearchAdapter(
       { BRIGHTDATA_API_TOKEN: "token" },
       async (_url, init) => {
         const body = JSON.parse(String(init?.body));
+        calls.push(body.params.name);
         const query = body.params.arguments.queries[0].query;
         return rpcResult(
           JSON.stringify([
@@ -144,6 +165,7 @@ describe("Bright Data MCP research adapter", () => {
         AbortSignal.timeout(1000),
       ),
     ).resolves.toEqual([]);
+    expect(calls).toEqual(["search_engine_batch"]);
   });
 
   it("falls back to legacy sessioned MCP when the modern request is rejected", async () => {
@@ -180,7 +202,11 @@ describe("Bright Data MCP research adapter", () => {
         if (body.method === "notifications/initialized")
           return new Response(null, { status: 202 });
         expect((init?.headers as any)["Mcp-Session-Id"]).toBe("session-1");
-        return rpcResult(JSON.stringify([{ query: "Bitcoin BTC crypto", result: { organic: [] } }]));
+        return rpcResult(
+          JSON.stringify([
+            { query: "Bitcoin BTC crypto", result: { organic: [] } },
+          ]),
+        );
       },
     );
     expect(JSON.parse(result)).toHaveLength(1);
