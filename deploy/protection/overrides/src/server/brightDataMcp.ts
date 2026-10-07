@@ -343,9 +343,11 @@ export function brightDataMcpResearchAdapter(
       if (!Array.isArray(parsed))
         throw Error("BRIGHTDATA_MCP_SEARCH_SHAPE_INVALID");
 
-      const rows: unknown[] = [];
-      let selectedSources = 0;
-      let scrapedSources = 0;
+      const jobs: Array<{
+        asset: ResearchAsset;
+        candidate: ReturnType<typeof chooseInvestigationCandidates>[number];
+      }> = [];
+
       for (const asset of assets) {
         const query = queryFor(asset);
         const batch = parsed.find((row) => row?.query === query);
@@ -368,33 +370,28 @@ export function brightDataMcpResearchAdapter(
             return [{ sourceUrl, title, description }];
           });
 
-        const selected = chooseInvestigationCandidates(
+        for (const candidate of chooseInvestigationCandidates(
           discovered,
           scrapeLimitPerAsset(env),
-        );
-        selectedSources += selected.length;
+        ))
+          jobs.push({ asset, candidate });
+      }
 
-        for (const candidate of selected) {
-          let artifact: ReturnType<typeof buildRawEvidenceArtifact>;
-          try {
-            const retrievedAt = new Date().toISOString();
-            const markdown = await callBrightDataMcpTool(
-              token,
-              "scrape_as_markdown",
-              { url: candidate.sourceUrl },
-              signal,
-              fetcher,
-            );
-            artifact = buildRawEvidenceArtifact(
-              candidate.sourceUrl,
-              retrievedAt,
-              markdown,
-            );
-          } catch {
-            continue;
-          }
-
-          scrapedSources += 1;
+      const results = await Promise.allSettled(
+        jobs.map(async ({ asset, candidate }) => {
+          const retrievedAt = new Date().toISOString();
+          const markdown = await callBrightDataMcpTool(
+            token,
+            "scrape_as_markdown",
+            { url: candidate.sourceUrl },
+            signal,
+            fetcher,
+          );
+          const artifact = buildRawEvidenceArtifact(
+            candidate.sourceUrl,
+            retrievedAt,
+            markdown,
+          );
           const claims = extractAtomicClaims(
             artifact.content,
             asset.name,
@@ -402,50 +399,55 @@ export function brightDataMcpResearchAdapter(
             candidate.description || candidate.title,
             2,
           );
-          for (const [index, claim] of claims.entries()) {
-            rows.push({
-              canonicalAssetId: asset.id,
-              symbol: asset.symbol,
-              provider: "brightdata-mcp-investigator",
-              sourceUrl: candidate.sourceUrl,
-              publishedAt: null,
-              retrievedAt: artifact.retrievedAt,
-              expiresAt: new Date(
-                Date.parse(artifact.retrievedAt) + 24 * 3600000,
-              ).toISOString(),
-              kind: evidenceKind(claim.topic, claim.polarity),
-              lineageId: createHash("sha256")
-                .update(
-                  [
-                    candidate.sourceFamily,
-                    candidate.sourceUrl,
-                    claim.topic,
-                    String(index),
-                  ].join("|"),
-                )
-                .digest("hex"),
-              summary: claim.summary.slice(0, 1000),
-              claim: claim.claim.slice(0, 2000),
-              relevance:
-                "Full source acquired after Bright Data SERP discovery. Evidence remains research-only until corroboration, contradiction review, and entry/execution checks are complete.",
-              verification: "UNVERIFIED",
-              verificationSourceUrl: null,
-              polarity: claim.polarity,
-              material: claim.material,
-              dataMode: "LIVE",
-              sourceFamily: candidate.sourceFamily,
-              sourceAuthorityScore: candidate.sourceAuthorityScore,
-              primarySourceLikely: candidate.primarySourceLikely,
-              claimTopic: claim.topic,
-              extractionMethod: "BRIGHTDATA_FULL_SOURCE_ATOMIC_V1",
-              artifactHash: artifact.contentHash,
-              artifactByteLength: artifact.byteLength,
-              ...(index === 0 ? { rawArtifact: artifact } : {}),
-            });
-          }
-        }
-      }
-      if (selectedSources > 0 && scrapedSources === 0)
+          return claims.map((claim, index) => ({
+            canonicalAssetId: asset.id,
+            symbol: asset.symbol,
+            provider: "brightdata-mcp-investigator",
+            sourceUrl: candidate.sourceUrl,
+            publishedAt: null,
+            retrievedAt: artifact.retrievedAt,
+            expiresAt: new Date(
+              Date.parse(artifact.retrievedAt) + 24 * 3600000,
+            ).toISOString(),
+            kind: evidenceKind(claim.topic, claim.polarity),
+            lineageId: createHash("sha256")
+              .update(
+                [
+                  candidate.sourceFamily,
+                  candidate.sourceUrl,
+                  claim.topic,
+                  String(index),
+                ].join("|"),
+              )
+              .digest("hex"),
+            summary: claim.summary.slice(0, 1000),
+            claim: claim.claim.slice(0, 2000),
+            relevance:
+              "Full source acquired after Bright Data SERP discovery. Evidence remains research-only until corroboration, contradiction review, and entry/execution checks are complete.",
+            verification: "UNVERIFIED",
+            verificationSourceUrl: null,
+            polarity: claim.polarity,
+            material: claim.material,
+            dataMode: "LIVE",
+            sourceFamily: candidate.sourceFamily,
+            sourceAuthorityScore: candidate.sourceAuthorityScore,
+            primarySourceLikely: candidate.primarySourceLikely,
+            claimTopic: claim.topic,
+            extractionMethod: "BRIGHTDATA_FULL_SOURCE_ATOMIC_V1",
+            artifactHash: artifact.contentHash,
+            artifactByteLength: artifact.byteLength,
+            ...(index === 0 ? { rawArtifact: artifact } : {}),
+          }));
+        }),
+      );
+
+      const rows = results.flatMap((result) =>
+        result.status === "fulfilled" ? result.value : [],
+      );
+      const scrapedSources = results.filter(
+        (result) => result.status === "fulfilled",
+      ).length;
+      if (jobs.length > 0 && scrapedSources === 0)
         throw Error("BRIGHTDATA_MCP_SCRAPE_FAILED");
       return rows;
     },
