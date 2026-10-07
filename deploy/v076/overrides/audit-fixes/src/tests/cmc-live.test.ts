@@ -94,6 +94,21 @@ function cmc200Response(): unknown {
   };
 }
 
+function cmcHistoricalResponse(): unknown {
+  const series = (base: number) => Array.from({ length: 7 }, (_, index) => ({
+    timestamp: `2026-08-${String(15 + index).padStart(2, "0")}T00:00:00.000Z`,
+    quote: { USD: { volume_24h: base + index * 1000 } },
+  }));
+  return {
+    status: { error_code: 0 },
+    data: {
+      "1": { id: 1, name: "Bitcoin", symbol: "BTC", quotes: series(40_000_000_000) },
+      "1027": { id: 1027, name: "Ethereum", symbol: "ETH", quotes: series(20_000_000_000) },
+      "5426": { id: 5426, name: "Solana", symbol: "SOL", quotes: series(4_000_000_000) },
+    },
+  };
+}
+
 function mkCanonical(
   symbol: string,
   cmcId: string,
@@ -169,8 +184,10 @@ describe("CMCAdapter live mode", () => {
 
     const result = await adapter.fetch({ canonicalAssets: mkAssetMap() });
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
     const [urlArg, initArg] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const [historyUrlArg] = mockFetch.mock.calls[1] as [string, RequestInit];
+    expect(historyUrlArg).toContain("/v3/cryptocurrency/quotes/historical");
     // v0.4.4 audit fix (P0-2): CMC current production endpoint is
     // /v3/cryptocurrency/quotes/latest, not /v1/. CMC also
     // recommends querying by numeric id, not symbol. With no
@@ -295,6 +312,76 @@ describe("CMCAdapter live mode", () => {
     expect((btc?.payload as { change90dPct: number }).change90dPct).toBe(35.5);
   });
 
+  it("enriches live quotes with seven completed daily volumes when authenticated history is available", async () => {
+    const mockFetch = vi.fn(async (url: string) => {
+      const body = url.includes("/quotes/historical") ? cmcHistoricalResponse() : cmc200Response();
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const adapter = new CMCAdapter();
+    adapter.configure({
+      baseUrl: "https://pro-api.coinmarketcap.com",
+      fixturePath: FIXTURE_PATH,
+      forceFixtures: false,
+      liveConfig: { apiKey: "test-key-1234" },
+    });
+
+    const result = await adapter.fetch({ canonicalAssets: mkAssetMap() });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    const historyUrl = String(mockFetch.mock.calls[1]?.[0] ?? "");
+    expect(historyUrl).toContain("/v3/cryptocurrency/quotes/historical");
+    expect(historyUrl).toContain("count=7");
+    expect(historyUrl).toContain("interval=daily");
+    expect(historyUrl).toContain("time_end=");
+
+    const obs = adapter.normalize(result[0]!.raw, {
+      canonicalAssets: mkAssetMap(),
+      endpoint: "quotes/latest",
+      receivedAt: "2026-08-22T02:00:00.000Z",
+      rawSchemaVersion: "1.0.0",
+    });
+    const btc = obs.find((o) => (o.payload as { symbol: string }).symbol === "BTC");
+    const history = (btc?.payload as { priorCompletedDailyVolumesUsd?: number[] }).priorCompletedDailyVolumesUsd;
+    expect(history).toHaveLength(7);
+    expect(history?.[0]).toBe(40_000_000_000);
+    expect(history?.[6]).toBe(40_000_006_000);
+  });
+
+  it("keeps prior daily volume history absent when authenticated historical data is unavailable", async () => {
+    const mockFetch = vi.fn(async (url: string) => {
+      if (url.includes("/quotes/historical")) {
+        return new Response(JSON.stringify({ status: { error_code: 403 } }), { status: 403 });
+      }
+      return new Response(JSON.stringify(cmc200Response()), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    const adapter = new CMCAdapter();
+    adapter.configure({
+      baseUrl: "https://pro-api.coinmarketcap.com",
+      fixturePath: FIXTURE_PATH,
+      forceFixtures: false,
+      liveConfig: { apiKey: "test-key-1234" },
+    });
+
+    const result = await adapter.fetch({ canonicalAssets: mkAssetMap() });
+    const obs = adapter.normalize(result[0]!.raw, {
+      canonicalAssets: mkAssetMap(),
+      endpoint: "quotes/latest",
+      receivedAt: "2026-08-22T02:00:00.000Z",
+      rawSchemaVersion: "1.0.0",
+    });
+    const btc = obs.find((o) => (o.payload as { symbol: string }).symbol === "BTC");
+    expect((btc?.payload as { priorCompletedDailyVolumesUsd?: number[] | null }).priorCompletedDailyVolumesUsd).toBeNull();
+  });
+
   it("setLiveMode(apiKey) flips forceFixtures to false and stores the key", () => {
     const adapter = new CMCAdapter();
     // Initial: no live config, forceFixtures undefined (defaults to fixture path).
@@ -314,7 +401,7 @@ describe("CMCAdapter live mode", () => {
     const mockFetch = mockFetchOnce(cmc200Response(), { status: 200 });
     vi.stubGlobal("fetch", mockFetch);
     return adapter.fetch({ canonicalAssets: mkAssetMap() }).then((result) => {
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
       const [, initArg] = mockFetch.mock.calls[0] as [string, RequestInit];
       const headers = (initArg.headers ?? {}) as Record<string, string>;
       expect(headers["X-CMC_PRO_API_KEY"]).toBe("op-key-xyz");
