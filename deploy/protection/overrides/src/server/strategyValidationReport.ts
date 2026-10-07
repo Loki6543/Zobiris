@@ -66,7 +66,16 @@ export function buildOutcomeValidationLab(
   const horizon = options.horizon ?? "7D";
   const symbol = options.symbol?.trim().toUpperCase();
   const feePolicy = VALIDATION_POLICY_REGISTRY?.registry.feeSchedule?.sidecarPolicyProposed ?? null;
-  const feeBps = Number.isFinite(options.feeBps) ? Math.max(0, options.feeBps ?? 0) : 0;
+  // The validation default is the Tier-1 maker/taker round trip (120 bps).
+  // This adapter stores costs as a symmetric per-side assumption, so 60 bps
+  // per side is the conservative arithmetic equivalent. Callers may override
+  // it for sensitivity analysis, but zero cost is never the implicit default.
+  const defaultValidationFeeBpsPerSide = feePolicy
+    ? (Number(feePolicy.makerBps) + Number(feePolicy.takerBps)) / 2
+    : 60;
+  const feeBps = Number.isFinite(options.feeBps)
+    ? Math.max(0, options.feeBps ?? defaultValidationFeeBpsPerSide)
+    : defaultValidationFeeBpsPerSide;
   const slippageBps = Number.isFinite(options.slippageBps) ? Math.max(0, options.slippageBps ?? 0) : 0;
 
   const eligible = records.filter((record) =>
@@ -129,8 +138,8 @@ export function buildOutcomeValidationLab(
       source: "MODELED_ASSUMPTION",
       referenceTier1MakerBps: feePolicy ? Number(feePolicy.makerBps) : 40,
       referenceTier1TakerBps: feePolicy ? Number(feePolicy.takerBps) : 80,
-      note: feeBps === 0 && options.feeBps === undefined
-        ? "Legacy main-lab arithmetic remains zero-cost unless the caller supplies feeBps; the evidence sidecar separately enforces the Tier-1 fallback cost model."
+      note: options.feeBps === undefined
+        ? "Default validation arithmetic uses the Tier-1 MAKER_TAKER round trip (120 bps; represented as 60 bps per side). Slippage remains a separate modeled assumption."
         : "fee/slippage are caller-supplied research assumptions only; outcome memory does not prove executable fills",
     },
     executionEvidence: {

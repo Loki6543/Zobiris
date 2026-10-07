@@ -92,6 +92,50 @@ describe("strategy validation lab", () => {
     expect(report.certification.executionEvidenceRequiredForLiveUse).toBe(true);
   });
 
+  it("defaults the outcome validation lab to the 1.20 percent maker/taker validation path", () => {
+    const base = Date.parse("2025-01-01T00:00:00.000Z");
+    const records: DecisionOutcomeRecord[] = Array.from({ length: 120 }, (_, index) => {
+      const generatedAt = new Date(base + index * 8 * 86400000).toISOString();
+      const dueAt = new Date(base + index * 8 * 86400000 + 7 * 86400000).toISOString();
+      return {
+        measurementVersion: "episodes-v2",
+        outcomeId: "cost-" + index,
+        symbol: "SOL",
+        generatedAt,
+        referencePriceObservedAt: generatedAt,
+        action: "BUY",
+        assetState: "CONFIRMED_TREND",
+        regime: "SIDEWAYS",
+        referencePriceUsd: 100,
+        opportunityScore: 0.8,
+        researchScore: 80,
+        evidenceQuality: 0.9,
+        thesisId: "cost-t-" + index,
+        strategyTag: "COST_DEFAULT_V1",
+        strategyStatus: "QUALIFIED",
+        recommendedPullbackPct: 5,
+        maxFavorablePct: 4,
+        maxAdversePct: -2,
+        evaluations: [{
+          status: "RESOLVED",
+          horizon: "7D",
+          dueAt,
+          evaluatedAt: dueAt,
+          priceObservedAt: dueAt,
+          priceUsd: 101,
+          returnPct: 1,
+          benchmarkReturnPct: 0.2,
+        }],
+      };
+    });
+    const lab = buildOutcomeValidationLab(records, { horizon: "7D" });
+    expect(lab.costAssumptions.selectedPath).toBe("MAKER_TAKER");
+    expect(lab.costAssumptions.feeBpsPerSide).toBeCloseTo(60, 9);
+    expect(lab.costAssumptions.roundTripFeeBpsByPath.MAKER_TAKER).toBeCloseTo(120, 9);
+    expect(lab.reports[0]!.report.oos.metrics.averageNetReturnPct).toBeCloseTo(-0.2, 9);
+    expect(lab.reports[0]!.report.status).toBe("FAILED_OOS");
+  });
+
   it("adapts qualified forward outcome episodes by strategy tag without granting authority", () => {
     const base = Date.parse("2025-01-01T00:00:00.000Z");
     const records: DecisionOutcomeRecord[] = Array.from({ length: 120 }, (_, index) => {

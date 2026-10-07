@@ -11,7 +11,7 @@ Candidate entry/exit models are evaluated in a read-only research pipeline:
 3. unseen vault block (15%)
 4. three contiguous walk-forward stability folds inside OOS
 5. fail-closed temporal leakage checks
-6. fee/slippage-adjusted return metrics
+6. fee/slippage-adjusted return metrics, defaulting to the 1.20% Tier-1 maker/taker validation path
 7. benchmark-relative metrics versus the persisted BTC observation
 8. regime breakdowns where at least five episodes exist
 
@@ -32,7 +32,7 @@ Both OOS and vault must clear:
 
 At least two of the three OOS walk-forward folds must also preserve positive net edge, acceptable drawdown and positive benchmark-relative edge.
 
-The t-statistic is reported but deliberately not used as a gate because forward crypto episodes across correlated assets are not independent.
+The t-statistic is reported but deliberately not used as a gate because forward crypto episodes across correlated assets are not independent. Multiple-testing promotion authority belongs to the trial ledger, where family size is derived from explicit tested cells and a Bonferroni critical z is enforced. The validation lab must not invent a family size from the visible report set.
 
 ## Current data limitation
 
@@ -89,4 +89,10 @@ Historical certification currently admits persisted price/reference timestamps. 
 
 `GET /api/strategy-validation?horizon=7D&symbol=SOL&strategyTag=ENTRY_MODEL_V1&feeBps=5&slippageBps=8`
 
-`feeBps` and `slippageBps` are optional modeled per-side costs from 0 to 1000 bps. Their source is reported as `MODELED_ASSUMPTION`.
+`feeBps` and `slippageBps` are optional modeled per-side costs from 0 to 1000 bps. Their source is reported as `MODELED_ASSUMPTION`. When `feeBps` is omitted, the lab now defaults to the Tier-1 `MAKER_TAKER` validation path: 120 bps round trip, represented by the current symmetric adapter as 60 bps per side. Zero cost is available only as an explicit sensitivity override; it is never the implicit validation default.
+
+## October 2026 discipline synthesis
+
+The correction bundle is treated as a repair specification, not as a greenfield architecture. The current repository already implements the two highest-value ledger repairs: `invalid` is distinct from `inconclusive`, and `nCellsEvaluated` is derived from explicit tested cells with a Bonferroni family-wise gate. The remaining optimization applied here is to make the main validation lab's default cost arithmetic agree with that policy instead of silently evaluating at zero fees.
+
+External validation tools remain evidence inputs, not authority. Purged cross-validation is appropriate for removing overlapping-label training rows and post-test embargo leakage, but it does not by itself prove independence, cost realism, or profitable alpha. Falsification-ledger conformance is useful as a fail-closed preregistration check. Neither component may grant live-order authority.
