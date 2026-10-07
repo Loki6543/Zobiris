@@ -87,7 +87,12 @@ export function evaluateReassessment(
       : current.length
         ? "EVIDENCE_INCOMPLETE"
         : "EVIDENCE_INCOMPLETE";
-  if (previous && fresh.length === 0 && previous.status === status)
+  if (
+    previous &&
+    previous.integrity &&
+    fresh.length === 0 &&
+    previous.status === status
+  )
     return previous;
   return {
     assetId,
