@@ -31,7 +31,7 @@ const BLOCKED_CRAWLER_PATTERNS = [
   /\bomgili(?:bot)?\b/i,
   /\bimagesiftbot\b/i,
   /\bgoogle-extended\b/i,
-  /(?:^|[^a-z])(?:bot|crawler|spider|scrapy)(?:[^a-z]|$)/i,
+  /(?:bot|crawler|spider|scrapy)/i,
 ] as const;
 
 export const ROBOTS_TXT = [
