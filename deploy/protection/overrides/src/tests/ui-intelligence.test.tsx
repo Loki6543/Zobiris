@@ -145,13 +145,12 @@ beforeEach(() => {
 });
 
 describe("simplified Zobiris Core", () => {
-  it("keeps decision making on three primary screens", async () => {
+  it("keeps decision making across primary screens and the horizon policy", async () => {
     render(<App />);
     expect(await screen.findByText("Current positions")).toBeTruthy();
     expect(screen.getByText("Open orders")).toBeTruthy();
     expect(within(screen.getByRole("region", { name: "Portfolio overview" })).getByText("$713.74")).toBeTruthy();
-    expect(screen.getByText("SELL SOL — KEEP / REDUCE SIZE")).toBeTruthy();
-    expect(screen.getByText("SELL SOL — CANCEL SECOND TRIM")).toBeTruthy();
+    expect(screen.getAllByText("SELL SOL — REVIEW / CORE HOLD").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Open KAS order analysis" }));
     expect(await screen.findByText(/TRIM 50% AT/)).toBeTruthy();
@@ -159,13 +158,15 @@ describe("simplified Zobiris Core", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open SOL order analysis" }));
     expect(await screen.findByText("BEST FIRST COURSE OF ACTION")).toBeTruthy();
-    expect(screen.getByText("SELL / HARVEST LADDER")).toBeTruthy();
+    expect(screen.getByText("CORE HOLD — ROUTINE SELLING DISABLED")).toBeTruthy();
+    expect(screen.getByText("LONG-TERM EXIT GATE")).toBeTruthy();
+    expect(screen.getByText("DOWNGRADE REQUIRED")).toBeTruthy();
+    expect(screen.queryByText("SELL / HARVEST LADDER")).toBeNull();
+    expect(screen.queryByText("DEFENSIVE REDUCTION")).toBeNull();
     expect(screen.getByText("BUY / RE-ENTRY RANGE")).toBeTruthy();
-    expect(screen.getByText("DEFENSIVE REDUCTION")).toBeTruthy();
     expect(screen.getByText("WAIT — research range only")).toBeTruthy();
     expect(screen.getByText(/Why Zobiris learned this:/)).toBeTruthy();
     expect(screen.getByText(/First add:/)).toBeTruthy();
-    expect(screen.getAllByText(/reduce .*%/i).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Market Today" }));
     expect(await screen.findByText("New positions to consider")).toBeTruthy();
@@ -183,6 +184,15 @@ describe("simplified Zobiris Core", () => {
     expect(screen.getByText("QNT")).toBeTruthy();
     expect(screen.getAllByText(/PAUSE/).length).toBeGreaterThan(0);
     expect(screen.getByText("Rules learned from you")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Time Outlook" }));
+    expect(await screen.findByText("Investment horizons")).toBeTruthy();
+    expect(screen.getByText("L3 PROTECTION ACTIVE")).toBeTruthy();
+    expect(screen.getByText("L3 — Long-Term Core")).toBeTruthy();
+    expect(screen.getByText("P2 — Position")).toBeTruthy();
+    expect(screen.getByText("T1 — Tactical")).toBeTruthy();
+    expect(screen.getByText("BTC")).toBeTruthy();
+    expect(screen.getByText("ETH")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "History / Learning" }));
     expect(await screen.findByText("Trade memory")).toBeTruthy();

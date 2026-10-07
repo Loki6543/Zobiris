@@ -23,8 +23,10 @@ const LEARNING_RULES = [
 import { PortfolioVisuals } from "./PortfolioVisuals";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
+import { TimeOutlookPage } from "./TimeOutlookPage";
+import { timeOutlookFor } from "./timeOutlook";
 
-type View = "portfolio" | "market" | "watchlist" | "history" | "compare";
+type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare";
 type RankedAsset = Record<string, any>;
 
 const money = (value: number) => new Intl.NumberFormat("en-US", {
@@ -655,6 +657,18 @@ export function App() {
       };
     }
 
+    const outlook = timeOutlookFor(symbol);
+    if (outlook?.horizon === "L3" && outlook.protected) {
+      return {
+        ...order,
+        key: order.side + symbol + index,
+        status: "REVIEW / CORE HOLD",
+        suggestedPrice: null,
+        suggestedAmountUsd: 0,
+        reason: "L3 long-term core: routine profit harvesting, weekly momentum, and normal pullbacks are not sell triggers. Review or cancel this sell order unless the holding is first downgraded to P2 after a documented thesis break, structural deterioration, or explicit user decision.",
+      };
+    }
+
     const plan = buildOrderPlan(holding, regime, reentryRisk.has(symbol));
     const siblingSellOrders = LIVE_OPEN_ORDERS
       .map((candidate, candidateIndex) => ({ candidate, candidateIndex }))
@@ -810,6 +824,7 @@ export function App() {
           ["portfolio", "Portfolio"],
           ["market", "Market Today"],
           ["watchlist", "Watchlist"],
+          ["outlook", "Time Outlook"],
           ["history", "History / Learning"],
           ["compare", "Compare Lab"],
         ] as Array<[View, string]>).map(([key, label]) => (
@@ -1029,6 +1044,8 @@ export function App() {
         </main>
       ) : null}
 
+      {view === "outlook" ? <TimeOutlookPage holdingSymbols={portfolioRows.map((row) => row.symbol)} /> : null}
+
       {view === "compare" ? <><ResearchEvidencePanel {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab rankedAssets={rankedAssets} focusSymbol={analysisSymbol} /></> : null}
 
       {view === "history" ? (
@@ -1142,6 +1159,8 @@ function OrderPlanPanel({
   const plannedSellUsd = sellOrders.reduce((sum, order) => sum + order.amountUsd, 0);
   const plannedPct = row.value > 0 ? (plannedSellUsd / row.value) * 100 : 0;
   const strategy = row.asset?.strategy21 ?? null;
+  const outlook = timeOutlookFor(row.symbol);
+  const longTermProtected = outlook?.horizon === "L3" && outlook.protected;
   const caseFile = detail?.caseFile ?? null;
   const eligibility = strategy?.eligibility?.status ?? "UNKNOWN";
   const nearestFlip = caseFile?.decisionBoundary?.nearestFlip ?? row.asset?.decisionBoundary?.nearestFlip ?? null;
@@ -1181,6 +1200,10 @@ function OrderPlanPanel({
     firstActionTitle = "VERIFY EXISTING KRAKEN ORDER FIRST";
     firstActionDetail = `Do not duplicate the snapshot order. If it is no longer open, the next planned trim is ${plan.trimPct}% near ${money(plan.harvestNear)}.`;
     learnedReason = "Zobiris learned to avoid stacking duplicate exits when an older order may already have filled.";
+  } else if (longTermProtected) {
+    firstActionTitle = "CORE HOLD — ROUTINE SELLING DISABLED";
+    firstActionDetail = `${row.symbol} is L3 long-term core (3–18+ months). Short-term profit, weekly weakness, or ordinary technical signals can trigger a review, but not a routine trim. Downgrade to P2 is required before normal sell logic resumes.`;
+    learnedReason = "Long-term designation is now a separate user-governed policy layer, so a good short-term trade signal cannot silently override the intended holding horizon.";
   } else if (row.upl >= 15 && plan.trimPct <= 0) {
     firstActionTitle = "HOLD — POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM";
     firstActionDetail = `A normal trim would be below ${money(MIN_MEANINGFUL_TRIM_USD)}. Keep the position intact unless the thesis breaks badly enough to justify a full exit.`;
@@ -1207,7 +1230,7 @@ function OrderPlanPanel({
           <div style={styles.analysisTitle}>{money(row.livePrice)} {row.priceAvailable ? "market snapshot" : "snapshot estimate — verify"} · {pct(row.upl)} vs average</div>
           <div style={styles.subtle}>24h {pct(plan.change24h)} · confidence {plan.confidence.toFixed(0)}%</div>
         </div>
-        <span style={actionStyle(row.action)}>{row.action}</span>
+        <span style={actionStyle(longTermProtected ? "HOLD" : row.action)}>{longTermProtected ? "L3 CORE" : row.action}</span>
       </div>
 
       <div style={styles.firstAction}>
@@ -1231,27 +1254,48 @@ function OrderPlanPanel({
       ) : null}
 
       <div style={styles.planGrid}>
-        <div style={styles.planCard}>
-          <div style={styles.limitLabel}>SELL / HARVEST LADDER</div>
-          <strong>{money(plan.harvestNear)} → {money(plan.harvestHigh)}</strong>
-          <div style={styles.tiny}>
-            {plan.trimPct > 0
-              ? <>Action 1: reduce {plan.trimPct}% ({num(trimQty, 8)} {row.symbol}, about {money(trimUsd)}) near {money(plan.harvestNear)}.</>
-              : <>No partial trim: the position is too small for a meaningful order.</>}
-            {plan.secondTrimPct > 0
-              ? <>{" "}Action 2: reduce another {plan.secondTrimPct}% (about {money(secondTrimUsd)}) near {money(plan.harvestHigh)}.</>
-              : null}
-            {" "}Keep the rest as the runner.
-          </div>
-        </div>
-        <div style={styles.planCard}>
-          <div style={styles.limitLabel}>DEFENSIVE REDUCTION</div>
-          <strong>Trigger {money(plan.reduceTrigger)}</strong>
-          <div style={styles.tiny}>
-            If structure breaks, reduce {plan.defensiveReducePct}% ({num(defensiveReduceQty, 8)} {row.symbol}, about {money(defensiveReduceUsd)}).
-            {" "}Trigger near {money(plan.reduceTrigger)}, limit reference near {money(plan.reduceLimit)}. Do not turn this into an automatic full exit.
-          </div>
-        </div>
+        {longTermProtected ? (
+          <>
+            <div style={styles.planCard}>
+              <div style={styles.limitLabel}>LONG-TERM EXIT GATE</div>
+              <strong>Protected — no routine harvest</strong>
+              <div style={styles.tiny}>
+                Weekly profit, a normal pullback, RSI/MACD changes, and ordinary harvest targets are review inputs only. They do not authorize a sale of an L3 core holding.
+              </div>
+            </div>
+            <div style={styles.planCard}>
+              <div style={styles.limitLabel}>DOWNGRADE REQUIRED</div>
+              <strong>L3 → P2 before normal sell logic</strong>
+              <div style={styles.tiny}>
+                A documented thesis break, material structural deterioration, or explicit user decision must downgrade the holding before Zobiris can resume routine trim or defensive-reduction recommendations.
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={styles.planCard}>
+              <div style={styles.limitLabel}>SELL / HARVEST LADDER</div>
+              <strong>{money(plan.harvestNear)} → {money(plan.harvestHigh)}</strong>
+              <div style={styles.tiny}>
+                {plan.trimPct > 0
+                  ? <>Action 1: reduce {plan.trimPct}% ({num(trimQty, 8)} {row.symbol}, about {money(trimUsd)}) near {money(plan.harvestNear)}.</>
+                  : <>No partial trim: the position is too small for a meaningful order.</>}
+                {plan.secondTrimPct > 0
+                  ? <>{" "}Action 2: reduce another {plan.secondTrimPct}% (about {money(secondTrimUsd)}) near {money(plan.harvestHigh)}.</>
+                  : null}
+                {" "}Keep the rest as the runner.
+              </div>
+            </div>
+            <div style={styles.planCard}>
+              <div style={styles.limitLabel}>DEFENSIVE REDUCTION</div>
+              <strong>Trigger {money(plan.reduceTrigger)}</strong>
+              <div style={styles.tiny}>
+                If structure breaks, reduce {plan.defensiveReducePct}% ({num(defensiveReduceQty, 8)} {row.symbol}, about {money(defensiveReduceUsd)}).
+                {" "}Trigger near {money(plan.reduceTrigger)}, limit reference near {money(plan.reduceLimit)}. Do not turn this into an automatic full exit.
+              </div>
+            </div>
+          </>
+        )}
         <div style={styles.planCard}>
           <div style={styles.limitLabel}>BUY / RE-ENTRY RANGE</div>
           <strong>{plan.buyNear>0?entryPrice(plan.buyNear):"Prior unavailable"}</strong>
@@ -1277,7 +1321,9 @@ function OrderPlanPanel({
         <strong>Why these levels</strong>
         <div style={styles.tiny}>
           {plan.regimeBreak ? "Regime Break widens entry discounts and tightens the reduction line. " : "Normal regime uses a narrower entry ladder. "}
-          Profit targets are set above both the live price and your cost basis, while re-entry levels move lower when research confidence is weak, the coin is already extended, or your trade history shows quick re-entry after selling.
+          {longTermProtected
+            ? "L3 core policy suppresses routine harvest and defensive-reduction instructions; short-term signals can still inform adds or trigger a thesis review, not a sale."
+            : "Profit targets are set above both the live price and your cost basis, while re-entry levels move lower when research confidence is weak, the coin is already extended, or your trade history shows quick re-entry after selling."}
         </div>
         {nearestFlip ? <div style={styles.tiny}><strong>What would improve the signal:</strong> {nearestFlip}</div> : null}
         {loading ? <div style={styles.tiny}>Loading deeper asset analysis…</div> : null}
