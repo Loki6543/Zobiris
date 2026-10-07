@@ -30,6 +30,16 @@ const source = z
   .string()
   .max(2048)
   .refine(publicSourceUrl, "Public HTTPS source required");
+const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
+const rawArtifactSchema = z.object({
+  sourceUrl: source,
+  retrievedAt: date,
+  contentType: z.literal("text/markdown"),
+  content: z.string().min(1).max(160 * 1024),
+  byteLength: z.number().int().positive().max(160 * 1024),
+  contentHash: sha256,
+  hashAlgorithm: z.literal("SHA256"),
+});
 const schema = z.object({
   canonicalAssetId: z.string().min(1).max(150),
   symbol: z.string().regex(/^[A-Z0-9._-]{1,20}$/),
@@ -59,6 +69,14 @@ const schema = z.object({
   polarity: z.enum(["POSITIVE", "NEGATIVE", "MIXED"]),
   material: z.boolean(),
   dataMode: z.enum(["LIVE", "IMPORTED"]),
+  sourceFamily: z.string().min(1).max(255).optional(),
+  sourceAuthorityScore: z.number().min(0).max(1).optional(),
+  primarySourceLikely: z.boolean().optional(),
+  claimTopic: z.string().min(1).max(100).optional(),
+  extractionMethod: z.string().min(1).max(100).optional(),
+  artifactHash: sha256.optional(),
+  artifactByteLength: z.number().int().positive().max(160 * 1024).optional(),
+  rawArtifact: rawArtifactSchema.optional(),
   social: z
     .object({
       mentions: z.number().nonnegative(),
@@ -78,7 +96,8 @@ const schema = z.object({
     })
     .optional(),
 });
-export type ResearchEvidence = z.infer<typeof schema> & {
+type ResearchEvidenceInput = z.infer<typeof schema>;
+export type ResearchEvidence = Omit<ResearchEvidenceInput, "rawArtifact"> & {
   id: string;
   contentHash: string;
 };
@@ -90,43 +109,116 @@ export function openResearchEvidence(
   const db = new Database(path);
   db.pragma("journal_mode = WAL");
   db.exec(
-    "CREATE TABLE IF NOT EXISTS research_evidence(id TEXT PRIMARY KEY, asset_id TEXT NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS research_reviews(asset_id TEXT PRIMARY KEY,payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS research_state(key TEXT PRIMARY KEY,payload TEXT NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS research_evidence(id TEXT PRIMARY KEY, asset_id TEXT NOT NULL, payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS research_reviews(asset_id TEXT PRIMARY KEY,payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS research_state(key TEXT PRIMARY KEY,payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS research_evidence_artifacts(content_hash TEXT PRIMARY KEY, source_url TEXT NOT NULL, retrieved_at TEXT NOT NULL, content_type TEXT NOT NULL, byte_length INTEGER NOT NULL, payload TEXT NOT NULL)",
   );
   const append = (records: unknown[], now = Date.now()) => {
     if (records.length > 100) throw Error("At most 100 evidence records");
-    const parsed = records.map((raw) => {
-      const r = schema.parse(raw);
-      if (identities.get(r.symbol) !== r.canonicalAssetId)
+    const prepared = records.map((raw) => {
+      const input = schema.parse(raw);
+      if (identities.get(input.symbol) !== input.canonicalAssetId)
         throw Error("Canonical identity mismatch");
       if (
-        Date.parse(r.retrievedAt) > now ||
-        Date.parse(r.expiresAt) <= Date.parse(r.retrievedAt) ||
-        (r.publishedAt && Date.parse(r.publishedAt) > Date.parse(r.retrievedAt))
+        Date.parse(input.retrievedAt) > now ||
+        Date.parse(input.expiresAt) <= Date.parse(input.retrievedAt) ||
+        (input.publishedAt &&
+          Date.parse(input.publishedAt) > Date.parse(input.retrievedAt))
       )
         throw Error("Invalid evidence chronology");
-      if (r.verification === "PRIMARY_CONFIRMED" && !r.verificationSourceUrl)
+      if (
+        input.verification === "PRIMARY_CONFIRMED" &&
+        !input.verificationSourceUrl
+      )
         throw Error("Primary verification source required");
-      const normalized = r.claim.toLowerCase().replace(/\s+/g, " ").trim();
-      const contentHash = createHash("sha256").update(normalized).digest("hex");
+
+      const { rawArtifact, ...base } = input;
+      let artifactHash = base.artifactHash;
+      let artifactByteLength = base.artifactByteLength;
+      if (rawArtifact) {
+        if (
+          rawArtifact.sourceUrl !== base.sourceUrl ||
+          rawArtifact.retrievedAt !== base.retrievedAt
+        )
+          throw Error("Raw evidence artifact provenance mismatch");
+        const actualBytes = Buffer.byteLength(rawArtifact.content, "utf8");
+        const actualHash = createHash("sha256")
+          .update(rawArtifact.content)
+          .digest("hex");
+        if (
+          rawArtifact.byteLength !== actualBytes ||
+          rawArtifact.contentHash !== actualHash
+        )
+          throw Error("Raw evidence artifact hash mismatch");
+        if (artifactHash && artifactHash !== actualHash)
+          throw Error("Evidence artifact reference mismatch");
+        if (artifactByteLength && artifactByteLength !== actualBytes)
+          throw Error("Evidence artifact byte length mismatch");
+        artifactHash = actualHash;
+        artifactByteLength = actualBytes;
+      }
+
+      const record = {
+        ...base,
+        ...(artifactHash ? { artifactHash } : {}),
+        ...(artifactByteLength ? { artifactByteLength } : {}),
+      };
+      const normalized = record.claim
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+      const contentHash = createHash("sha256")
+        .update(normalized)
+        .digest("hex");
       const id = createHash("sha256")
         .update(
           [
-            r.canonicalAssetId,
-            r.lineageId,
+            record.canonicalAssetId,
+            record.lineageId,
             contentHash,
-            r.verification,
-            r.polarity,
-            r.social?.periodEnd ?? "",
-            r.material,
-            r.relevance,
-            r.verificationSourceUrl ?? "",
+            record.verification,
+            record.polarity,
+            record.social?.periodEnd ?? "",
+            record.material,
+            record.relevance,
+            record.verificationSourceUrl ?? "",
+            record.artifactHash ?? "",
           ].join("|"),
         )
         .digest("hex");
-      return { ...r, id, contentHash };
+      return {
+        record: { ...record, id, contentHash } as ResearchEvidence,
+        rawArtifact,
+      };
     });
+
     db.transaction(() => {
-      for (const r of parsed) {
+      for (const item of prepared) {
+        const r = item.record;
+        if (item.rawArtifact) {
+          const existingArtifact = db
+            .prepare(
+              "SELECT payload FROM research_evidence_artifacts WHERE content_hash=?",
+            )
+            .get(item.rawArtifact.contentHash) as
+            | { payload: string }
+            | undefined;
+          if (
+            existingArtifact &&
+            JSON.parse(existingArtifact.payload).content !==
+              item.rawArtifact.content
+          )
+            throw Error("Raw evidence artifact collision");
+          db.prepare(
+            "INSERT OR IGNORE INTO research_evidence_artifacts VALUES(?,?,?,?,?,?)",
+          ).run(
+            item.rawArtifact.contentHash,
+            item.rawArtifact.sourceUrl,
+            item.rawArtifact.retrievedAt,
+            item.rawArtifact.contentType,
+            item.rawArtifact.byteLength,
+            JSON.stringify(item.rawArtifact),
+          );
+        }
+
         const previous = db
           .prepare("SELECT payload FROM research_evidence WHERE id=?")
           .get(r.id) as { payload: string } | undefined;
@@ -142,7 +234,7 @@ export function openResearchEvidence(
         ).run(r.id, r.canonicalAssetId, JSON.stringify(r));
       }
     })();
-    return parsed;
+    return prepared.map((item) => item.record);
   };
   return {
     append,
@@ -174,6 +266,14 @@ export function openResearchEvidence(
       db
         .prepare("INSERT OR REPLACE INTO research_state VALUES(?,?)")
         .run(key, JSON.stringify(value)),
+    readArtifact: (contentHash: string) => {
+      const row = db
+        .prepare(
+          "SELECT payload FROM research_evidence_artifacts WHERE content_hash=?",
+        )
+        .get(contentHash) as { payload: string } | undefined;
+      return row ? JSON.parse(row.payload) : null;
+    },
     close: () => db.close(),
   };
 }
