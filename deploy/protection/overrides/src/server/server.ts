@@ -147,6 +147,33 @@ function currentResearch(symbol?:string){
   };
  }finally{repo.close();}
 }
+function currentInvestigatorIntegrity(){
+ try {
+  const research=currentResearch();
+  return {
+   authority:research.authority,
+   source:research.provenance.source,
+   asOf:research.asOf,
+   checkedAt:research.checkedAt,
+   status:"AVAILABLE",
+   assets:research.assets.map(asset=>({
+    symbol:asset.symbol,
+    assetId:asset.assetId,
+    reviewStatus:asset.review.status,
+    integrity:asset.review.integrity,
+   })),
+  };
+ } catch {
+  return {
+   authority:"SHADOW_ONLY_NO_TRADING_AUTHORITY",
+   source:"persistent-research-evidence",
+   asOf:null,
+   checkedAt:new Date().toISOString(),
+   status:"UNAVAILABLE",
+   assets:[],
+  };
+ }
+}
 const WATCHLIST_SOURCE_URL =
   "https://coinmarketcap.com/?type=coins&tableRankBy=watchlist&watchListId=6a9a95c387e5a45cc1f40d5e";
 
@@ -1208,9 +1235,11 @@ const API: ApiRouter = {
   },
   "GET /api/intelligence/research-integrity": (_req, res) => {
     const research = readResearchProvenance(DEFAULT_DB);
+    const investigator = currentInvestigatorIntegrity();
     jsonResponse(res, 200, { authority: research.evidence.authority, asOf: new Date().toISOString(),
-      provenance: { source: research.evidence.source, dataMode: 'persisted', note: 'P0 engine evidence only; statistical evaluators and automatic promotion are not implemented.' },
-      researchIntegrity: research.assessment, researchEvidence: research.evidence });
+      provenance: { source: research.evidence.source, dataMode: 'persisted', note: 'P0 engine evidence remains the promotion-restricted integrity boundary. Bright Data full-source investigator evidence is additive, shadow-only, and may only corroborate, contradict, flag, or demote.' },
+      researchIntegrity: research.assessment, researchEvidence: research.evidence,
+      investigator });
   },
   "GET /api/research/provenance": (req, res) => {
     if (!isAuthenticated(req, SECURITY)) return send401(res, "research diagnostics require Bearer auth");
