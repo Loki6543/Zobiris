@@ -315,7 +315,7 @@ export function brightDataMcpResearchAdapter(
   fetcher: typeof fetch = fetch,
 ): ResearchAdapter {
   return {
-    id: "brightdata-mcp-search",
+    id: "brightdata-mcp-investigator",
     minIntervalMs: brightDataMinimumIntervalMs(env),
     configured: () => Boolean(brightDataToken(env)),
     fetch: async (assets, signal) => {
@@ -375,7 +375,7 @@ export function brightDataMcpResearchAdapter(
         selectedSources += selected.length;
 
         for (const candidate of selected) {
-          let artifact;
+          let artifact: ReturnType<typeof buildRawEvidenceArtifact>;
           try {
             const retrievedAt = new Date().toISOString();
             const markdown = await callBrightDataMcpTool(
