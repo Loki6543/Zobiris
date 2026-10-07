@@ -7,6 +7,18 @@ const BRIGHTDATA_MCP_PATH = "/mcp";
 const MCP_PROTOCOL = "2026-07-28";
 const LEGACY_MCP_PROTOCOL = "2025-11-25";
 const MAX_MCP_RESPONSE_BYTES = 1024 * 1024;
+const DEFAULT_BRIGHTDATA_MIN_INTERVAL_MS = 30 * 60 * 1000;
+
+function brightDataToken(env: NodeJS.ProcessEnv): string | undefined {
+  return env.BRIGHTDATA_API_TOKEN?.trim() || env.BRIGHT_API_KEY?.trim() || undefined;
+}
+
+function brightDataMinimumIntervalMs(env: NodeJS.ProcessEnv): number {
+  const configured = Number(env.BRIGHTDATA_MIN_INTERVAL_MS);
+  if (!Number.isFinite(configured) || configured < 60_000)
+    return DEFAULT_BRIGHTDATA_MIN_INTERVAL_MS;
+  return Math.min(configured, 24 * 60 * 60 * 1000);
+}
 
 type JsonRpcEnvelope = {
   id?: string | number | null;
@@ -286,9 +298,10 @@ export function brightDataMcpResearchAdapter(
 ): ResearchAdapter {
   return {
     id: "brightdata-mcp-search",
-    configured: () => Boolean(env.BRIGHTDATA_API_TOKEN?.trim()),
+    minIntervalMs: brightDataMinimumIntervalMs(env),
+    configured: () => Boolean(brightDataToken(env)),
     fetch: async (assets, signal) => {
-      const token = env.BRIGHTDATA_API_TOKEN?.trim();
+      const token = brightDataToken(env);
       if (!token) throw Error("BRIGHTDATA_MCP_NOT_CONFIGURED");
       const geo = geoLocation(env);
       const queries = assets.map((asset) => ({

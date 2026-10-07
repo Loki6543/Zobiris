@@ -24,6 +24,35 @@ describe("Bright Data MCP research adapter", () => {
     expect(
       brightDataMcpResearchAdapter({ BRIGHTDATA_API_TOKEN: "token" }).configured(),
     ).toBe(true);
+    expect(
+      brightDataMcpResearchAdapter({ BRIGHT_API_KEY: "legacy-token" }).configured(),
+    ).toBe(true);
+    expect(
+      brightDataMcpResearchAdapter({ BRIGHT_API_KEY: "legacy-token" }).minIntervalMs,
+    ).toBe(30 * 60 * 1000);
+  });
+
+  it("prefers BRIGHTDATA_API_TOKEN but accepts the Railway legacy BRIGHT_API_KEY alias", async () => {
+    let observedUrl = "";
+    const adapter = brightDataMcpResearchAdapter(
+      {
+        BRIGHTDATA_API_TOKEN: "preferred-token",
+        BRIGHT_API_KEY: "legacy-token",
+        BRIGHTDATA_MIN_INTERVAL_MS: "3600000",
+      },
+      async (url, init) => {
+        observedUrl = String(url);
+        const body = JSON.parse(String(init?.body));
+        const query = body.params.arguments.queries[0].query;
+        return rpcResult(JSON.stringify([{ query, engine: "google", result: { organic: [] } }]));
+      },
+    );
+    expect(adapter.minIntervalMs).toBe(3_600_000);
+    await adapter.fetch(
+      [{ id: "asset-btc", symbol: "BTC", name: "Bitcoin" }],
+      AbortSignal.timeout(1000),
+    );
+    expect(new URL(observedUrl).searchParams.get("token")).toBe("preferred-token");
   });
 
   it("uses the hosted MCP batch search and emits unverified provenance-only evidence", async () => {

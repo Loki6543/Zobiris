@@ -16,6 +16,7 @@ export interface ResearchAsset {
 }
 export interface ResearchAdapter {
   id: string;
+  minIntervalMs?: number;
   configured(): boolean;
   fetch(assets: ResearchAsset[], signal: AbortSignal): Promise<unknown[]>;
 }
@@ -122,6 +123,27 @@ export async function collectResearchTick(
     }
     if (state.retryAt > now) {
       statuses.push({ ...state, status: "UNAVAILABLE" });
+      continue;
+    }
+    const minIntervalMs = Math.max(0, adapter.minIntervalMs ?? 0);
+    const lastSuccessMs = old?.lastSuccessAt ? Date.parse(old.lastSuccessAt) : Number.NaN;
+    if (
+      minIntervalMs > 0 &&
+      Number.isFinite(lastSuccessMs) &&
+      now - lastSuccessMs < minIntervalMs
+    ) {
+      const skipped: ResearchCollectionStatus = {
+        ...state,
+        status:
+          old?.status === "AVAILABLE" || old?.status === "PARTIAL"
+            ? old.status
+            : "PARTIAL",
+        attemptedAt: old?.attemptedAt ?? state.attemptedAt,
+        records: 0,
+        error: undefined,
+      };
+      repo.setState("provider:" + adapter.id, skipped);
+      statuses.push(skipped);
       continue;
     }
     if (!universe.length) {
