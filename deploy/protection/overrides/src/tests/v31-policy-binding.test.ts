@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { loadRegistry, bindDecision, assertBound, stampEpisode, portfolioPolicyFromRegistry } from '../server/policy/zobirisPolicyBinding.js';
+import { loadRegistry, bindDecision, assertBound, stampEpisode, portfolioPolicyFromRegistry, mayAffect } from '../server/policy/zobirisPolicyBinding.js';
 import { evaluatePortfolioGate } from '../server/policy/portfolioGate.js';
 
 const registryPath=fileURLToPath(new URL('../server/policy/zobiris-policy-registry-v3.1.json', import.meta.url));
@@ -22,6 +22,21 @@ describe('v3.1 policy binding',()=>{
     expect(episode.policyHash).toMatch(/^[0-9a-f]{64}$/);
     expect(episode.setupFamily).toBe('UNKNOWN');
     expect(episode.metadataProvenance).toBe('LIVE');
+  });
+  it('keeps P1B statistical diagnostics shadow-only with zero capital authority',()=>{
+    const scope=h.registry.authorityScopes.find((item:any)=>item.featureId==='sidecar_trial_registry_dsr_pbo');
+    expect(scope).toMatchObject({
+      status:'SHADOW_ONLY',
+      mayAffectQualification:false,
+      mayAffectReferenceLimit:false,
+      mayAffectSizing:false,
+      mayAffectOrderRecommendation:false,
+      mayWriteExchange:false,
+    });
+    expect(mayAffect(h,'sidecar_trial_registry_dsr_pbo','mayAffectQualification')).toBe(false);
+    expect(mayAffect(h,'sidecar_trial_registry_dsr_pbo','mayAffectReferenceLimit')).toBe(false);
+    expect(mayAffect(h,'sidecar_trial_registry_dsr_pbo','mayAffectSizing')).toBe(false);
+    expect(mayAffect(h,'sidecar_trial_registry_dsr_pbo','mayAffectOrderRecommendation')).toBe(false);
   });
   it('registry portfolio policy matches the intended hard limits',()=>{
     const p=portfolioPolicyFromRegistry(h);
