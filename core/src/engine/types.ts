@@ -177,7 +177,6 @@ export const MetricsResponseSchema=z.object({
   policy:z.object({version:z.string(),hash:z.string().regex(/^[a-f0-9]{64}$/)}),
 });
 
-
 export const MinimumEvidenceResponseSchema=z.object({
   ok:z.literal(true),
   evidence:z.object({
@@ -192,3 +191,4 @@ export const MinimumEvidenceResponseSchema=z.object({
     reasons:z.array(z.string()),
   }),
 });
+export type MinimumEvidence=z.infer<typeof MinimumEvidenceResponseSchema>["evidence"];
