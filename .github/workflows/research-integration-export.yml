@@ -1,0 +1,43 @@
+name: research-integration-export
+
+on:
+  push:
+    branches:
+      - research-integration-work-2026-10-07
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Decode embedded v0.7.6 base and overlay current source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/zobiris-base /tmp/zobiris-merged
+          cat deploy/v076/*.b64 | base64 -d > /tmp/zobiris.txz
+          tar -xJf /tmp/zobiris.txz -C /tmp/zobiris-base
+          cp -a /tmp/zobiris-base/Zobiris_v0.7.6_Railway_Staging/. /tmp/zobiris-merged/
+          cp -a deploy/v076/overrides/. /tmp/zobiris-merged/
+          if [ -d deploy/v076/overrides/audit-fixes ]; then
+            cp -a deploy/v076/overrides/audit-fixes/. /tmp/zobiris-merged/
+          fi
+          cp -a deploy/prediction/overrides/. /tmp/zobiris-merged/
+          cp -a deploy/p0/overrides/. /tmp/zobiris-merged/
+          cp -a deploy/dashboard/overrides/. /tmp/zobiris-merged/
+          cp -a deploy/protection/overrides/. /tmp/zobiris-merged/
+          cp railway_hosted_gate.mjs /tmp/zobiris-merged/scripts/railway_hosted_gate.mjs
+          (
+            cd /tmp/zobiris-merged
+            zip -qr "$GITHUB_WORKSPACE/ZOBIRIS_RESEARCH_MERGED_SOURCE.zip" .
+          )
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZOBIRIS_RESEARCH_MERGED_SOURCE
+          path: ZOBIRIS_RESEARCH_MERGED_SOURCE.zip
+          retention-days: 2
