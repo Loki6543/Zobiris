@@ -333,6 +333,7 @@ export function assessEvidenceIntegrity(
   const contradicting = new Set<string>();
   const unresolvedTopics: string[] = [];
   let contestedTopics = 0;
+  let verifiedTopic = false;
 
   for (const [topic, rows] of byTopic) {
     const topicFamilies = new Set(rows.map(familyOf).filter(Boolean));
@@ -355,9 +356,11 @@ export function assessEvidenceIntegrity(
       continue;
     }
 
-    if (topicFamilies.size >= 2)
+    if (topicFamilies.size >= 2) {
       rows.forEach((row) => corroborated.add(row.id));
-    else unresolvedTopics.push(topic);
+      if (rows.some((row) => row.verification === "PRIMARY_CONFIRMED"))
+        verifiedTopic = true;
+    } else unresolvedTopics.push(topic);
   }
 
   const contradictionSeverity = Math.min(
@@ -365,10 +368,7 @@ export function assessEvidenceIntegrity(
     contestedTopics / Math.max(1, byTopic.size),
   );
 
-  const verified =
-    primary.some((row) => row.verification === "PRIMARY_CONFIRMED") &&
-    corroborated.size > 0 &&
-    contradictionSeverity === 0;
+  const verified = verifiedTopic && contradictionSeverity === 0;
 
   const strong =
     !verified &&
