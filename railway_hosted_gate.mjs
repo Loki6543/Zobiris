@@ -169,7 +169,13 @@ async function verifyCandidate() {
 
     const p0 = await jsonCheck(localOrigin, '/api/intelligence/research-integrity', {}, [200], 'candidate P0 evidence boundary');
     if (p0.payload?.provenance?.source !== 'PERSISTED_P0_EVIDENCE' || p0.payload?.researchEvidence?.version !== '0.3.0') throw new Error('candidate P0 evidence registry is missing');
-    if (p0.payload?.researchIntegrity?.promotable !== false || p0.payload?.researchEvidence?.statisticalEvaluatorsImplemented !== false) throw new Error('P0 cannot claim statistical promotion authority');
+    if (p0.payload?.researchIntegrity?.promotable !== false) throw new Error('P0 cannot claim statistical promotion authority');
+    if (p0.payload?.researchEvidence?.statisticalEvaluatorsImplemented !== true) throw new Error('P1B statistical evaluators are not wired');
+    const p1b = p0.payload?.researchEvidence?.statisticalEvaluation;
+    if (p1b?.authority !== 'SHADOW_ONLY_NO_TRADING_AUTHORITY') throw new Error('P1B statistical evaluator authority boundary is missing');
+    for (const axis of ['dsr', 'pbo', 'cpcv']) {
+      if (p1b?.[axis]?.metric?.status === 'PASS') throw new Error(`empty predeploy P0 evidence cannot certify ${axis}`);
+    }
     await jsonCheck(localOrigin, '/api/research/provenance', {}, [401, 403], 'candidate anonymous research diagnostics rejected');
     console.log('PASS candidate P0 v3 persisted evidence boundary and promotion restrictions');
 
