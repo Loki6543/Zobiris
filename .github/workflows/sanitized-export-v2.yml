@@ -1,0 +1,66 @@
+name: sanitized-export-v2
+
+on:
+  push:
+    branches:
+      - sanitized-export-2026-10-07
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout share-safe branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify share-safe source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, sys
+          checks = {
+              "private key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+              "AWS key": re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+              "GitHub token": re.compile(r"\b(?:gh[pousr]_|github_pat_)[A-Za-z0-9_]{20,}\b"),
+              "Slack token": re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{20,}\b"),
+              "OpenAI-style token": re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
+              "Railway host": re.compile(r"[A-Za-z0-9.-]+\.up\.railway\.app"),
+              "known portfolio trade source id": re.compile(r"\bT[A-Z0-9]{5,}-[A-Z0-9]{5,}-[A-Z0-9]{5,}\b"),
+          }
+          problems=[]
+          for p in Path(".").rglob("*"):
+              if not p.is_file() or ".git" in p.parts or p.stat().st_size > 5_000_000:
+                  continue
+              try:
+                  s=p.read_text(encoding="utf-8")
+              except UnicodeDecodeError:
+                  continue
+              for label,rx in checks.items():
+                  if rx.search(s):
+                      problems.append(f"{label}: {p}")
+          if problems:
+              print("\n".join(problems))
+              sys.exit(1)
+          print("Share-safe scan passed.")
+          PY
+
+      - name: Package source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f ZOBIRIS_SANITIZED_SOURCE_2026-10-07.zip
+          zip -qr ZOBIRIS_SANITIZED_SOURCE_2026-10-07.zip .             -x '.git/*' '.github/*' '*.sqlite' '*.sqlite3' '*.db' '*.pem' '*.key' '*.p12' '*.pfx'
+
+      - name: Upload share-safe source
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZOBIRIS_SANITIZED_SOURCE_2026-10-07_V2
+          path: ZOBIRIS_SANITIZED_SOURCE_2026-10-07.zip
+          if-no-files-found: error
+          retention-days: 7
