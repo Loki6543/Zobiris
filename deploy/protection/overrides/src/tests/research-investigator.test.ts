@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assessEvidenceIntegrity,
   chooseInvestigationCandidates,
+  extractAtomicClaims,
 } from "../server/researchInvestigator.js";
 
 const now = Date.parse("2026-10-06T23:00:00Z");
@@ -32,6 +33,17 @@ describe("research evidence investigator", () => {
     expect(selected[0]!.sourceUrl).toContain("github.com");
     expect(selected[0]!.primarySourceLikely).toBe(true);
     expect(selected[0]!.highImpactTrigger).toBe(true);
+  });
+
+
+  it("does not manufacture evidence from a SERP lead when the scraped page lacks the asset claim", () => {
+    expect(
+      extractAtomicClaims(
+        "# Market update\n\nAn unrelated protocol announced a network upgrade for its validators.",
+        "Solana",
+        "SOL",
+      ),
+    ).toEqual([]);
   });
 
   it("does not call unrelated-topic corroboration VERIFIED", () => {
