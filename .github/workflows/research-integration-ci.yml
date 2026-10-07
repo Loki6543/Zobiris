@@ -1,0 +1,20 @@
+name: research-integration-ci
+
+on:
+  push:
+    branches:
+      - research-integration-work-2026-10-07
+
+permissions:
+  contents: read
+
+jobs:
+  full-docker-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Run production Docker build gate
+        run: docker build --progress=plain -t zobiris-research-integration .
