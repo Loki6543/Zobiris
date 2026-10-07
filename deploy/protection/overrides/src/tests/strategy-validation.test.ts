@@ -191,11 +191,20 @@ describe("strategy validation lab", () => {
         }],
       };
     });
-    const lab = buildOutcomeValidationLab(records, { horizon: "7D" });
+    const lab = buildOutcomeValidationLab(records, {
+      horizon: "7D",
+      statisticalEvidenceByTag: { ENTRY_MODEL_V1: passingStatisticalEvidence("ENTRY_MODEL_V1") },
+    });
     expect(lab.reports).toHaveLength(1);
     expect(lab.reports[0]!.strategyTag).toBe("ENTRY_MODEL_V1");
     expect(lab.reports[0]!.report.status).toBe("SHADOW_VALIDATED");
     expect(lab.reports[0]!.report.certification.classification).toBe("CERTIFIED_SHADOW");
+    expect((lab.reports[0]!.report as any).statisticalCertification).toMatchObject({
+      status: "PASS",
+      mappingStatus: "MAPPED",
+      provenanceComplete: true,
+      authority: "SHADOW_ONLY_NO_TRADING_AUTHORITY",
+    });
     expect(lab.executionEvidence.executableFillCertified).toBe(false);
     expect(lab.factorAudit.find((item) => item.factor === "onchain")?.usedInCertification).toBe(false);
     expect(lab.liveOrderAuthority).toBe(false);
