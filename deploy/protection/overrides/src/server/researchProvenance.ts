@@ -16,6 +16,7 @@ const hash = (text: string) => createHash('sha256').update(text).digest('hex');
 const migrationHash = hash(migration);
 const DSR_PASS_THRESHOLD = 0.95;
 const PBO_PASS_THRESHOLD = 0.10;
+const MAX_SELECTIONS_PER_READ = 200;
 
 function schemaHash(db: Database.Database): string {
   return hash(JSON.stringify(db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name").all()));
@@ -69,12 +70,14 @@ type SummaryRow = {
   nObservations: number;
 };
 
-function selections(db: Database.Database): SelectionRow[] {
-  return db.prepare(`SELECT selection_id AS selectionId, family_id AS familyId,
+function selections(db: Database.Database): { rows: SelectionRow[]; total: number; truncated: boolean } {
+  const total = Number((db.prepare('SELECT count(*) AS n FROM selection_event').get() as { n: number }).n);
+  const rows = db.prepare(`SELECT selection_id AS selectionId, family_id AS familyId,
     selected_candidate_id AS candidateId, selected_split_id AS splitId,
     metric_definition_hash AS metricHash, cost_model_hash AS costHash,
     trial_count_raw AS trialCountRaw, effective_trial_count AS effectiveTrialCount
-    FROM selection_event ORDER BY selected_at, selection_id`).all() as SelectionRow[];
+    FROM selection_event ORDER BY selected_at DESC, selection_id DESC LIMIT ?`).all(MAX_SELECTIONS_PER_READ) as SelectionRow[];
+  return { rows, total, truncated: total > rows.length };
 }
 
 function selectedSummary(db: Database.Database, selection: SelectionRow): SummaryRow | null {
@@ -262,12 +265,21 @@ function evaluateCpcv(db: Database.Database, selected: SelectionRow[]) {
 }
 
 export function evaluateP0StatisticalEvidence(db: Database.Database) {
-  const selected = selections(db);
+  const scan = selections(db);
+  const selected = scan.rows;
   const dsr = evaluateDsr(db, selected);
   const pbo = evaluatePbo(db, selected);
   const cpcv = evaluateCpcv(db, selected);
+  if (scan.truncated) {
+    for (const entry of [dsr, pbo, cpcv]) {
+      if (entry.metric.status === 'PASS') entry.metric.status = 'WATCH';
+      entry.metric.reasons.push(`Evidence read bounded at ${MAX_SELECTIONS_PER_READ} newest selections out of ${scan.total}; full-history certification is required offline.`);
+    }
+  }
   return {
-    selectionCount: selected.length,
+    selectionCount: scan.total,
+    evaluatedSelectionCount: selected.length,
+    truncated: scan.truncated,
     dsr,
     pbo,
     cpcv,
