@@ -180,7 +180,6 @@ export function openResearchEvidence(
             record.material,
             record.relevance,
             record.verificationSourceUrl ?? "",
-            record.artifactHash ?? "",
           ].join("|"),
         )
         .digest("hex");
