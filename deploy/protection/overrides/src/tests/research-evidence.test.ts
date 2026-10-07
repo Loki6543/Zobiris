@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { it, expect } from "vitest";
 import { openResearchEvidence } from "../server/researchEvidence.js";
 import { evaluateReassessment } from "../server/reassessment.js";
@@ -141,6 +142,114 @@ it("refreshes repeat observations without multiplying confirmations and retains 
       now,
     );
     expect(r.list("qnt")).toHaveLength(2);
+  } finally {
+    r.close();
+  }
+});
+
+
+it("stores full-source evidence as an immutable SHA-256 artifact instead of duplicating it in evidence rows", () => {
+  const r = openResearchEvidence(":memory:", new Map([["QNT", "qnt"]]));
+  try {
+    const content =
+      "# Quant update\n\nQuant announced a protocol upgrade for its network participants.";
+    const contentHash = createHash("sha256").update(content).digest("hex");
+    const row = evidence({
+      verification: "UNVERIFIED",
+      verificationSourceUrl: null,
+      provider: "brightdata-mcp-investigator",
+      sourceFamily: "quant.network",
+      sourceAuthorityScore: 0.68,
+      primarySourceLikely: false,
+      claimTopic: "NETWORK_UPGRADE",
+      extractionMethod: "BRIGHTDATA_FULL_SOURCE_ATOMIC_V1",
+      artifactHash: contentHash,
+      artifactByteLength: Buffer.byteLength(content),
+      rawArtifact: {
+        sourceUrl: "https://quant.network/news/test",
+        retrievedAt: "2026-10-03T01:00:00Z",
+        contentType: "text/markdown",
+        content,
+        byteLength: Buffer.byteLength(content),
+        contentHash,
+        hashAlgorithm: "SHA256",
+      },
+    });
+    const appended = r.append([row], now);
+    expect(appended[0]!.artifactHash).toBe(contentHash);
+    expect((appended[0] as any).rawArtifact).toBeUndefined();
+    expect(r.readArtifact(contentHash)).toMatchObject({
+      contentHash,
+      hashAlgorithm: "SHA256",
+      content,
+    });
+  } finally {
+    r.close();
+  }
+});
+
+it("corroborates independent source families and escalates contradictions without creating trading authority", () => {
+  const r = openResearchEvidence(":memory:", new Map([["QNT", "qnt"]]));
+  try {
+    r.append(
+      [
+        evidence({
+          verification: "UNVERIFIED",
+          verificationSourceUrl: null,
+          provider: "brightdata-mcp-investigator",
+          sourceUrl: "https://quant.network/news/upgrade",
+          lineageId: "upgrade-primary",
+          claim: "Quant announced a network upgrade.",
+          claimTopic: "NETWORK_UPGRADE",
+          polarity: "POSITIVE",
+          sourceFamily: "quant.network",
+          primarySourceLikely: true,
+        }),
+        evidence({
+          verification: "UNVERIFIED",
+          verificationSourceUrl: null,
+          provider: "brightdata-mcp-investigator",
+          sourceUrl: "https://example.com/quant-upgrade",
+          lineageId: "upgrade-secondary",
+          claim: "Quant network upgrade is scheduled.",
+          claimTopic: "NETWORK_UPGRADE",
+          polarity: "POSITIVE",
+          sourceFamily: "example.com",
+          primarySourceLikely: false,
+        }),
+      ],
+      now,
+    );
+    const supported = evaluateReassessment(null, r.list("qnt"), now, "qnt");
+    expect(supported.integrity.label).toBe("STRONGLY_SUPPORTED");
+    expect(supported.integrity.independentSourceCount).toBe(2);
+
+    r.append(
+      [
+        evidence({
+          verification: "UNVERIFIED",
+          verificationSourceUrl: null,
+          provider: "brightdata-mcp-investigator",
+          sourceUrl: "https://contrary.example/quant-upgrade",
+          lineageId: "upgrade-contrary",
+          claim: "Quant upgrade faces a suspension warning.",
+          claimTopic: "NETWORK_UPGRADE",
+          polarity: "NEGATIVE",
+          sourceFamily: "contrary.example",
+          primarySourceLikely: false,
+        }),
+      ],
+      now,
+    );
+    const contested = evaluateReassessment(
+      supported,
+      r.list("qnt"),
+      now,
+      "qnt",
+    );
+    expect(contested.integrity.label).toBe("CONTESTED");
+    expect(contested.status).toBe("THESIS_RISK");
+    expect(JSON.stringify(contested)).not.toContain("maxOrder");
   } finally {
     r.close();
   }
