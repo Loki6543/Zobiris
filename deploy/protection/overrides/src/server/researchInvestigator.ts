@@ -174,7 +174,12 @@ export function chooseInvestigationCandidates(
   candidates: DiscoveryCandidate[],
   limit = 2,
 ): RankedCandidate[] {
-  const ranked = rankInvestigationCandidates(candidates);
+  const ranked = rankInvestigationCandidates(candidates).filter(
+    (candidate) =>
+      candidate.primarySourceLikely ||
+      candidate.highImpactTrigger ||
+      candidate.score >= 0.58,
+  );
   const selected: RankedCandidate[] = [];
   const families = new Set<string>();
   for (const candidate of ranked) {
