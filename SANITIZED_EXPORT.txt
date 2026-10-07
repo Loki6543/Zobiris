@@ -1,0 +1,26 @@
+ZOBIRIS SANITIZED SOURCE EXPORT
+================================
+
+Source checkpoint:
+af9b9974ea18ddf1891e65de7c1568129229fb8a
+
+Purpose:
+Share-safe source review without exposing private account, credential, or infrastructure information.
+
+Removed or replaced:
+- Personal portfolio holdings, balances, cost bases, open orders, trade IDs, and trade timestamps.
+- User-specific watchlist source URL and full watchlist membership.
+- User-specific canonical mapping batches tied to that watchlist.
+- Private production Railway hostname defaults.
+- Documentation/research notes.
+- Environment files, databases, credentials/private-key file types, encoded source archives, binary/media assets.
+- Watchlist-specific regression tests that would reconstruct private membership.
+
+Retained:
+- ZOBIRIS strategy, scoring, research-integrity, delayed-rotation, harvesting/profit-protection, execution, provider, server, and UI source code.
+- Environment-variable names and secret-loading interfaces, but not secret values.
+- Generic BTC/ETH/SOL example watchlist and provider mappings.
+- Generic empty portfolio fixture with a non-user-specific example maneuver-capital constant.
+
+Important:
+This branch is intentionally not a production-state clone. Privacy-sensitive fixtures are replaced with examples, so some tests that depend on the private watchlist or portfolio snapshot are intentionally absent.
