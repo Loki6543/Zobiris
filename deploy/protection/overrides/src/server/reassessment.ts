@@ -1,4 +1,8 @@
 import type { ResearchEvidence } from "./researchEvidence.js";
+import {
+  assessEvidenceIntegrity,
+  type EvidenceIntegritySummary,
+} from "./researchInvestigator.js";
 export interface Review {
   assetId: string;
   status:
@@ -12,6 +16,7 @@ export interface Review {
   counterEvidenceIds: string[];
   missingEvidence: string[];
   nextReviewCondition: string;
+  integrity: EvidenceIntegritySummary;
   updatedAt: string;
 }
 function socialAcceleration(rows: ResearchEvidence[], now: number): boolean {
@@ -60,6 +65,7 @@ export function evaluateReassessment(
     (e) => Date.parse(e.expiresAt) > now && Date.parse(e.retrievedAt) <= now,
   );
   const fresh = current.filter((e) => !previous?.evidenceIds.includes(e.id));
+  const integrity = assessEvidenceIntegrity(evidence, now);
   const confirmed = current.filter(
     (e) =>
       e.verification === "PRIMARY_CONFIRMED" &&
@@ -68,6 +74,7 @@ export function evaluateReassessment(
       e.publishedAt,
   );
   const risk =
+    integrity.label === "CONTESTED" ||
     confirmed.some((e) => e.polarity === "NEGATIVE") ||
     current.some(
       (e) => e.verification === "RETRACTED" || e.verification === "CONFLICTING",
@@ -80,7 +87,12 @@ export function evaluateReassessment(
       : current.length
         ? "EVIDENCE_INCOMPLETE"
         : "EVIDENCE_INCOMPLETE";
-  if (previous && fresh.length === 0 && previous.status === status)
+  if (
+    previous &&
+    previous.integrity &&
+    fresh.length === 0 &&
+    previous.status === status
+  )
     return previous;
   return {
     assetId,
@@ -88,18 +100,33 @@ export function evaluateReassessment(
     evidenceIds: current.map((e) => e.id),
     previousEvidenceIds: previous?.evidenceIds ?? [],
     changedClaims: fresh.map((e) => e.claim),
-    counterEvidenceIds: current
-      .filter(
-        (e) => e.polarity !== "POSITIVE" || e.verification === "CONFLICTING",
-      )
-      .map((e) => e.id),
+    counterEvidenceIds: [
+      ...new Set([
+        ...current
+          .filter(
+            (e) =>
+              e.polarity !== "POSITIVE" || e.verification === "CONFLICTING",
+          )
+          .map((e) => e.id),
+        ...integrity.contradictingEvidenceIds,
+      ]),
+    ],
     missingEvidence: confirmed.length
-      ? ["Token-demand impact and entry conditions still require evaluation."]
+      ? [
+          "Token-demand impact and entry conditions still require evaluation.",
+          ...integrity.unresolvedTopics.map(
+            (topic) => `Independent corroboration unresolved for ${topic}.`,
+          ),
+        ]
       : [
           "No current material primary-confirmed catalyst; social evidence may be incomplete.",
+          ...integrity.unresolvedTopics.map(
+            (topic) => `Independent corroboration unresolved for ${topic}.`,
+          ),
         ],
     nextReviewCondition:
-      "Verify token impact, contradictory evidence, current entry geometry and order-size execution before changing an investment decision.",
+      "Verify token impact, contradictory evidence, independent source families, current entry geometry and order-size execution before changing an investment decision.",
+    integrity,
     updatedAt: new Date(now).toISOString(),
   };
 }
