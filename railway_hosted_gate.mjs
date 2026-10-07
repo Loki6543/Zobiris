@@ -96,6 +96,40 @@ async function verifyPublicBaseline() {
   console.log('PASS public baseline remains healthy and secret-free');
 }
 
+async function verifySearchPrivacy(origin) {
+  const robots = await fetch(new URL('/robots.txt', origin), {
+    signal: AbortSignal.timeout(15000),
+  });
+  const robotsBody = await robots.text();
+  const robotsTag = robots.headers.get('x-robots-tag') ?? '';
+  if (
+    robots.status !== 200 ||
+    !robotsBody.includes('User-agent: *') ||
+    !robotsBody.includes('Disallow: /') ||
+    !robotsTag.includes('noindex')
+  ) {
+    throw new Error('candidate search privacy robots policy is missing');
+  }
+
+  const browser = await fetch(new URL('/', origin), {
+    headers: { 'User-Agent': 'Mozilla/5.0 ZobirisPrivacyGate' },
+    signal: AbortSignal.timeout(15000),
+  });
+  const browserTag = browser.headers.get('x-robots-tag') ?? '';
+  if (!browser.ok || !browserTag.includes('noindex') || !browserTag.includes('noarchive')) {
+    throw new Error('candidate browser response is missing X-Robots-Tag privacy policy');
+  }
+
+  const blocked = await fetch(new URL('/', origin), {
+    headers: { 'User-Agent': 'GPTBot/1.2' },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (blocked.status !== 403) {
+    throw new Error(`candidate crawler block expected HTTP 403, got ${blocked.status}`);
+  }
+  console.log('PASS candidate search/AI crawler privacy boundary');
+}
+
 async function verifyCandidate() {
   const child = spawn(process.execPath, ['--import', 'tsx', 'src/server/server.ts'], {
     cwd: process.cwd(),
@@ -125,6 +159,7 @@ async function verifyCandidate() {
 
   try {
     await waitForHealth(localOrigin);
+    await verifySearchPrivacy(localOrigin);
 
     const integrity = await jsonCheck(localOrigin, '/api/integrity', {}, [200], 'candidate integrity endpoint');
     if (integrity.payload?.version !== '0.7.6') throw new Error('candidate integrity endpoint is not v0.7.6');

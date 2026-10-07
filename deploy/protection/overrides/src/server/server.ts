@@ -91,6 +91,7 @@ import {
   sendJson,
 } from "./security.js";
 import { randomUUID } from "node:crypto";
+import { applySearchPrivacyHeaders, isBlockedCrawlerUserAgent, sendCrawlerBlocked, sendRobotsTxt } from "./crawlerPrivacy.js";
 import { persistRefresh } from "../storage/integration.js";
 import { config as loadEnv } from "dotenv";
 import { challengeEvidence } from "../agents/challenger.js";
@@ -1549,6 +1550,20 @@ export function createZobirisServer() {
   return createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://localhost");
     const pathname = url.pathname;
+
+    // Privacy boundary: ZOBIRIS is intentionally not indexable or crawlable.
+    // Search/AI crawler policy is enforced both cooperatively (robots + noindex)
+    // and actively for known crawler user agents. Direct browser access remains
+    // available to the operator unless a separate authentication wall is added.
+    applySearchPrivacyHeaders(res);
+    if (pathname === "/robots.txt") {
+      sendRobotsTxt(res);
+      return;
+    }
+    if (isBlockedCrawlerUserAgent(req.headers["user-agent"])) {
+      sendCrawlerBlocked(res);
+      return;
+    }
     // v0.4.4 audit fix (P0 #4): CORS is an explicit allow-list, NOT
     // a wildcard. When no origins are configured, no
     // Access-Control-Allow-Origin header is sent — the browser
