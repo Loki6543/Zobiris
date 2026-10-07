@@ -78,7 +78,7 @@ async function verifySimpleUi(origin) {
     const response = await fetch(new URL(src, origin), { signal: AbortSignal.timeout(15000) });
     bundle += await response.text();
   }
-  for (const required of ["ZOBIRIS CORE", "Market Today", "Time Outlook", "Investment horizons", "L3 PROTECTION ACTIVE", "History / Learning", "Current positions", "BEST FIRST COURSE OF ACTION", "CORE HOLD — ROUTINE SELLING DISABLED", "SELL / HARVEST LADDER", "BUY / RE-ENTRY RANGE", "DEFENSIVE REDUCTION", "Why Zobiris learned this:", "Kraken execution gate passed", "Unlock private portfolio", "Private account is locked on the public view", "Maneuver capital", "Current snapshot order:", "POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM", "Pilot mode: new capital only goes to 30d + 90d laggards with a fresh 7d recovery"]) {
+  for (const required of ["ZOBIRIS CORE", "Market Today", "Time Outlook", "Investment horizons", "L3 PROTECTION ACTIVE", "History / Learning", "Current positions", "BEST FIRST COURSE OF ACTION", "CORE HOLD — ROUTINE SELLING DISABLED", "CORE HOLD — REVIEW EXISTING SELL ORDER", "Existing sell orders from the synchronized Kraken account", "SELL / HARVEST LADDER", "BUY / RE-ENTRY RANGE", "DEFENSIVE REDUCTION", "Why Zobiris learned this:", "Kraken execution gate passed", "Unlock private portfolio", "Private account is locked on the public view", "Maneuver capital", "Current snapshot order:", "POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM", "Pilot mode: new capital only goes to 30d + 90d laggards with a fresh 7d recovery"]) {
     if (!bundle.includes(required)) throw new Error("candidate simplified UI is missing " + required);
   }
   for (const forbidden of ["Research thesis + falsifiers", "Break conditions:", "Not yet measured:", " · thesis "]) {

@@ -1203,14 +1203,18 @@ function OrderPlanPanel({
     firstActionTitle = "VERIFY CURRENT PRICE FIRST";
     firstActionDetail = "Price is unavailable or stale. These are research estimates; refresh before placing any order.";
     learnedReason = "An old screenshot price cannot establish a current trade setup.";
+  } else if (longTermProtected) {
+    firstActionTitle = sellOrders.length
+      ? "CORE HOLD — REVIEW EXISTING SELL ORDER"
+      : "CORE HOLD — ROUTINE SELLING DISABLED";
+    firstActionDetail = sellOrders.length
+      ? `${row.symbol} is L3 long-term core (3–18+ months), but a sell order is still present in the synchronized Kraken account. Verify it and normally cancel it unless the holding is first downgraded to P2 after a documented thesis break, structural deterioration, or explicit user decision.`
+      : `${row.symbol} is L3 long-term core (3–18+ months). Short-term profit, weekly weakness, or ordinary technical signals can trigger a review, but not a routine trim. Downgrade to P2 is required before normal sell logic resumes.`;
+    learnedReason = "Long-term designation is now a separate user-governed policy layer, so a good short-term trade signal cannot silently override the intended holding horizon.";
   } else if (staleOrderWarning) {
     firstActionTitle = "VERIFY EXISTING KRAKEN ORDER FIRST";
-    firstActionDetail = `Do not duplicate the snapshot order. If it is no longer open, the next planned trim is ${plan.trimPct}% near ${money(plan.harvestNear)}.`;
+    firstActionDetail = "Do not duplicate the synchronized Kraken order. If it is no longer open, recalculate the position plan from current evidence before placing a replacement.";
     learnedReason = "Zobiris learned to avoid stacking duplicate exits when an older order may already have filled.";
-  } else if (longTermProtected) {
-    firstActionTitle = "CORE HOLD — ROUTINE SELLING DISABLED";
-    firstActionDetail = `${row.symbol} is L3 long-term core (3–18+ months). Short-term profit, weekly weakness, or ordinary technical signals can trigger a review, but not a routine trim. Downgrade to P2 is required before normal sell logic resumes.`;
-    learnedReason = "Long-term designation is now a separate user-governed policy layer, so a good short-term trade signal cannot silently override the intended holding horizon.";
   } else if (row.upl >= 15 && plan.trimPct <= 0) {
     firstActionTitle = "HOLD — POSITION TOO SMALL FOR A USEFUL PARTIAL TRIM";
     firstActionDetail = `A normal trim would be below ${money(MIN_MEANINGFUL_TRIM_USD)}. Keep the position intact unless the thesis breaks badly enough to justify a full exit.`;
@@ -1249,13 +1253,13 @@ function OrderPlanPanel({
 
       {sellOrders.length ? (
         <div style={styles.existingPlan}>
-          <strong>Existing sell orders from the Sep 24 account snapshot</strong>
+          <strong>Existing sell orders from the synchronized Kraken account</strong>
           <div style={styles.tiny}>
             {sellOrders.map((order) => money(order.amountUsd) + " @ " + money(order.targetPriceUsd)).join(" · ")}
             {" "}({plannedPct.toFixed(0)}% of current position value)
           </div>
           {staleOrderWarning ? (
-            <div style={styles.warningText}>One snapshot sell target is now at or below the live price. Verify Kraken before adding another order because it may already have filled or been cancelled.</div>
+            <div style={styles.warningText}>One synchronized sell target is now at or below the live price. Verify Kraken before adding another order because it may already have filled or been cancelled.</div>
           ) : null}
         </div>
       ) : null}

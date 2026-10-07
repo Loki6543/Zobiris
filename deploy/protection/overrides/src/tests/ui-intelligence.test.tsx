@@ -163,7 +163,9 @@ describe("simplified Zobiris Core", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open SOL order analysis" }));
     expect(await screen.findByText("BEST FIRST COURSE OF ACTION")).toBeTruthy();
-    expect(screen.getByText("CORE HOLD — ROUTINE SELLING DISABLED")).toBeTruthy();
+    expect(screen.getByText("CORE HOLD — REVIEW EXISTING SELL ORDER")).toBeTruthy();
+    expect(screen.queryByText(/next planned trim/i)).toBeNull();
+    expect(screen.getByText("Existing sell orders from the synchronized Kraken account")).toBeTruthy();
     expect(screen.getByText("LONG-TERM EXIT GATE")).toBeTruthy();
     expect(screen.getByText("DOWNGRADE REQUIRED")).toBeTruthy();
     expect(screen.queryByText("SELL / HARVEST LADDER")).toBeNull();
