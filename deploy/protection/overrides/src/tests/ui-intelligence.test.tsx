@@ -150,6 +150,11 @@ describe("simplified Zobiris Core", () => {
     expect(await screen.findByText("Current positions")).toBeTruthy();
     expect(screen.getByText("Open orders")).toBeTruthy();
     expect(within(screen.getByRole("region", { name: "Portfolio overview" })).getByText("$713.74")).toBeTruthy();
+    const solRow = screen.getByRole("button", { name: "Open SOL order analysis" }).closest("tr");
+    expect(solRow).toBeTruthy();
+    expect(within(solRow as HTMLElement).getByText("L3 CORE HOLD")).toBeTruthy();
+    const harvestCandidate = screen.getByText("Best harvest candidate").parentElement;
+    expect(harvestCandidate?.textContent ?? "").not.toContain("SOL ");
     expect(screen.getAllByText("SELL SOL — REVIEW / CORE HOLD").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Open KAS order analysis" }));
