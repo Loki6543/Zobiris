@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { unlink } from 'node:fs/promises';
 
-const publicBase = process.argv[2] ?? 'https://zobiris-production.up.railway.app';
+const publicBase = process.argv[2] ?? process.env.ZOBIRIS_PUBLIC_BASE_URL ?? 'http://127.0.0.1:3000';
 const publicOrigin = new URL(publicBase.endsWith('/') ? publicBase : `${publicBase}/`);
 const token = process.env.ZOBIRIS_REFRESH_TOKEN;
 if (!token) throw new Error('ZOBIRIS_REFRESH_TOKEN is missing');

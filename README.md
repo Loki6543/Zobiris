@@ -1,2 +1,0 @@
-# Zobiris
-Zobiris
