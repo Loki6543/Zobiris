@@ -793,23 +793,23 @@ export function App() {
           <div aria-label="ZOBIRIS CORE" style={styles.brand}><span className="brand-mark" aria-hidden="true">Z</span> ZOBIRIS <span className="brand-core">CORE</span></div>
           <div style={styles.subtle}>Portfolio decisions, market limits, and trade memory.</div>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap"}}>
+        <div className="header-actions" style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap"}}>
           {operatorToken ? (
             <button
               type="button"
-              style={{...styles.refreshButton,background:"#273754"}}
+              style={{...styles.refreshButton,background:"linear-gradient(145deg,#243c47,#12232d)",color:"#edf5fa",border:"1px solid #54727f"}}
               onClick={() => {
                 try { window.sessionStorage.removeItem("zobiris.operatorToken.v1"); } catch {}
                 setOperatorToken("");
                 setAccount(null);
               }}
             >
-              Lock private portfolio
+              <DashboardIcon name="lock" />Lock private portfolio
             </button>
           ) : (
             <button
               type="button"
-              style={{...styles.refreshButton,background:"#273754"}}
+              style={{...styles.refreshButton,background:"linear-gradient(145deg,#243c47,#12232d)",color:"#edf5fa",border:"1px solid #54727f"}}
               onClick={() => {
                 const value = window.prompt("Enter the ZOBIRIS operator token")?.trim() ?? "";
                 if (!value) return;
@@ -817,16 +817,16 @@ export function App() {
                 setOperatorToken(value);
               }}
             >
-              Unlock private portfolio
+              <DashboardIcon name="lock" />Unlock private portfolio
             </button>
           )}
           <button style={styles.refreshButton} onClick={() => void refresh()} disabled={refreshing}>
-            {refreshing ? "Refreshing…" : "Refresh market"}
+            <DashboardIcon name="refresh" />{refreshing ? "Refreshing…" : "Refresh market"}
           </button>
         </div>
       </header>
 
-      <nav aria-label="Dashboard" style={styles.nav}>
+      <nav className="dashboard-nav" aria-label="Dashboard" style={styles.nav}>
         {([
           ["portfolio", "Portfolio"],
           ["market", "Market Today"],
@@ -836,28 +836,28 @@ export function App() {
           ["compare", "Compare Lab"],
         ] as Array<[View, string]>).map(([key, label]) => (
           <button aria-current={view === key ? "page" : undefined} key={key} onClick={() => setView(key)} style={view === key ? styles.navActive : styles.navButton}>
-            {label}
+            <DashboardIcon name={key} />{label}
           </button>
         ))}
       </nav>
 
-      <div style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. {accountSynced ? `Kraken account synced ${account?.syncMode === "websocket+poll" ? "live by WebSocket + REST reconciliation" : "by automatic REST polling"} · account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}.` : "Private Kraken account data is locked on the public view."}</div>
-      {error ? <div role="alert" style={styles.notice}>{error}</div> : null}
-      {loading && !snapshot ? <div style={styles.notice}>Loading live Zobiris market data…</div> : null}
+      <div className="dashboard-notice" style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. {accountSynced ? `Kraken account synced ${account?.syncMode === "websocket+poll" ? "live by WebSocket + REST reconciliation" : "by automatic REST polling"} · account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}.` : "Private Kraken account data is locked on the public view."}</div>
+      {error ? <div className="dashboard-notice" role="alert" style={styles.notice}>{error}</div> : null}
+      {loading && !snapshot ? <div className="dashboard-notice" style={styles.notice}>Loading live Zobiris market data…</div> : null}
 
       {view === "portfolio" ? (
         <main>
           <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
-            <Metric label="Portfolio" value={money(total)} />
-            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Private account is locked on the public view"} />
-            <Metric label="Reserved buys" value={money(reservedBuys)} />
-            <Metric label="Free cash" value={money(freeCash)} />
-            <Metric label="Maneuver capital" value={money(MANEUVER_CAPITAL_USD)} note={"Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD)} />
+            <Metric label="Portfolio" value={accountSynced ? money(total) : "Private"} />
+            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Unlock to view balances"} />
+            <Metric label="Reserved buys" value={accountSynced ? money(reservedBuys) : "Private"} />
+            <Metric label="Free cash" value={accountSynced ? money(freeCash) : "Private"} />
+            <Metric label="Maneuver capital" value={accountSynced ? money(MANEUVER_CAPITAL_USD) : "Private"} note={accountSynced ? "Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD) : "Unlock to view capital limits"} />
           </section>
 
           <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
           <ProfitProtection operatorToken={operatorToken} />
-          <section style={styles.card}>
+          <section className="dashboard-panel" style={styles.card}>
             <div style={styles.sectionHead}>
               <div>
                 <h2 style={styles.h2}>Current positions</h2>
@@ -912,10 +912,11 @@ export function App() {
                 </tbody>
               </table>
             </div>
+            {!portfolioRows.length && <div className="dashboard-empty"><strong>{accountSynced ? "No positions to display" : "Private account"}</strong>{accountSynced ? "Your synchronized positions will appear here." : "Unlock your portfolio above to view your current positions."}</div>}
           </section>
 
           <section className="dashboard-columns" style={styles.twoCol}>
-            <div style={styles.card}>
+            <div className="dashboard-panel" style={styles.card}>
               <h2 style={styles.h2}>Open orders</h2>
               {orderEvaluations.map((order) => (
                 <div key={order.key} style={styles.orderReviewRow}>
@@ -932,7 +933,7 @@ export function App() {
               ))}
             </div>
 
-            <div style={styles.card}>
+            <div className="dashboard-panel" style={styles.card}>
               <h2 style={styles.h2}>What matters now</h2>
               <DecisionLine title="Market posture" value={regime} detail={regime.toLowerCase().includes("break") ? "Use limits. Do not chase. Keep new entries small." : "Use staged limits and keep cash available."} />
               {strongestHoldingAction ? <DecisionLine title="Best harvest candidate" value={strongestHoldingAction.symbol + " " + pct(strongestHoldingAction.upl)} detail={strongestHoldingAction.action} /> : null}
@@ -948,7 +949,7 @@ export function App() {
         <main>
           <MarketBrief refreshKey={snapshotMs} />
           <ResearchEvidencePanel {...researchEvidence} />
-          <section style={styles.heroCard}>
+          <section className="dashboard-panel" style={styles.heroCard}>
             <div style={styles.eyebrow}>TODAY</div>
             <h1 style={styles.h1}>{regime}</h1>
             <p style={styles.heroText}>
@@ -962,12 +963,12 @@ export function App() {
             </div>
           </section>
 
-          <section style={styles.card}>
+          <section className="dashboard-panel" style={styles.card}>
             <h2 style={styles.h2}>Entry policy · consistent across every buy plan</h2>
             <div style={styles.subtle}>Live pilot: 4–8% pullback prior, plus 2 percentage points for recent re-entry risk (10% maximum). Buy prices and quantities round down to Kraken requirements. A lower price never overrides strategy, liquidity or capital gates.</div>
             <details style={{marginTop:12}}><summary>Upgraded entry research · shadow only</summary><p style={styles.tiny}>Structural support/retest, ATR, spread, fees and adverse selection belong in the next entry model. Minimum-edge research rule: max(all-in costs + adverse-selection buffer, 0.25 × ATR, 1.5 × spread), in basis points. LOQS and fill/missed-fill proxies remain unavailable until real inputs and forward validation exist. No fixture probabilities or invented optimal price.</p></details>
           </section>
-          <section style={styles.card}>
+          <section className="dashboard-panel" style={styles.card}>
             <h2 style={styles.h2}>New positions to consider</h2>
             <div style={styles.subtle}>Pilot mode: new capital only goes to 30d + 90d laggards with a fresh 7d recovery, and only through a pullback limit after Kraken execution gates pass.</div>
             <div style={{ marginTop: 14 }}>
@@ -984,11 +985,11 @@ export function App() {
                     <div style={styles.tiny}>{Math.round(row.discount * 100)}% below current {money(row.price)} · initial PROBE only · {num(row.quantity, 12)} {row.symbol}</div>
                   </div>
                 </div>
-              )) : <div style={styles.notice}>{candidateResearchUniverse.some((symbol) => assetDetailLoading[symbol]) ? "Checking Kraken execution volume and liquidity gates…" : rankedAssets.length ? `No eligible limit candidates. Highest confidence ${highestConfidence.toFixed(1)}% (consideration requires more than ${STRATEGY21_MIN_ORDER_CONFIDENCE_PCT}%). ${incompleteKrakenHistory ? "14-day Kraken book/notional history is incomplete for some assets. " : ""}All entry and liquidity gates remain in force. Kraken tick/minimum checks must also pass; 1% cash buffer is reserved for fees (verify your fee tier).` : "Market research has not loaded yet."}</div>}
+              )) : <div className="dashboard-notice" style={styles.notice}>{candidateResearchUniverse.some((symbol) => assetDetailLoading[symbol]) ? "Checking Kraken execution volume and liquidity gates…" : rankedAssets.length ? `No eligible limit candidates. Highest confidence ${highestConfidence.toFixed(1)}% (consideration requires more than ${STRATEGY21_MIN_ORDER_CONFIDENCE_PCT}%). ${incompleteKrakenHistory ? "14-day Kraken book/notional history is incomplete for some assets. " : ""}All entry and liquidity gates remain in force. Kraken tick/minimum checks must also pass; 1% cash buffer is reserved for fees (verify your fee tier).` : "Market research has not loaded yet."}</div>}
             </div>
           </section>
 
-          <section style={styles.card}>
+          <section className="dashboard-panel" style={styles.card}>
             <div style={styles.sectionHead}>
               <div>
                 <h2 style={styles.h2}>Watchlist ranking</h2>
@@ -1015,7 +1016,7 @@ export function App() {
           </section>
 
           <section className="dashboard-columns" style={styles.twoCol}>
-            <div style={styles.card}>
+            <div className="dashboard-panel" style={styles.card}>
               <h2 style={styles.h2}>Existing orders review</h2>
               {orderEvaluations.map((order) => (
                 <div key={order.key} style={styles.orderReviewRow}>
@@ -1031,14 +1032,14 @@ export function App() {
                   </div>
                 </div>
               ))}
-              {!orderEvaluations.length ? <div style={styles.notice}>{accountSynced
+              {!orderEvaluations.length ? <div className="dashboard-notice" style={styles.notice}>{accountSynced
                 ? Number(account?.openOrdersReceivedCount ?? 0) > Number(account?.openOrdersParsedCount ?? 0)
                   ? `Kraken returned orders that Zobiris could not parse (${account.openOrdersParsedCount} of ${account.openOrdersReceivedCount}). Verify orders directly in Kraken until this is resolved.`
                   : "Kraken returned no open orders for this API key. If Kraken shows active limits, check that the API key belongs to the same Kraken account and has Query Open Orders & Trades access."
                 : "Kraken account sync is unavailable. Verify active orders directly in Kraken."}</div> : null}
             </div>
 
-            <div style={styles.card}>
+            <div className="dashboard-panel" style={styles.card}>
               <h2 style={styles.h2}>Rules learned from you</h2>
               {LEARNING_RULES.map((rule) => (
                 <div key={rule.title} style={styles.rule}>
@@ -1066,7 +1067,7 @@ export function App() {
           </section>
 
           <section className="dashboard-columns" style={styles.twoCol}>
-            <div style={styles.card}>
+            <div className="dashboard-panel" style={styles.card}>
               <h2 style={styles.h2}>What Zobiris has learned</h2>
               {LEARNING_RULES.map((rule) => (
                 <div key={rule.title} style={styles.rule}>
@@ -1074,10 +1075,10 @@ export function App() {
                   <div style={styles.tiny}>{rule.detail}</div>
                 </div>
               ))}
-              <div style={styles.notice}>Early sample only. These rules should gain or lose weight as more trades are recorded.</div>
+              <div className="dashboard-notice" style={styles.notice}>Early sample only. These rules should gain or lose weight as more trades are recorded.</div>
             </div>
 
-            <div style={styles.card}>
+            <div className="dashboard-panel" style={styles.card}>
               <div style={styles.sectionHead}>
                 <div>
                   <h2 style={styles.h2}>Add a future trade</h2>
@@ -1098,7 +1099,7 @@ export function App() {
             </div>
           </section>
 
-          <section style={styles.card}>
+          <section className="dashboard-panel" style={styles.card}>
             <div style={styles.sectionHead}>
               <div>
                 <h2 style={styles.h2}>Trade memory</h2>
@@ -1343,6 +1344,20 @@ function OrderPlanPanel({
   );
 }
 
+function DashboardIcon({name}: {name: string}) {
+  const paths: Record<string, string> = {
+    portfolio: "M4 20V13h3v7M10 20V8h3v12M16 20V3h3v17",
+    market: "M3 17l6-6 4 3 8-10M15 4h6v6",
+    watchlist: "m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z",
+    outlook: "M12 8v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0",
+    history: "M12 5v15M3 4h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v14h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3Z",
+    compare: "M9 3h6M10 3v7L4 20h16l-6-10V3M8 15h8",
+    lock: "M7 10V7a5 5 0 0 1 10 0v3M6 10h12v11H6ZM12 14v3",
+    refresh: "M20 7a9 9 0 1 0 1 8M20 3v5h-5",
+  };
+  return <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.portfolio}/></svg>;
+}
+
 function actionStyle(action: string): CSSProperties {
   if (/VERIFY|WAIT|WATCH|PENDING/.test(action)) return { ...styles.pill, borderColor: "#746039", color: "#ffd48a", background: "#332b20" };
   if (action.includes("TRIM") || action.includes("HARVEST")) return { ...styles.pill, borderColor: "#e9b44c", color: "#ffd67a" };
@@ -1351,60 +1366,61 @@ function actionStyle(action: string): CSSProperties {
 }
 
 const styles: Record<string, CSSProperties> = {
-  page: { minHeight: "100vh", background: "#0b1224", color: "#f3f6fb", fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", padding: "20px", boxSizing: "border-box" },
-  header: { maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0 18px" },
-  brand: { fontWeight: 900, letterSpacing: 2, fontSize: 22 },
-  subtle: { color: "#a4b5cf", fontSize: 13, lineHeight: 1.45 },
-  tiny: { color: "#a4b5cf", fontSize: 12, lineHeight: 1.45, marginTop: 3 },
-  nav: { maxWidth: 1280, margin: "0 auto 18px", display: "flex", gap: 8, borderBottom: "1px solid #283b5c", overflowX: "auto" },
-  navButton: { background: "transparent", color: "#a4b5cf", borderTop: 0, borderLeft: 0, borderRight: 0, borderBottom: "2px solid transparent", padding: "12px 14px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" },
-  navActive: { background: "#6651d4", color: "#fff", borderTop: 0, borderLeft: 0, borderRight: 0, borderBottom: "2px solid #ac9bff", padding: "12px 14px", cursor: "pointer", fontWeight: 800, whiteSpace: "nowrap" },
-  refreshButton: { background: "#6651d4", color: "#ffffff", border: 0, borderRadius: 8, padding: "10px 14px", fontWeight: 800, cursor: "pointer" },
-  secondaryButton: { background: "#162541", color: "#d7dee9", border: "1px solid #304565", borderRadius: 8, padding: "8px 11px", fontWeight: 700, cursor: "pointer" },
-  metrics: { maxWidth: 1280, margin: "0 auto 16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 },
-  metric: { background: "#111e36", border: "1px solid #293c5b", borderRadius: 12, padding: 16 },
+  page: { minHeight: "100vh", background: "#0a1118", color: "#f3f6fb", fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", padding: "20px", boxSizing: "border-box" },
+  header: { maxWidth: 1440, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0 18px" },
+  brand: { fontWeight: 900, letterSpacing: 2, fontSize: 28 },
+  subtle: { color: "#a7bdc9", fontSize: 13, lineHeight: 1.45 },
+  tiny: { color: "#a7bdc9", fontSize: 12, lineHeight: 1.45, marginTop: 3 },
+  nav: { maxWidth: 1440, margin: "0 auto 18px", display: "flex", gap: 8, borderBottom: "1px solid #304853", overflowX: "auto" },
+  navButton: { background: "transparent", color: "#a7bdc9", borderTop: 0, borderLeft: 0, borderRight: 0, borderBottom: "2px solid transparent", padding: "12px 14px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" },
+  navActive: { background: "#75eed6", color: "#082c2a", borderTop: 0, borderLeft: 0, borderRight: 0, borderBottom: "2px solid #a4fff0", padding: "12px 14px", cursor: "pointer", fontWeight: 800, whiteSpace: "nowrap" },
+  refreshButton: { background: "linear-gradient(135deg,#8ff4df,#50d9ca)", color: "#082c2a", border: 0, borderRadius: 8, padding: "10px 14px", fontWeight: 800, cursor: "pointer" },
+  secondaryButton: { background: "#182b35", color: "#d7dee9", border: "1px solid #36505c", borderRadius: 8, padding: "8px 11px", fontWeight: 700, cursor: "pointer" },
+  metrics: { maxWidth: 1440, margin: "0 auto 16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 },
+  metric: { background: "#111e27", border: "1px solid #304853", borderRadius: 12, padding: 16 },
   metricValue: { fontSize: 28, fontWeight: 750, marginTop: 10, letterSpacing: -0.8 },
-  card: { maxWidth: 1280, margin: "0 auto 16px", background: "#111e36", border: "1px solid #293c5b", borderRadius: 14, padding: 18, boxSizing: "border-box" },
-  heroCard: { maxWidth: 1280, margin: "0 auto 16px", background: "linear-gradient(120deg, #262553, #102d43)", border: "1px solid #2a3040", borderRadius: 16, padding: 24, boxSizing: "border-box" },
-  eyebrow: { color: "#7ee2b8", fontSize: 11, fontWeight: 900, letterSpacing: 2 },
+  card: { maxWidth: 1440, margin: "0 auto 16px", background: "#111e27", border: "1px solid #304853", borderRadius: 14, padding: 18, boxSizing: "border-box" },
+  heroCard: { maxWidth: 1440, margin: "0 auto 16px", background: "linear-gradient(120deg, #1d393d, #11212b)", border: "1px solid #2a3040", borderRadius: 16, padding: 24, boxSizing: "border-box" },
+  eyebrow: { color: "#88e9d0", fontSize: 11, fontWeight: 900, letterSpacing: 2 },
   h1: { fontSize: 36, margin: "6px 0 8px" },
   h2: { fontSize: 18, fontWeight: 700, margin: 0, letterSpacing: -0.2 },
   heroText: { color: "#c5ccd8", maxWidth: 760, lineHeight: 1.6, margin: "0 0 16px" },
   heroStats: { display: "flex", gap: 18, flexWrap: "wrap", color: "#a8bbd6", fontSize: 13 },
   sectionHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 },
-  twoCol: { maxWidth: 1280, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 16 },
+  twoCol: { maxWidth: 1440, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 16 },
   tableWrap: { overflowX: "auto" },
   table: { width: "100%", borderCollapse: "collapse", minWidth: 680 },
   assetButton: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "transparent", color: "inherit", border: 0, padding: 0, textAlign: "left", cursor: "pointer", font: "inherit" },
-  chevron: { width: 24, height: 24, borderRadius: 7, display: "grid", placeItems: "center", background: "#233756", color: "#c8d1df", fontWeight: 900, flex: "0 0 auto" },
+  chevron: { width: 24, height: 24, borderRadius: 7, display: "grid", placeItems: "center", background: "#28434e", color: "#c8d1df", fontWeight: 900, flex: "0 0 auto" },
   analysisCell: { padding: "8px 0 16px" },
-  analysisPanel: { background: "#0c1830", border: "1px solid #344b70", borderRadius: 12, padding: 16, marginTop: 6 },
+  analysisPanel: { background: "#0c1922", border: "1px solid #365260", borderRadius: 12, padding: 16, marginTop: 6 },
   analysisHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 },
   analysisTitle: { fontSize: 20, fontWeight: 900, marginTop: 4 },
-  firstAction: { background: "#172c49", border: "1px solid #4c6178", borderRadius: 12, padding: 15, marginBottom: 12 },
+  firstAction: { background: "#1b343d", border: "1px solid #4c6178", borderRadius: 12, padding: 15, marginBottom: 12 },
   firstActionLabel: { color: "#8fbfff", fontSize: 10, fontWeight: 900, letterSpacing: 1.2, marginBottom: 5 },
   firstActionTitle: { fontSize: 21, fontWeight: 950, lineHeight: 1.2 },
   firstActionDetail: { color: "#eef3f9", fontSize: 14, lineHeight: 1.5, marginTop: 6 },
   learnedWhy: { color: "#9facbd", fontSize: 12, lineHeight: 1.5, marginTop: 7 },
-  existingPlan: { background: "#162541", border: "1px solid #344b70", borderRadius: 10, padding: 12, marginBottom: 12 },
+  existingPlan: { background: "#182b35", border: "1px solid #365260", borderRadius: 10, padding: 12, marginBottom: 12 },
   warningText: { color: "#ffd67a", fontSize: 12, lineHeight: 1.45, marginTop: 7 },
   planGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 },
-  planCard: { background: "#12213c", border: "1px solid #304565", borderRadius: 10, padding: 12, minHeight: 96 },
-  analysisText: { marginTop: 12, paddingTop: 12, borderTop: "1px solid #304565", lineHeight: 1.45 },
+  planCard: { background: "#142731", border: "1px solid #36505c", borderRadius: 10, padding: 12, minHeight: 96 },
+  analysisText: { marginTop: 12, paddingTop: 12, borderTop: "1px solid #36505c", lineHeight: 1.45 },
   good: { color: "#4be2a0", fontWeight: 800 },
   bad: { color: "#ff708e", fontWeight: 800 },
   pill: { display: "inline-block", border: "1px solid", borderRadius: 999, padding: "5px 8px", fontSize: 11, fontWeight: 900, letterSpacing: 0.3 },
-  orderRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 0", borderBottom: "1px solid #293c5b" },
-  orderReviewRow: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, padding: "13px 0", borderBottom: "1px solid #293c5b" },
-  rule: { padding: "12px 0", borderBottom: "1px solid #293c5b", lineHeight: 1.45 },
-  candidate: { display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: "1px solid #293c5b" },
-  rank: { width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#233756", color: "#b9c5d6", fontWeight: 900 },
-  limitLabel: { color: "#7ee2b8", fontWeight: 900, fontSize: 10, letterSpacing: 1.1 },
-  notice: { maxWidth: 1280, margin: "0 auto 18px", lineHeight: 1.6, background: "#162541", border: "1px solid #304565", borderRadius: 10, padding: 12, color: "#a8bbd6", fontSize: 13 },
+  orderRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 0", borderBottom: "1px solid #304853" },
+  orderReviewRow: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, padding: "13px 0", borderBottom: "1px solid #304853" },
+  rule: { padding: "12px 0", borderBottom: "1px solid #304853", lineHeight: 1.45 },
+  candidate: { display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: "1px solid #304853" },
+  rank: { width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#28434e", color: "#b9c5d6", fontWeight: 900 },
+  limitLabel: { color: "#88e9d0", fontWeight: 900, fontSize: 10, letterSpacing: 1.1 },
+  notice: { maxWidth: 1440, margin: "0 auto 18px", lineHeight: 1.6, background: "#182b35", border: "1px solid #36505c", borderRadius: 10, padding: 12, color: "#a8bbd6", fontSize: 13 },
   formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginTop: 14 },
-  input: { background: "#0c1830", color: "#f3f6fb", border: "1px solid #304565", borderRadius: 8, padding: "10px 11px", minWidth: 0 },
-  footer: { maxWidth: 1280, margin: "28px auto 10px", paddingTop: 16, borderTop: "1px solid #293c5b", color: "#94a7c4", fontSize: 12, lineHeight: 1.5 },
+  input: { background: "#0c1922", color: "#f3f6fb", border: "1px solid #36505c", borderRadius: 8, padding: "10px 11px", minWidth: 0 },
+  footer: { maxWidth: 1440, margin: "28px auto 10px", paddingTop: 16, borderTop: "1px solid #304853", color: "#94a7c4", fontSize: 12, lineHeight: 1.5 },
 };
 
 export default App;
+
 
