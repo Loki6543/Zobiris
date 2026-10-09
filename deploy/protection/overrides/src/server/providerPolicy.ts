@@ -1,7 +1,6 @@
 export type ProviderHealthLike = {
   provider?: string;
   status?: string;
-  [key: string]: unknown;
 };
 
 const OPTIONAL_PROVIDER_FALLBACKS: Record<string, {
