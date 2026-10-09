@@ -1,3 +1,4 @@
+import { isVisibleAsset, visibleAssetData } from "../shared/assetUniverse.js";
 import { releaseResearchBundle } from "./researchImportBundle.js";
 import { applyResearchBundle } from "./researchRuntime.js";
 import {openResearchEvidence} from './researchEvidence.js';
@@ -46,7 +47,7 @@ import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 
 import { openStorage } from "../storage/client.js";
-import { compareDaily, compareUniverse, sidewaysHistory } from "../compareLab/compare.js";
+import { compareDaily, sidewaysHistory } from "../compareLab/compare.js";
 import {
   getRecentSnapshots,
   getSnapshotById,
@@ -71,7 +72,7 @@ async function loadWatchlist() {
   for (const asset of [...HOLDINGS, ...OPEN_ORDERS, ...account.holdings, ...account.openOrders]) {
     if (!assets.has(asset.symbol)) assets.set(asset.symbol, {symbol: asset.symbol, name: asset.name});
   }
-  return [...assets.values()];
+  return [...assets.values()].filter(a => isVisibleAsset(a.symbol));
 }
 import { buildCaseFile } from "../portfolio/caseFile.js";
 import { orchestrate } from "../specialists/orchestrator.js";
@@ -191,7 +192,7 @@ function jsonResponse(
   status: number,
   body: unknown,
 ): void {
-  const text = JSON.stringify(body, null, 2);
+  const text = JSON.stringify(visibleAssetData(body), null, 2);
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Content-Length": Buffer.byteLength(text),
@@ -682,7 +683,7 @@ const API: ApiRouter = {
     }
   },
   "GET /api/compare/universe": async (_req, res) => {
-    try { jsonResponse(res, 200, { symbols: await compareUniverse(), source: "Kraken public AssetPairs" }); }
+    try { jsonResponse(res, 200, { symbols: (await loadWatchlist()).map(a => a.symbol), source: "Canonical Zobiris watchlist" }); }
     catch { jsonResponse(res, 503, { error: "Kraken coin list unavailable" }); }
   },
   "GET /api/compare/daily": async (req, res) => {
@@ -1779,3 +1780,4 @@ const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
 if (invokedPath === fileURLToPath(import.meta.url)) {
   startZobirisServer();
 }
+
