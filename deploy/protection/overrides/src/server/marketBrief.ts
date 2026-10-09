@@ -12,7 +12,7 @@ export function summarizeMarket(series: {symbol:string;points:{time:number;close
  market:positive===3?'BTC, ETH and SOL are all advancing over seven days. This supports a broad major-coin recovery.':positive===0?'BTC, ETH and SOL are all declining over seven days. Major-coin risk appetite is weak.':'Major coins are diverging. Participation is uneven, so Bitcoin strength alone would not confirm an altcoin recovery.',
  outlook:bias==='UPWARD BIAS'?'The daily structure favors continuation higher over the next several days, provided Bitcoin holds its 50-day trend and momentum stays positive.':bias==='DOWNWARD BIAS'?'The daily structure favors further downside over the next several days. A recovery needs a sustained reclaim of the 50-day trend and positive weekly momentum.':'There is no clean directional edge. Treat the recent range as unresolved until price and weekly momentum align with the daily trend.',
  counter:bias==='UPWARD BIAS'?'A rising trend can still reverse. A close below the 50-day EMA or a turn to negative weekly momentum would weaken this view.':bias==='DOWNWARD BIAS'?'Selling can exhaust. A close back above the 50-day EMA together with positive weekly momentum would weaken the bearish view.':'A sharp move can break the range in either direction; mixed indicators should not be read as low risk.',
- lower:Math.min(...points.slice(-20).map(p=>p.close)),upper:Math.max(...points.slice(-20).map(p=>p.close)),close:last.close,daily,returns,chart:points.slice(-30),
+ lower:Math.min(...points.slice(-20).map(p=>p.close)),upper:Math.max(...points.slice(-20).map(p=>p.close)),close:last.close,daily,returns,chart:points.slice(-90),
  caveat:daily.rsi14>70?'Momentum is stretched: simple RSI is above 70, increasing pullback concern.':daily.rsi14<30?'Momentum is depressed: simple RSI is below 30, increasing rebound potential without confirming a bottom.':'Momentum is not at an extreme on the simple 14-day RSI.',
  volume:daily.volume7dVsPrior30d==null?'Volume confirmation is unavailable.':daily.volume7dVsPrior30d>=1?'Recent average volume exceeds its preceding 30-day baseline.':'Recent average volume is below its preceding 30-day baseline; directional conviction is weaker.'};
 }
@@ -22,3 +22,4 @@ export async function marketBrief(){
  const [history,daily]=await Promise.all([compareDaily(['BTC','ETH','SOL'],90),exitMarketContext('BTC')]);
  const value=summarizeMarket(history.series,daily);cached={expires:Date.now()+300000,value};return value;
 }
+

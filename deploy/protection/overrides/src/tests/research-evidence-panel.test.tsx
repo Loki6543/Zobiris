@@ -46,12 +46,15 @@ it("shows unavailable social and import provenance without inventing buy authori
   expect(screen.getByText("<script>alert(1)</script>")).toBeTruthy();
   expect(document.querySelector("script")).toBeNull();
   expect(screen.queryByText("Buy")).toBeNull();
+  expect(screen.queryByText("stocktwits")).toBeNull();
+  expect(screen.queryByText("Not configured")).toBeNull();
 });
-it("renders an honest empty state", () => {
+it("hides an empty research section", () => {
   render(
     <ResearchEvidenceContent
       data={{ assets: [], providers: [], asOf: null }}
     />,
   );
-  expect(screen.getByText(/No research evidence collected/)).toBeTruthy();
+  expect(screen.queryByRole("region", {name:"News and social investigation"})).toBeNull();
 });
+

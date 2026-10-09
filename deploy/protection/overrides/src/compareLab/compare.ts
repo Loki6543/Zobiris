@@ -1,3 +1,6 @@
+import { entryRules } from "../server/entryRules.js";
+import { loadWatchlist } from "../scripts/_watchlist.js";
+import { isVisibleAsset } from "../shared/assetUniverse.js";
 /** Compare Lab uses only completed Kraken OHLC candles. No synthetic display bars. */
 const PAIRS: Record<string, string> = {
   BTC: "XBTUSD", ETH: "ETHUSD", SOL: "SOLUSD", XRP: "XRPUSD",
@@ -33,8 +36,14 @@ const cache = new Map<string, { expires: number; candles: Candle[] }>();
 async function daily(symbol: string): Promise<Candle[]> {
   const cached = cache.get(symbol);
   if (cached && cached.expires > Date.now()) return cached.candles;
+  let pair = PAIRS[symbol];
+  if (!pair) {
+    const rule = (await entryRules())[symbol];
+    if (!rule || rule.status !== 'online') throw new Error(`${symbol} is on the watchlist; completed Kraken USD history is unavailable.`);
+    pair = rule.pair;
+  }
   const response = await fetch("https://api.kraken.com/0/public/OHLC?pair=" +
-    encodeURIComponent(PAIRS[symbol]!) + "&interval=1440", { signal: AbortSignal.timeout(10000) });
+    encodeURIComponent(pair) + "&interval=1440", { signal: AbortSignal.timeout(10000) });
   if (!response.ok) throw new Error("Kraken HTTP " + response.status);
   const payload = await response.json() as {
     error?: string[]; result?: Record<string, unknown>;
@@ -54,8 +63,9 @@ async function daily(symbol: string): Promise<Candle[]> {
 }
 export async function compareDaily(rawSymbols: string[], days: number) {
   const symbols = [...new Set(rawSymbols.map(s => s.trim().toUpperCase()))];
+  const allowed = new Set([...compareSymbols, ...(await loadWatchlist()).map(a => a.symbol)]);
   if (symbols.length < 2 || symbols.length > 5 ||
-      symbols.some(s => !Object.hasOwn(PAIRS, s)) ||
+      symbols.some(s => !isVisibleAsset(s) || !allowed.has(s)) ||
       ![7, 30, 90, 180].includes(days))
     throw new RangeError("Choose 2–5 supported coins and a 7, 30, 90 or 180 day window.");
   const histories = await Promise.all(symbols.map(async symbol => ({
@@ -82,8 +92,9 @@ export async function compareDaily(rawSymbols: string[], days: number) {
 /** Historical analogues, evaluated only after their forward seven days completed. */
 export async function sidewaysHistory(rawSymbols: string[], thresholdPct = 2) {
   const symbols = [...new Set(rawSymbols.map(s => s.trim().toUpperCase()))];
+  const allowed = new Set([...compareSymbols, ...(await loadWatchlist()).map(a => a.symbol)]);
   if (symbols[0] !== "BTC" || symbols.length < 2 || symbols.length > 5 ||
-      symbols.some(s => !Object.hasOwn(PAIRS, s)) || ![1, 2, 3].includes(thresholdPct))
+      symbols.some(s => !isVisibleAsset(s) || !allowed.has(s)) || ![1, 2, 3].includes(thresholdPct))
     throw new RangeError("Choose BTC plus 1–4 supported coins and a 1%, 2% or 3% threshold.");
   const histories = await Promise.all(symbols.map(async symbol => ({ symbol, candles: await daily(symbol) })));
   const common = histories.reduce<Set<number>>((set, history, i) => {
@@ -128,7 +139,8 @@ export async function sidewaysHistory(rawSymbols: string[], thresholdPct = 2) {
 
 /** Descriptive daily exit inputs. No trade authorization or calibrated exit score. */
 export async function exitMarketContext(symbol:string){
- if(!Object.hasOwn(PAIRS,symbol))return null;
+ if(!isVisibleAsset(symbol))return null;
+ if(!Object.hasOwn(PAIRS,symbol)&&!(await loadWatchlist()).some(a=>a.symbol===symbol))return null;
  const candles=await daily(symbol);
  if(candles.length<201||candles.slice(-201).some((c,i,a)=>(i>0&&c.time-a[i-1]!.time!==86400)||!Number.isFinite(c.high)||!Number.isFinite(c.low)||c.high<c.close||c.low>c.close||c.low<=0||!Number.isFinite(c.volume)||c.volume<0))return null;
  const last=candles.at(-1)!;
@@ -146,3 +158,4 @@ export async function exitMarketContext(symbol:string){
  const mode=trend==='WEAK'&&momentum7dPct<0?'EXIT REVIEW':rsi14>75&&momentum7dPct>0?'DISTRIBUTION WATCH':trend==='STRONG'&&momentum7dPct>0?'TREND':'MIXED';
  return {source:'Kraken completed daily candles',asOf:new Date(last.time*1000).toISOString(),atr14,atrPct:atr14/last.close*100,ema50,ema200,rsi14,momentum7dPct,volume7dVsPrior30d:priorVol>0?recentVol/priorVol:null,trend,mode,superTrend:null,method:'ATR and RSI use simple 14-day averages; mode is an unvalidated descriptive heuristic.'};
 }
+

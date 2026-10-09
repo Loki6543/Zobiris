@@ -1,3 +1,4 @@
+import { isVisibleAsset } from "../shared/assetUniverse";
 import type { CSSProperties } from "react";
 import { HORIZON_META, TIME_OUTLOOK, type HorizonCode } from "./timeOutlook";
 
@@ -11,8 +12,11 @@ const statusLabel: Record<string, string> = {
   TACTICAL: "TACTICAL",
 };
 
-export function TimeOutlookPage({ holdingSymbols = [] }: { holdingSymbols?: string[] }) {
+export function TimeOutlookPage({ holdingSymbols = [], watchlist }: { holdingSymbols?: string[]; watchlist?: {symbol:string;name?:string}[] }) {
   const holdings = new Set(holdingSymbols.map((symbol) => symbol.toUpperCase()));
+
+  const active = new Set((watchlist ?? TIME_OUTLOOK).filter(a => isVisibleAsset(a.symbol)).map(a => a.symbol));
+  const pending = (watchlist ?? []).filter(a => active.has(a.symbol) && !TIME_OUTLOOK.some(c => c.symbol === a.symbol));
 
   return (
     <main style={styles.page}>
@@ -37,7 +41,7 @@ export function TimeOutlookPage({ holdingSymbols = [] }: { holdingSymbols?: stri
 
       {ORDER.map((horizon) => {
         const meta = HORIZON_META[horizon];
-        const coins = TIME_OUTLOOK.filter((coin) => coin.horizon === horizon);
+        const coins = TIME_OUTLOOK.filter((coin) => coin.horizon === horizon && active.has(coin.symbol));
         return (
           <section key={horizon} style={styles.section}>
             <div style={styles.sectionHead}>
@@ -69,6 +73,11 @@ export function TimeOutlookPage({ holdingSymbols = [] }: { holdingSymbols?: stri
         );
       })}
 
+      {pending.length > 0 && <section style={styles.section} aria-label="Watchlist horizons awaiting review">
+        <h2 style={styles.h2}>Horizon awaiting review · {pending.length} coins</h2>
+        <p style={styles.muted}>These coins belong to the same watchlist. No investment horizon has been assigned; inclusion does not grant long-term protection or trading authority.</p>
+        <div style={{...styles.grid,marginTop:14}}>{pending.map(a=><article style={styles.card} key={a.symbol}><strong>{a.symbol}</strong><p style={styles.muted}>{a.name ?? a.symbol} · Awaiting horizon review</p></article>)}</div>
+      </section>}
       <section style={styles.footerNote}>
         <strong>Authority boundary:</strong> this horizon layer changes how Zobiris interprets holding period and sell urgency. It does not bypass Kraken liquidity, freshness, sizing, or evidence gates for new buys.
       </section>
@@ -104,3 +113,4 @@ const styles: Record<string, CSSProperties> = {
 };
 
 export default TimeOutlookPage;
+
