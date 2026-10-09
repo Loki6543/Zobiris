@@ -58,3 +58,9 @@ it("hides an empty research section", () => {
   expect(screen.queryByRole("region", {name:"News and social investigation"})).toBeNull();
 });
 
+
+it("restricts research coverage to the active watchlist",()=>{
+ render(<ResearchEvidenceContent symbols={['BTC','QNT']} data={{assets:[{symbol:'OLD',evidence:[{id:'old',summary:'Retired evidence'}]}]}}/>);
+ expect(screen.queryByText('Retired evidence')).toBeNull();
+ expect(screen.queryByRole('region',{name:'News and social investigation'})).toBeNull();
+});
