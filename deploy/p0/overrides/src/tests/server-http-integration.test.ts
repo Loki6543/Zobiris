@@ -184,8 +184,19 @@ describe("v0.4.13 watchlist-only HTTP boundary", () => {
     ).toBe(true);
   }, 20_000);
 
-  it("fails truthfully when the optional OpenAI Challenger is not configured", async () => {
-    const response = await fetch(`${baseUrl}/api/agents/challenge`, {
+  it("keeps the challenger available through a deterministic local fallback when OpenAI is not configured", async () => {
+    const statusResponse = await fetch(`${baseUrl}/api/agents/challenger-status`, {
+      headers: { Authorization: "Bearer test-refresh-token" },
+    });
+    expect(statusResponse.status).toBe(200);
+    expect(await statusResponse.json()).toMatchObject({
+      available: true,
+      mode: "DETERMINISTIC_LOCAL",
+      authority: "advisory-read-only",
+      liveOrderAuthority: false,
+    });
+
+    const malformedResponse = await fetch(`${baseUrl}/api/agents/challenge`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -193,9 +204,9 @@ describe("v0.4.13 watchlist-only HTTP boundary", () => {
       },
       body: JSON.stringify({}),
     });
-    expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({
-      error: "OpenAI challenger is not configured",
+    expect(malformedResponse.status).toBe(400);
+    expect(await malformedResponse.json()).toMatchObject({
+      error: "invalid challenger request",
     });
   });
 
