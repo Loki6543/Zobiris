@@ -849,7 +849,7 @@ export function App() {
         <main>
           <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
             <Metric label="Portfolio" value={accountSynced ? money(total) : "Private"} />
-            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Unlock to view balances"} />
+            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Private account is locked on the public view"} />
             <Metric label="Reserved buys" value={accountSynced ? money(reservedBuys) : "Private"} />
             <Metric label="Free cash" value={accountSynced ? money(freeCash) : "Private"} />
             <Metric label="Maneuver capital" value={accountSynced ? money(MANEUVER_CAPITAL_USD) : "Private"} note={accountSynced ? "Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD) : "Unlock to view capital limits"} />
