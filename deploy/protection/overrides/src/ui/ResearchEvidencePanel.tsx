@@ -39,11 +39,14 @@ const date = (value: string | null) =>
 export function ResearchEvidenceContent({
   data,
   symbol,
+  symbols,
 }: {
   data: any;
   symbol?: string;
+  symbols?: string[];
 }) {
-  const rows = (data?.assets ?? []).filter(
+  const source = symbols ? [...new Set(symbols)].map(symbol => (data?.assets ?? []).find((a:any) => a.symbol === symbol) ?? {symbol,evidence:[]}) : (data?.assets ?? []);
+  const rows = source.filter(
     (a: any) => isVisibleAsset(a.symbol) && (!symbol || a.symbol === symbol),
   );
   const visible = rows.filter((a: any) => a.evidence?.length);
@@ -145,11 +148,13 @@ export function ResearchEvidencePanel({
   data,
   error,
   symbol,
+  symbols,
 }: {
   data: any;
   error?: boolean;
   symbol?: string;
+  symbols?: string[];
 }) {
   if (error || !data) return null;
-  return <ResearchEvidenceContent data={data} symbol={symbol} />;
+  return <ResearchEvidenceContent data={data} symbol={symbol} symbols={symbols} />;
 }
