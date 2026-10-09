@@ -226,14 +226,21 @@ async function verifyCandidate() {
     }, redact));
     console.log('DIAGNOSTIC candidate providers:', JSON.stringify(diagnosticProviders.payload, redact));
     if (diagnosticProviders.payload.providers?.find(p => p.provider === 'cmc')?.freshness !== 'live') throw new Error('CMC current quote freshness not reported live');
+    if ((diagnosticProviders.payload.providers ?? []).some(p => p.status === 'credentials-needed')) {
+      throw new Error('credential-gated optional providers still degrade provider health');
+    }
+    const fallbackProviders = new Set((diagnosticProviders.payload.optionalFallbacks ?? []).map(row => row.provider));
+    for (const provider of ['lunarcrush','coinglass','coinmarketcal']) {
+      if (!fallbackProviders.has(provider)) throw new Error(`missing explicit fallback policy for ${provider}`);
+    }
 
     if (refresh.live !== true) throw new Error('candidate refresh did not run live provider policy');
     if (!(Number(refresh.observationCount) > 2)) throw new Error('candidate refresh did not expand beyond the BTC/SOL-only observation floor');
     if (!(Number(refresh.evidenceClaimCount) > 2)) throw new Error('candidate refresh did not expand beyond the BTC/SOL-only evidence floor');
 
     const attentionStatus = refresh.attentionCollection?.status ?? null;
-    if (attentionStatus === 'FAILED' || attentionStatus === 'DISABLED' || attentionStatus == null) {
-      throw new Error(`candidate attention collection is not usable: ${attentionStatus ?? 'missing'}`);
+    if (attentionStatus === 'FAILED' || attentionStatus === 'DISABLED' || attentionStatus === 'PARTIAL' || attentionStatus == null) {
+      throw new Error(`candidate attention collection is not operationally complete: ${attentionStatus ?? 'missing'}`);
     }
     console.log(`PASS candidate refresh expanded live evidence coverage; attention status ${attentionStatus}`);
 
@@ -343,6 +350,13 @@ async function verifyCandidate() {
     const horizons = new Set((caseFile?.evidence ?? []).map((item) => item?.impactHorizon).filter(Boolean));
     if (horizons.size === 0) throw new Error('candidate BTC case file is missing evidence impact horizons');
     console.log(`PASS candidate BTC exposes decision boundary and evidence horizons: ${[...horizons].join(', ')}`);
+
+    const challengerStatus = await jsonCheck(localOrigin, '/api/agents/challenger-status', {
+      headers: { Authorization: `Bearer ${token}` },
+    }, [200], 'candidate challenger fallback status');
+    if (challengerStatus.payload?.available !== true) throw new Error('challenger fallback is unavailable');
+    if (!['OPENAI','DETERMINISTIC_LOCAL'].includes(challengerStatus.payload?.mode)) throw new Error('challenger mode is invalid');
+    if (challengerStatus.payload?.liveOrderAuthority !== false) throw new Error('challenger gained live-order authority');
 
     const positive = await fetch(new URL('/api/agents/challenge', localOrigin), {
       method: 'POST',

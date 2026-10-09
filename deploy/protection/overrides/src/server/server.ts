@@ -95,6 +95,8 @@ import { applySearchPrivacyHeaders, isBlockedCrawlerUserAgent, sendCrawlerBlocke
 import { persistRefresh } from "../storage/integration.js";
 import { config as loadEnv } from "dotenv";
 import { challengeEvidence } from "../agents/challenger.js";
+import { attentionAvailabilityView, providerHealthView } from "./providerPolicy.js";
+import { localChallengeEvidence } from "./localChallenger.js";
 import { collectStrategy21Kraken } from "../strategy21/collector.js";
 import { loadStrategyLiquidity, saveStrategyMarketState } from "../strategy21/storage.js";
 import { buildIntelligenceOverview } from "../strategy21/intelligenceVNext/index.js";
@@ -232,11 +234,6 @@ async function runChallengeHandler(
     SECURITY.refreshRateLimitPerHour,
   );
   if (!rl.allowed) return send429(res, rl.retryAfterSec);
-  if (!process.env.OPENAI_API_KEY)
-    return jsonResponse(res, 503, {
-      error: "OpenAI challenger is not configured",
-    });
-
   const rawBody = await readBody(req);
   let raw: unknown;
   try {
@@ -289,9 +286,13 @@ async function runChallengeHandler(
       error: "target claim not found in this symbol ledger",
     });
   }
-  const output = await challengeEvidence({ ...parsed.data, claims });
+  const challengerMode = process.env.OPENAI_API_KEY ? "OPENAI" : "DETERMINISTIC_LOCAL";
+  const output = process.env.OPENAI_API_KEY
+    ? await challengeEvidence({ ...parsed.data, claims })
+    : localChallengeEvidence({ ...parsed.data, claims });
   jsonResponse(res, 200, {
     worker: "zobiris-challenger",
+    mode: challengerMode,
     authority: "advisory-read-only",
     deterministicOutputsChanged: false,
     output,
@@ -609,7 +610,9 @@ async function runRefreshHandler(
     } catch (error) {
       console.warn("Swarm shadow ledger update failed:", error instanceof Error ? error.message : String(error));
     }
-    const attentionCollection = await collectAttentionShadowOnRefresh();
+    const attentionCollectionRaw = await collectAttentionShadowOnRefresh();
+    const attentionCollection = attentionAvailabilityView(attentionCollectionRaw, process.env);
+    const providerHealth = providerHealthView(result.providerHealthUpdates);
     const elapsedMs = Date.now() - startedAt;
     jsonResponse(res, 200, {
       sessionId: result.session.id,
@@ -630,7 +633,8 @@ async function runRefreshHandler(
       evidenceClaimCount: result.evidenceClaims.length,
       snapshotId: persisted.snapshotId,
       outboxIds: persisted.outboxIds,
-      providerHealth: result.providerHealthUpdates,
+      providerHealth: providerHealth.providers,
+      providerFallbacks: providerHealth.optionalFallbacks,
       attentionCollection,
       researchSweep: refreshResearch
         ? {
@@ -711,6 +715,19 @@ const API: ApiRouter = {
         lastError: account.lastError,
         dangerousPermissionCount: account.dangerousPermissionsDetected.length,
       },
+    });
+  },
+  "GET /api/agents/challenger-status": (req, res) => {
+    if (!isAuthenticated(req, SECURITY))
+      return send401(res, "challenger status requires Bearer auth");
+    jsonResponse(res, 200, {
+      available: true,
+      mode: process.env.OPENAI_API_KEY ? "OPENAI" : "DETERMINISTIC_LOCAL",
+      authority: "advisory-read-only",
+      liveOrderAuthority: false,
+      note: process.env.OPENAI_API_KEY
+        ? "External challenger is available; deterministic decision outputs remain unchanged."
+        : "Local deterministic challenger is active; external-model credentials are optional.",
     });
   },
   "GET /api/entry-rules": async (_req,res)=>{
@@ -1268,7 +1285,8 @@ const API: ApiRouter = {
   "GET /api/providers": (_req, res) => {
     const storage = openStorage({ path: DEFAULT_DB });
     try {
-      jsonResponse(res, 200, { providers: listProviderHealth(storage.db) });
+      const view = providerHealthView(listProviderHealth(storage.db));
+      jsonResponse(res, 200, view);
     } finally {
       storage.close();
     }
