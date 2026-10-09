@@ -1,3 +1,4 @@
+import { mergeAssetUniverse, visibleAssetData } from "../shared/assetUniverse";
 import {ResearchEvidencePanel,useResearchEvidence} from './ResearchEvidencePanel';
 import {PilotScorecard} from './PilotScorecard';
 import {entryReference,validateEntry,type EntryRules} from '../shared/entryPlan';
@@ -318,16 +319,16 @@ export function App() {
       if (!snapshotResponse.ok) throw new Error(`Snapshot load failed (HTTP ${snapshotResponse.status}).`);
       if (!watchlistResponse.ok) throw new Error(`Watchlist load failed (HTTP ${watchlistResponse.status}).`);
       if (snapshotResponse.ok) {
-        setSnapshot(await snapshotResponse.json());
+        setSnapshot(visibleAssetData(await snapshotResponse.json()));
         setAssetDetails({});
       }
       if (watchlistResponse.ok) {
         const data = await watchlistResponse.json();
-        setWatchlist(Array.isArray(data?.watchlist) ? data.watchlist : []);
+        setWatchlist(visibleAssetData(Array.isArray(data?.watchlist) ? data.watchlist : []));
       }
       if (accountResponse.ok) {
         const data = await accountResponse.json();
-        setAccount(data?.account ?? null);
+        setAccount(visibleAssetData(data?.account ?? null));
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Market data could not be loaded.");
@@ -344,7 +345,7 @@ export function App() {
         const response = await fetch("/api/account", { headers: authHeaders });
         if (!response.ok || cancelled) return;
         const data = await response.json();
-        if (!cancelled) setAccount(data?.account ?? null);
+        if (!cancelled) setAccount(visibleAssetData(data?.account ?? null));
       } catch {
         // Keep the last good account snapshot; server-side reconciliation continues.
       }
@@ -1052,9 +1053,9 @@ export function App() {
         </main>
       ) : null}
 
-      {view === "outlook" ? <TimeOutlookPage holdingSymbols={portfolioRows.map((row) => row.symbol)} /> : null}
+      {view === "outlook" ? <TimeOutlookPage watchlist={watchlist} holdingSymbols={portfolioRows.map((row) => row.symbol)} /> : null}
 
-      {view === "compare" ? <><ResearchEvidencePanel {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab rankedAssets={rankedAssets} focusSymbol={analysisSymbol} /></> : null}
+      {view === "compare" ? <><ResearchEvidencePanel {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab rankedAssets={mergeAssetUniverse(watchlist, rankedAssets)} focusSymbol={analysisSymbol} /></> : null}
 
       {view === "history" ? (
         <main>
