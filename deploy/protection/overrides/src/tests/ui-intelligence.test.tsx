@@ -97,7 +97,7 @@ beforeEach(() => {
     }
     if(url.includes('/api/entry-rules'))return new Response(JSON.stringify({rules:{ATOM:{symbol:'ATOM',pair:'ATOMUSD',tickSize:0.001,lotDecimals:8,orderMin:0.1,costMin:0.5,status:'online',observedAt:new Date().toISOString()}}}),{status:200});
     if (url.includes("/api/watchlist")) {
-      return new Response(JSON.stringify({ watchlist: [{ symbol: "BTC" }, ...rankedAssets.map(asset => ({symbol: asset.symbol}))] }), { status: 200, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ watchlist: [{ symbol: "BTC" }, { symbol: "ETH" }, ...rankedAssets.map(asset => ({symbol: asset.symbol}))] }), { status: 200, headers: { "content-type": "application/json" } });
     }
     if (url.includes("/api/account")) {
       return new Response(JSON.stringify({ account: {
@@ -255,4 +255,5 @@ it("expires quote-derived actions while an otherwise fresh page remains open", a
    expect(screen.queryByText("VERIFY CURRENT PRICE FIRST")).toBeTruthy();
  } finally { vi.useRealTimers(); }
 });
+
 
