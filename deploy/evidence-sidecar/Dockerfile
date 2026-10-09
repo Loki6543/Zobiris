@@ -1,5 +1,4 @@
-# syntax=docker/dockerfile:1
-FROM node:22-bookworm-slim AS build
+FROM mirror.gcr.io/library/node:22-bookworm-slim AS build
 WORKDIR /app
 
 # Repository-friendly source bundle. The bundle is the checksum-verified v0.2
@@ -13,7 +12,7 @@ RUN base64 -d /tmp/source.tgz.b64 > /tmp/source.tgz \
 RUN npm ci --no-audit --no-fund
 RUN npm run gate
 
-FROM node:22-bookworm-slim AS runtime
+FROM mirror.gcr.io/library/node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app/package.json ./
