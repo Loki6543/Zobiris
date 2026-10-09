@@ -1,3 +1,4 @@
+import { isVisibleAsset } from "../shared/assetUniverse";
 import { useEffect, useState } from "react";
 export function useResearchEvidence() {
   const [data, setData] = useState<any>(null);
@@ -43,9 +44,11 @@ export function ResearchEvidenceContent({
   symbol?: string;
 }) {
   const rows = (data?.assets ?? []).filter(
-    (a: any) => !symbol || a.symbol === symbol,
+    (a: any) => isVisibleAsset(a.symbol) && (!symbol || a.symbol === symbol),
   );
   const visible = rows.filter((a: any) => a.evidence?.length);
+  if (!visible.length) return null;
+  const providers = (data?.providers ?? []).filter((p:any) => ["AVAILABLE", "CONNECTED", "LIVE", "OK"].includes(p.status));
   return (
     <section className="daily-brief" aria-label="News and social investigation">
       <span className="visual-kicker">NEWS & SOCIAL INVESTIGATION</span>
@@ -56,9 +59,9 @@ export function ResearchEvidenceContent({
         Research review flags are separate from investment rankings. Token
         demand, entry price and portfolio fit still need evaluation.
       </p>
-      <p className="visual-footnote">Automatic feed connections</p>
+      {providers.length > 0 && <p className="visual-footnote">Connected research feeds</p>}
       <div className="brief-returns">
-        {(data?.providers ?? []).map((p: any) => (
+        {providers.map((p: any) => (
           <div key={p.provider}>
             <strong>{p.provider}</strong>
             <span>
@@ -147,18 +150,6 @@ export function ResearchEvidencePanel({
   error?: boolean;
   symbol?: string;
 }) {
-  if (error)
-    return (
-      <section className="daily-brief">
-        <h2>News & social investigation</h2>
-        <p>Research refresh failed. Evidence freshness cannot be confirmed.</p>
-      </section>
-    );
-  if (!data)
-    return (
-      <section className="daily-brief">
-        <p>Loading research coverage…</p>
-      </section>
-    );
+  if (error || !data) return null;
   return <ResearchEvidenceContent data={data} symbol={symbol} />;
 }
