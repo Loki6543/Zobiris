@@ -59,7 +59,7 @@ function Chart({ series }: { series: Series[] }) {
     <text x="680" y="310" fill="#aeb9c9" fontSize="12">{formatUtcDay(series[0]!.points.at(-1)!.time)}</text>
   </svg>;
 }
-export function CompareLab({ rankedAssets = [], focusSymbol = "BTC" }: { rankedAssets?: any[]; focusSymbol?: string }) {
+export function CompareLab({ rankedAssets = [], focusSymbol = "BTC", onAnalyzeSymbol }: { rankedAssets?: any[]; focusSymbol?: string; onAnalyzeSymbol?: (symbol:string)=>void }) {
   const [mode, setMode] = useState<"compare" | "patterns" | "analysis">("compare");
   const [selectedSymbol, setSelectedSymbol] = useState(focusSymbol);
   useEffect(() => { setSelectedSymbol(focusSymbol); if (focusSymbol !== "BTC") setMode("analysis"); }, [focusSymbol]);
@@ -116,7 +116,7 @@ export function CompareLab({ rankedAssets = [], focusSymbol = "BTC" }: { rankedA
         }}>{value === "compare" ? "BTC / SOL & compare" : value === "patterns" ? "BTC sideways patterns" : "Crypto analysis"}</button>)}
       </div>
       {mode === "compare" ? <button type="button" style={{ ...button, marginBottom: 12 }} onClick={() => { setSymbols(["BTC", "SOL"]); setDays(30); }}>BTC / SOL analysis preset</button> : null}
-      {mode === "analysis" ? <label style={{ color: "#b5c0d0" }}>Analyze coin{" "}<select aria-label="Analyze coin" value={selectedSymbol} onChange={event => setSelectedSymbol(event.target.value)} style={button}>
+      {mode === "analysis" ? <label style={{ color: "#b5c0d0" }}>Analyze coin{" "}<select aria-label="Analyze coin" value={selectedSymbol} onChange={event => { setSelectedSymbol(event.target.value); onAnalyzeSymbol?.(event.target.value); }} style={button}>
         {allSymbols.map(symbol => <option key={symbol}>{symbol}</option>)}
       </select></label> : null}
       {mode !== "analysis" && <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 15 }}>
