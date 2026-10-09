@@ -949,7 +949,7 @@ export function App() {
       {view === "market" ? (
         <main>
           <MarketBrief refreshKey={snapshotMs} />
-          <ResearchEvidencePanel {...researchEvidence} />
+          <ResearchEvidencePanel symbols={watchlist.map(a=>a.symbol)} {...researchEvidence} />
           <section className="dashboard-panel" style={styles.heroCard}>
             <div style={styles.eyebrow}>TODAY</div>
             <h1 style={styles.h1}>{regime}</h1>
@@ -1055,7 +1055,7 @@ export function App() {
 
       {view === "outlook" ? <TimeOutlookPage watchlist={watchlist} holdingSymbols={portfolioRows.map((row) => row.symbol)} /> : null}
 
-      {view === "compare" ? <><ResearchEvidencePanel {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab rankedAssets={mergeAssetUniverse(watchlist, rankedAssets)} focusSymbol={analysisSymbol} /></> : null}
+      {view === "compare" ? <><ResearchEvidencePanel symbols={watchlist.map(a=>a.symbol)} {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab rankedAssets={mergeAssetUniverse(watchlist, rankedAssets)} focusSymbol={analysisSymbol} /></> : null}
 
       {view === "history" ? (
         <main>
