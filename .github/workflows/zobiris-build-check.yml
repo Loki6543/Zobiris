@@ -1,0 +1,19 @@
+name: ZOBIRIS build and regression checks
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  release-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout application
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build using canonical production Dockerfile
+        run: docker build --progress=plain --tag zobiris-ci:test .
