@@ -1,4 +1,4 @@
-import {describe,it,expect} from 'vitest';
+import {describe,it,expect,vi} from 'vitest';
 import {sizeTrade,netPnl,maintenance,candleExit,signal} from '../tactical/risk';
 import {parseBars,TacticalService} from '../tactical/service';
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
@@ -15,4 +15,17 @@ describe('tactical authority and economic boundaries',()=>{
  it('stays cash for flat prices',()=>expect(signal(Array.from({length:60},(_,i)=>({time:i,open:100,high:101,low:99,close:100,volume:1}))).side).toBe(null));
  it('persists a pause and always denies live authority',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tactical-'));try{const file=path.join(dir,'ledger.json');new TacticalService(file).pause();const s=new TacticalService(file).status();expect(s.paused).toBe(true);expect(s.liveEnabled).toBe(false);expect(s.counts.closed).toBe(0);}finally{fs.rmSync(dir,{recursive:true});}});
  it('does not overwrite a corrupt ledger on collection',async()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tactical-'));try{const file=path.join(dir,'ledger.json');fs.writeFileSync(file,'broken');const s=new TacticalService(file);await s.tick();expect(s.status().paused).toBe(true);expect(fs.readFileSync(file,'utf8')).toBe('broken');}finally{fs.rmSync(dir,{recursive:true});}});
+});
+
+
+describe('public observer lifecycle',()=>{
+ it('records real-time proposals once per candle and fails closed on disconnection',async()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tactical-feed-'));
+  const now=Date.now(),hour=Math.floor(now/3600000)*3600000;
+  const rows=Array.from({length:120},(_,i)=>[(hour-(120-i)*3600000)/1000,100,102,98,100,100,1]);
+  const pairs=Object.fromEntries(['BTC','ETH','SOL'].map(symbol=>[symbol+'USD',{wsname:symbol+'/USD',pair_decimals:2,lot_decimals:6,ordermin:0.000001,costmin:1,status:'online'}]));
+  const mock=vi.fn(async(input:any)=>{const u=String(input);return {ok:true,json:async()=>({error:[],result:u.includes('SystemStatus')?{status:'online'}:u.includes('AssetPairs')?pairs:u.includes('OHLC')?{PAIR:rows,last:1}:{PAIR:{bids:[['100','5',1]],asks:[['100.01','5',1]]}}})} as Response;});
+  vi.stubGlobal('fetch',mock);
+  try{const file=path.join(dir,'ledger.json'),service=new TacticalService(file);await service.tick();expect(service.status().error).toBe(null);expect(service.status().counts.proposals).toBe(9);expect(service.status().counts.open).toBe(0);await service.tick();expect(service.status().counts.proposals).toBe(9);mock.mockRejectedValue(new Error('offline'));await service.tick();expect(service.status().error).toBe('offline');expect(service.status().counts.open).toBe(0);expect(new TacticalService(file).status().counts.proposals).toBe(9);}finally{vi.unstubAllGlobals();fs.rmSync(dir,{recursive:true});}
+ });
 });
