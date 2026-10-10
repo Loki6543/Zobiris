@@ -1,3 +1,4 @@
+import { TacticalService } from '../tactical/service.js';
 import { isVisibleAsset, visibleAssetData } from "../shared/assetUniverse.js";
 import { releaseResearchBundle } from "./researchImportBundle.js";
 import { applyResearchBundle } from "./researchRuntime.js";
@@ -669,6 +670,9 @@ interface ApiRouter {
   ) => Promise<void> | void;
 }
 
+let tacticalObserver:TacticalService|undefined;
+const tactical=()=>tacticalObserver??=new TacticalService(DEFAULT_DB+'.tactical.json');
+
 const API: ApiRouter = {
   "GET /api/compare/sideways": async (req, res) => {
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -863,6 +867,8 @@ const API: ApiRouter = {
     let repo:ReturnType<typeof researchRepository>|undefined;
     try{const body=JSON.parse(await readBody(req));repo=researchRepository();jsonResponse(res,200,importResearchEvidence(repo,body.records,true));}catch{jsonResponse(res,400,{error:'Invalid research import: check identities, dates, source URLs and record limits (64KB HTTP body).'});}finally{repo?.close();}
   },
+  "GET /api/tactical": (_req,res)=>{jsonResponse(res,200,tactical().status());},
+  "POST /api/tactical/pause": (req,res)=>{if(!isAuthenticated(req,SECURITY))return send401(res,"operator token required");jsonResponse(res,200,tactical().pause());},
   "GET /api/market-brief": async (_req, res) => {
     try { jsonResponse(res, 200, await marketBrief()); }
     catch(e) { errorResponse(res, 503, e); }
@@ -1647,6 +1653,9 @@ export function createZobirisServer() {
 export function startZobirisServer(port = PORT, host = HOST) {
   const server = createZobirisServer();
   startAccountContextSync();
+  if(process.env.ZOBIRIS_ALLOW_LIVE_PROVIDERS==='1'&&process.env.ZOBIRIS_PREFLIGHT_SKIP_SHADOW_RESEARCH!=='1'){
+    const timer=setInterval(()=>void tactical().tick(),60000);timer.unref();server.on('close',()=>clearInterval(timer));void tactical().tick();
+  }
   const stopResearch=startResearchTimers(async()=>{
     const assets=researchAssets();const repo=researchRepository(assets);
     try{
@@ -1780,4 +1789,5 @@ const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
 if (invokedPath === fileURLToPath(import.meta.url)) {
   startZobirisServer();
 }
+
 
