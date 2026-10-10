@@ -100,16 +100,21 @@ export function CommandCenter(props: Props) {
   const [briefProblem, setBriefProblem] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
+    let latestRequest = 0;
     const load = async () => {
+      const requestId = ++latestRequest;
       try {
         const response = await fetch("/api/market-brief", { signal: controller.signal });
         if (!response.ok) throw new Error("Market brief unavailable");
         const data = await response.json();
-        if (!Array.isArray(data?.chart) || data.chart.length < 2 || !Number.isFinite(data.close) || !Number.isFinite(Date.parse(data.asOf))) throw new Error("Invalid market brief");
+        if (!Array.isArray(data?.chart) || data.chart.length < 2
+          || !data.chart.every((p: MarketPoint) => Number.isFinite(p?.time) && Number.isFinite(p?.close) && p.close > 0)
+          || !Number.isFinite(data.close) || data.close <= 0
+          || !Number.isFinite(Date.parse(data.asOf))) throw new Error("Invalid market brief");
         if (Date.now() - Date.parse(data.asOf) > 36 * 60 * 60 * 1000) throw new Error("Market brief stale");
-        if (!controller.signal.aborted) { setBrief(data); setBriefProblem(false); }
+        if (!controller.signal.aborted && requestId === latestRequest) { setBrief(data); setBriefProblem(false); }
       } catch {
-        if (!controller.signal.aborted) { setBrief(null); setBriefProblem(true); }
+        if (!controller.signal.aborted && requestId === latestRequest) { setBrief(null); setBriefProblem(true); }
       }
     };
     void load();
