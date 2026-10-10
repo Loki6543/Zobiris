@@ -138,7 +138,7 @@ export function CommandCenter(props: Props) {
         <div className="zcc-stat"><span>Portfolio equity</span><strong>{props.accountSynced ? money(props.portfolioValue) : "Private"}</strong><small>{props.accountSynced ? "Kraken read-only snapshot" : "Unlock portfolio for balances"}</small></div>
         <div className="zcc-stat"><span>Unreserved cash</span><strong>{props.accountSynced ? money(props.freeCash) : "Private"}</strong><small>{props.accountSynced ? money(props.reservedBuys) + " reserved in buy limits" : "No public cash figure"}</small></div>
         <div className="zcc-stat"><span>Market regime</span><strong className="zcc-regime">{props.snapshotFresh ? props.regime : "Verify market"}</strong><small>Engine classification, not a forecast</small></div>
-        <div className="zcc-stat"><span>Open orders</span><strong>{props.accountSynced ? String(props.orders.length) : "Private"}</strong><small>{props.accountSynced ? "Reported by Kraken private account" : "Order states not available publicly"}</small></div>
+        <div className="zcc-stat"><span>Pending limits</span><strong>{props.accountSynced ? String(props.orders.length) : "Private"}</strong><small>{props.accountSynced ? "Reported by Kraken private account" : "Order states not available publicly"}</small></div>
       </div>
 
       <div className="zcc-workspace">
