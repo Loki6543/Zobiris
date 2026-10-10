@@ -1,3 +1,4 @@
+import { TacticalMargin } from './TacticalMargin';
 import { mergeAssetUniverse, visibleAssetData } from "../shared/assetUniverse";
 import {ResearchEvidencePanel,useResearchEvidence} from './ResearchEvidencePanel';
 import {PilotScorecard} from './PilotScorecard';
@@ -28,7 +29,7 @@ import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare";
+type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare" | "tactical";
 type RankedAsset = Record<string, any>;
 
 const money = (value: number) => new Intl.NumberFormat("en-US", {
@@ -836,6 +837,7 @@ export function App() {
           ["outlook", "Time Outlook"],
           ["history", "History / Learning"],
           ["compare", "Compare Lab"],
+          ["tactical", "Margin Intelligence"],
         ] as Array<[View, string]>).map(([key, label]) => (
           <button aria-current={view === key ? "page" : undefined} key={key} onClick={() => setView(key)} style={view === key ? styles.navActive : styles.navButton}>
             <DashboardIcon name={key} />{label}
@@ -1074,6 +1076,8 @@ export function App() {
       {view === "outlook" ? <TimeOutlookPage watchlist={watchlist} holdingSymbols={portfolioRows.map((row) => row.symbol)} /> : null}
 
       {view === "compare" ? <><ResearchEvidencePanel symbols={watchlist.map(a=>a.symbol)} {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab onAnalyzeSymbol={setAnalysisSymbol} rankedAssets={mergeAssetUniverse(watchlist, rankedAssets)} focusSymbol={analysisSymbol} /></> : null}
+
+      {view === "tactical" ? <TacticalMargin operatorToken={operatorToken} /> : null}
 
       {view === "history" ? (
         <main>
@@ -1441,5 +1445,6 @@ const styles: Record<string, CSSProperties> = {
 };
 
 export default App;
+
 
 
