@@ -22,6 +22,7 @@ const LEARNING_RULES = [
 ];
 
 import { PortfolioVisuals } from "./PortfolioVisuals";
+import { CommandCenter } from "./CommandCenter";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
@@ -848,6 +849,23 @@ export function App() {
 
       {view === "portfolio" ? (
         <main>
+          <CommandCenter
+            refreshKey={snapshotMs}
+            snapshotAsOf={snapshotMs}
+            snapshotFresh={snapshotFresh}
+            regime={regime}
+            accountSynced={accountSynced}
+            accountAsOf={LIVE_CAPTURED_AT}
+            portfolioValue={total}
+            cash={LIVE_CASH_USD}
+            freeCash={freeCash}
+            reservedBuys={reservedBuys}
+            orders={LIVE_OPEN_ORDERS}
+            watch={watchlistRankings}
+            trades={LIVE_TRADE_MEMORY}
+            onNavigate={(next) => setView(next)}
+            onAnalyze={(symbol) => { setAnalysisSymbol(symbol); setView("compare"); }}
+          />
           <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
             <Metric label="Portfolio" value={accountSynced ? money(total) : "Private"} />
             <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Private account is locked on the public view"} />
