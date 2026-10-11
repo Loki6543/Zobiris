@@ -312,7 +312,7 @@ function sentimentSpecialist(ctx: SwarmContext): SwarmSpecialist {
     "sentiment",
     score,
     clamp(0.55 + Math.min(samples, 8) * 0.05),
-    "price-derived",
+    "language",
     [`Social state: ${state}.`],
   );
 }

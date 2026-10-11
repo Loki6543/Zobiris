@@ -27,6 +27,8 @@ export interface OutcomeEvaluation {
 
 export interface DecisionOutcomeRecord {
   measurementVersion?: "episodes-v2";
+  /** New prospective measurement: QUALIFIED onsets spaced apart from other cohort states. */
+  samplingRule?: "COHORT_SPACED_7D";
   decisionTime?: string;
   registryVersion?: string;
   policyHash?: string;
@@ -144,6 +146,7 @@ function seedToRecord(seed: NonNullable<NonNullable<NonNullable<SnapshotLike["ra
   const horizons = Array.isArray(seed.horizons) ? seed.horizons : [];
   const base = {
     measurementVersion:"episodes-v2" as const,
+    samplingRule:"COHORT_SPACED_7D" as const,
     decisionTime: seed.generatedAt,
     proposedLimitUsd:entryReference(referencePriceUsd,seed.recommendedPullbackPct),
     sampledTouchAt:null,actualFill:null,
@@ -238,7 +241,10 @@ async function updateMemory(path: string, snapshot: SnapshotLike, observations?:
     record.regime = typeof snapshot.regime === "string" ? snapshot.regime : null;
     const generated=Date.parse(record.generatedAt),quote=currentPrices.get(record.symbol);
     if(!quote||!Number.isFinite(generated)||generated>asOfMs||asOfMs-generated>15*60000)continue;
-    if(data.records.some(r=>r.measurementVersion==='episodes-v2'&&r.symbol===record.symbol&&Math.abs(generated-Date.parse(r.generatedAt))<7*86400000))continue;
+    const cohort = (status?:string) => status === 'QUALIFIED' ? 'QUALIFIED' : 'OTHER';
+    if(data.records.some(r=>r.measurementVersion==='episodes-v2'&&r.symbol===record.symbol
+        &&cohort(r.strategyStatus)===cohort(record.strategyStatus)
+        &&Math.abs(generated-Date.parse(r.generatedAt))<7*86400000))continue;
     const btc=currentPrices.get('BTC');
     record.benchmarkPriceUsd=btc&&Math.abs(btc.at-quote.at)<=5*60000?btc.price:null;
     data.records.push(record);
@@ -325,7 +331,7 @@ export function pilotScorecard(data:OutcomeFile,now=Date.now()){
  return {status:'SHADOW_ONLY_NO_VERDICT',statusLabel:statusLabel('SHADOW_ONLY_NO_VERDICT',evidenceClass),evidenceClass,registryVersion:OUTCOME_POLICY_REGISTRY?.registryVersion??null,policyHash:OUTCOME_POLICY_REGISTRY?.registrySha256??null,updatedAt:data.updatedAt,qualified,nonqualifying,benchmark:group(episodes.filter(r=>r.symbol==='BTC')),
   legacyExcluded:data.records.length-episodes.length,archivedRecordCount:data.archivedRecordCount??0,
   actualFills:null,fillProbability:null,missedFillRegret:null,
-  limitations:['Seven-day nonoverlapping episodes per symbol reduce duplicate snapshots; correlated coins are not statistically independent.',
+  limitations:['Seven-day spacing now applies within QUALIFIED and other cohorts (COHORT_SPACED_7D); two cohorts may share overlapping market paths. Record sampling-rule changes before comparing cohorts; correlated coins are not statistically independent.',
    'Horizons use the first observed quote within 25% of the due horizon, not an exact historical candle. Later observations expire.',
    'Returns and excursions use sampled spot prices, before fees. Sparse observations miss intraperiod highs/lows and limit touches.',
    'A sampled touch is not a real fill. Limit prices are unrounded baseline research priors, without personal re-entry adjustments or order authority.',

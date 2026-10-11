@@ -83,7 +83,7 @@ const MATERIAL_PATTERNS: Array<{ topic: EvidenceTopic; re: RegExp }> = [
   { topic: "GOVERNANCE", re: /\b(governance|proposal|vote|validator|dao)\b/i },
 ];
 
-const NEGATIVE_RE = /\b(exploit|hack(?:ed)?|breach|drain(?:ed)?|vulnerab(?:ility|le)|delist(?:ed|ing)?|lawsuit|enforcement|outage|halt(?:ed)?|suspend(?:ed)?|dilution|unlock|sell(?:ing|off)?|risk|warning)\b/i;
+const NEGATIVE_RE = /\b(exploit|hack(?:ed)?|breach|drain(?:ed)?|vulnerab(?:ility|le)|delist(?:ed|ing)?|lawsuit|enforcement|outage|halt(?:ed)?|suspend(?:ed)?|dilution|unlock|sell(?:ing|off)?)\b/i;
 const POSITIVE_RE = /\b(list(?:ed|ing)?|approval|approved|partnership|integrat(?:e|ed|ion)|adoption|upgrade|launch|release|burn(?:ed|ing)?|growth|expand(?:ed|ing)?)\b/i;
 
 function hostname(url: string): string {
@@ -118,7 +118,7 @@ function authorityFor(url: string, title: string, description: string): {
     return { score: 0.93, primarySourceLikely: true };
   if (/(^|\.)(reuters|bloomberg)\.com$/.test(host))
     return { score: 0.88, primarySourceLikely: false };
-  if (/(^|\.)(coindesk|theblock)\.co$/.test(host) || /(^|\.)decrypt\.co$/.test(host))
+  if (/(^|\.)coindesk\.com$/.test(host) || /(^|\.)theblock\.co$/.test(host) || /(^|\.)decrypt\.co$/.test(host))
     return { score: 0.76, primarySourceLikely: false };
 
   const officialLanguage =

@@ -4,7 +4,7 @@ import { appendBookFeatures, readBookFeatures } from "./bookFeatureStore.js";
 import { saveShadowForecasts, settleShadowForecasts } from "./predictionOutcomes.js";
 
 /** The return value only writes shadow tables. It has no Strategy 2.1 decision input or output. */
-export function createShadowFeatureHandler(dbPath: string, feeBpsPerSide = 40): (feature: BookFeatures) => void {
+export function createShadowFeatureHandler(dbPath: string, feeBpsPerSide = 80): (feature: BookFeatures) => void {
   const forecastBuckets = new Map<string, number>();
   return (feature) => {
     appendBookFeatures(dbPath, feature);

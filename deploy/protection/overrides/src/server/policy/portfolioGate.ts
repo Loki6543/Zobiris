@@ -19,7 +19,8 @@ export interface PortfolioPolicy {
 
 export interface GateHolding {
   symbol: string;
-  valueUsd: number;
+  /** null means valuation unavailable; this holding still occupies a slot. */
+  valueUsd: number | null;
   /** false for reward dust and other balances that do not occupy a slot */
   intentional?: boolean;
 }
@@ -90,7 +91,7 @@ function validPolicy(policy: PortfolioPolicy): boolean {
 
 function slotSymbols(state: PortfolioState): Set<string> {
   const s = new Set<string>();
-  for (const h of state.holdings) if (h && typeof h.symbol === 'string' && h.intentional !== false && h.valueUsd > 0) s.add(symbolKey(h.symbol));
+  for (const h of state.holdings) if (h && typeof h.symbol === 'string' && h.intentional !== false && (h.valueUsd === null || (finiteNonNeg(h.valueUsd) && h.valueUsd > 0))) s.add(symbolKey(h.symbol));
   for (const o of state.openOrders) if (o && typeof o.symbol === 'string' && o.side === 'buy') s.add(symbolKey(o.symbol));
   return s;
 }
@@ -128,12 +129,14 @@ export function evaluatePortfolioGate(state: PortfolioState, c: GateCandidate, p
   else if (nowMs - asOf > policy.maxAccountDataAgeMin * 60_000) reasons.push('ACCOUNT_STATE_STALE');
   if (!finiteNonNeg(state.cashUsd)) reasons.push('CASH_INVALID');
   if (!(requested > 0)) reasons.push('REQUESTED_SIZE_INVALID');
-  if (!validCollections || state.holdings.some(h => !h || !finiteNonNeg(h.valueUsd) || typeof h.symbol !== 'string' || !h.symbol.trim())
+  if (!validCollections || state.holdings.some(h => !h || (h.valueUsd !== null && !finiteNonNeg(h.valueUsd)) || typeof h.symbol !== 'string' || !h.symbol.trim())
       || state.openOrders.some(o => !o || !finiteNonNeg(o.notionalUsd) || typeof o.symbol !== 'string' || !o.symbol.trim()
         || (o.side !== 'buy' && o.side !== 'sell'))) reasons.push('POSITION_DATA_INVALID');
   if (reasons.length) return result('BLOCK', 0, slots.size, null, null);
 
-  const held = state.holdings.find((h) => symbolKey(h.symbol) === symbolKey(c.symbol) && h.intentional !== false && h.valueUsd > 0);
+  const unknownValuations = state.holdings.filter(h => h.intentional !== false && h.valueUsd === null);
+  if (unknownValuations.length) warnings.push('HOLDING_VALUE_UNKNOWN');
+  const held = state.holdings.find((h) => symbolKey(h.symbol) === symbolKey(c.symbol) && h.intentional !== false && (h.valueUsd === null || h.valueUsd > 0));
   const openBuys = state.openOrders.filter((o) => o.side === 'buy');
   const openSellSameSymbol = state.openOrders.filter((o) => o.side === 'sell' && symbolKey(o.symbol) === symbolKey(c.symbol)).reduce((a, o) => a + o.notionalUsd, 0);
   if ((state.pendingSellProceedsUsd ?? 0) > 0) warnings.push('PENDING_SELL_PROCEEDS_NOT_COUNTED');
@@ -143,6 +146,10 @@ export function evaluatePortfolioGate(state: PortfolioState, c: GateCandidate, p
     if (action === 'NEW_BUY' && held) {
       warnings.push('ALREADY_HELD_EVALUATED_AS_ADD');
       action = 'ADD';
+    }
+    if (action === 'ADD' && held?.valueUsd === null) {
+      reasons.push('HOLDING_VALUE_UNKNOWN_FOR_ADD');
+      return result('BLOCK', 0, slots.size, null, null);
     }
     if (action === 'ADD' && !held) {
       reasons.push('ADD_REQUIRES_INTENTIONAL_HOLDING');
@@ -182,6 +189,10 @@ export function evaluatePortfolioGate(state: PortfolioState, c: GateCandidate, p
   // Sells
   if (!held) {
     reasons.push('SELL_REQUIRES_HOLDING');
+    return result('BLOCK', 0, slots.size, null, null);
+  }
+  if (held.valueUsd === null) {
+    reasons.push('HOLDING_VALUE_UNKNOWN_FOR_SELL');
     return result('BLOCK', 0, slots.size, null, null);
   }
   const sellable = round2(Math.max(0, held.valueUsd - openSellSameSymbol));

@@ -1,7 +1,8 @@
 /** Research policy v1. No execution authority. Rates are stress assumptions, not exchange quotes. */
 export const POLICY = {version:'tactical-v1', equity:300, riskFraction:.005, aggregateRisk:.01, maxLeverage:1.5, maxPositions:2, dailyLoss:.02, drawdown:.08} as const;
 export type Side='long'|'short';
-export const COSTS={fee:.004,slippage:.001,opening:.0003,rollover:.0003};
+/** Conservative Kraken Pro Tier-1 *spot* taker-fee proxy (80 bps per side, effective July 2026). Not a verified Bitnomial US margin quote or account fee tier. */
+export const COSTS={fee:.008,slippage:.001,opening:.0003,rollover:.0003};
 export function maintenance(now:number):boolean{
  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'short',hour:'2-digit',hourCycle:'h23'}).formatToParts(now);
  const get=(t:string)=>parts.find(p=>p.type===t)?.value;

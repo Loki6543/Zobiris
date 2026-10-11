@@ -672,6 +672,8 @@ interface ApiRouter {
 
 let tacticalObserver:TacticalService|undefined;
 const tactical=()=>tacticalObserver??=new TacticalService(DEFAULT_DB+'.tactical.json');
+// Liveness must not recalculate DSR/PBO on every Railway probe.
+let healthResearchCache:{checkedAt:number;status:string}|null=null;
 
 const API: ApiRouter = {
   "GET /api/compare/sideways": async (req, res) => {
@@ -704,9 +706,14 @@ const API: ApiRouter = {
   },
   "GET /api/health": (_req, res) => {
     const account = getAccountView();
-    let researchStatus: string = 'DEGRADED';
-    try { researchStatus = readResearchProvenance(DEFAULT_DB).evidence.status; }
-    catch { /* Research availability must not take down portfolio liveness. */ }
+    const checkedAt=Date.now();
+    if (!healthResearchCache || checkedAt-healthResearchCache.checkedAt>60_000) {
+      let status='DEGRADED';
+      try { status=readResearchProvenance(DEFAULT_DB).evidence.status; }
+      catch { /* Liveness is independent of statistical evidence processing. */ }
+      healthResearchCache={checkedAt,status};
+    }
+    const researchStatus=healthResearchCache.status;
     jsonResponse(res, 200, {
       status: "ok",
       researchProvenance: { version: P0_VERSION, status: researchStatus },
@@ -863,7 +870,8 @@ const API: ApiRouter = {
   },
   "POST /api/research/evidence/import": async(req,res) => {
     if(!isAuthenticated(req,SECURITY))return send401(res,'operator token required');
-    if(!checkRateLimit('research-import:'+clientIpFrom(req),10,60000).allowed)return send429(res,60);
+    const researchLimit=checkRateLimit('research-import:'+clientIpFrom(req),Date.now(),10);
+    if(!researchLimit.allowed)return send429(res,researchLimit.retryAfterSec);
     let repo:ReturnType<typeof researchRepository>|undefined;
     try{const body=JSON.parse(await readBody(req));repo=researchRepository();jsonResponse(res,200,importResearchEvidence(repo,body.records,true));}catch{jsonResponse(res,400,{error:'Invalid research import: check identities, dates, source URLs and record limits (64KB HTTP body).'});}finally{repo?.close();}
   },
@@ -1237,6 +1245,8 @@ const API: ApiRouter = {
     } finally { storage.close(); }
   },
   "GET /api/strategy21/liquidity/:symbol": (req, res) => {
+    const rl=checkRateLimit("liquidity-detail:"+clientIpFrom(req),Date.now(),30);
+    if(!rl.allowed)return send429(res,rl.retryAfterSec);
     const url = new URL(req.url ?? "/", "http://localhost");
     const symbol = decodeURIComponent(url.pathname.split("/").pop()!).toUpperCase();
     const liq = loadStrategyLiquidity(DEFAULT_DB, [symbol]).get(symbol);
@@ -1414,7 +1424,9 @@ const API: ApiRouter = {
       storage.close();
     }
   },
-  "GET /api/specialists/summary": async (_req, res) => {
+  "GET /api/specialists/summary": async (req, res) => {
+    const rl=checkRateLimit("specialists-summary:"+clientIpFrom(req),Date.now(),12);
+    if(!rl.allowed)return send429(res,rl.retryAfterSec);
     const storage = openStorage({ path: DEFAULT_DB });
     try {
       const recent = getRecentSnapshots(storage.db, 1);

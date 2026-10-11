@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { integrateStrategy21 } from "../integration.js";
 import { buildLiquidityProfile, type OrderBookSnapshot } from "../engine/liquidity.js";
-import { DELAYED_ROTATION_MODE } from "../engine/delayedRotation.js";
+import { DELAYED_ROTATION_MODE, evaluateDelayedRotation } from "../engine/delayedRotation.js";
 
 function asset(symbol: string, score: number) {
   return {
@@ -156,4 +156,15 @@ test("a failed delayed-rotation screen only demotes an otherwise eligible baseli
   assert.equal(lag.delayedRotation.status, "NOT_LAGGING");
   assert.equal(lag.positionAuthority.maxNextOrderUsd, 0);
   assert.equal(lag.nextDollarScore, null);
+});
+
+test("fallback price provenance is marked for review without positive capital qualification",()=>{
+  const baseline=evidence();
+  const live=evaluateDelayedRotation("LAG",baseline as any);
+  assert.equal(live.status,"QUALIFIED");
+  const fallback=baseline.map(claim=>claim.symbol==="LAG"?{...claim,dataMode:"fallback",claimOrigin:"synthetic"}:claim);
+  const observed=evaluateDelayedRotation("LAG",fallback as any);
+  assert.equal(observed.status,"QUALIFIED");
+  assert.equal(observed.dataProvenance,"PROVIDER_SNAPSHOT_OR_FALLBACK");
+  assert.equal(observed.qualifiesForNewCapital,false);
 });
