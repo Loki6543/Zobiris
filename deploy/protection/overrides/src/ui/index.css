@@ -440,9 +440,6 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 @media (forced-colors:active){
   .zcc-panel,.zcc-chart,.zcc-stat,.zcc-feed{border:1px solid CanvasText;}
   .zcc-feed-dot{outline:1px solid CanvasText;}
-}
-
-.tactical-terminal{display:grid;gap:20px;color:#e6edf4;padding:12px 0 36px}.tactical-terminal article,.tactical-hero{padding:24px;border:1px solid #293c4c;border-radius:20px;background:linear-gradient(145deg,#172633,#0b141e 70%);box-shadow:inset 0 1px 0 #ffffff12,0 14px 28px #0005}.tactical-hero{display:flex;justify-content:space-between;align-items:start;background:radial-gradient(ellipse at top right,#244d4c66,transparent 65%),linear-gradient(145deg,#182a38,#0b141e)}.tactical-hero h1{font-size:clamp(26px,3vw,42px);margin:10px 0}.tactical-eyebrow{font-size:11px;letter-spacing:2px;color:#75eed6}.tactical-badge{font-size:11px;color:#ffce8a;border:1px solid #86623e;padding:9px 12px;border-radius:30px;white-space:nowrap}.tactical-grid{display:grid;gap:20px}.tactical-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.tactical-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.tactical-terminal h2{font-size:21px;margin:10px 0}.tactical-terminal p{font-size:13px;line-height:1.65}.tactical-terminal small,.tactical-muted{color:#99afc1}.tactical-terminal article{min-width:0}.tactical-heading{display:flex;justify-content:space-between;align-items:center}.tactical-terminal select,.tactical-terminal input,.tactical-terminal button{background:#0a141e;color:#e6edf4;border:1px solid #3a5062;border-radius:8px;padding:9px;max-width:100%;box-sizing:border-box}.tactical-terminal button{cursor:pointer}.tactical-terminal button:disabled{opacity:.5;cursor:default}.tactical-controls{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tactical-controls label{display:grid;gap:8px;font-size:12px;color:#a9bac9}.tactical-controls input{width:100%;min-width:0}.tactical-terminal dt{font-size:12px;color:#99afc1;margin-top:12px}.tactical-terminal dd{font-size:13px;margin:5px 0}.tactical-terminal table{width:100%;border-collapse:collapse;font-size:12px;text-align:left}.tactical-terminal th,.tactical-terminal td{padding:12px 8px;border-bottom:1px solid #263848}.tactical-terminal th{color:#9bb4c6}.tactical-scroll{overflow:auto}.tactical-terminal a{color:#75eed6}.tactical-warning{padding:15px;background:#48351b66;border:1px solid #9b723d;border-radius:12px}.tactical-terminal svg{width:100%;display:block;margin-top:20px}@media(max-width:900px){.tactical-grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}.tactical-grid.two{grid-template-columns:1fr}}@media(max-width:520px){.tactical-hero{display:block}.tactical-badge{display:inline-block;margin-top:12px}.tactical-terminal article,.tactical-hero{padding:17px}.tactical-grid.four{gap:10px}.tactical-grid.four h2{font-size:18px}.tactical-terminal{gap:14px}}
 
 
 
@@ -654,18 +651,17 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 @media(max-width:700px){.zobiris-dashboard .watch-movers-list{grid-template-columns:minmax(0,1fr);}.zobiris-dashboard .watch-movers-panel{padding:16px;}}
 
 
-/* Margin Intelligence shares the screenshot's dense, professional card geometry; paper status stays explicit. */
-.zobiris-dashboard .tactical-terminal{max-width:1440px;margin:0 auto;gap:14px;}
-.zobiris-dashboard .tactical-terminal .tactical-hero,.zobiris-dashboard .tactical-terminal article{background:linear-gradient(130deg,#102439,#0a1929)!important;border:1px solid #25435a!important;box-shadow:0 8px 26px #0109124a!important;border-radius:13px!important;}
-.zobiris-dashboard .tactical-terminal .tactical-hero{padding:21px 24px!important;min-height:0;}
-.zobiris-dashboard .tactical-terminal .tactical-hero h1{font-size:clamp(23px,2.3vw,32px);margin:7px 0 2px;}
-.zobiris-dashboard .tactical-terminal article{padding:18px!important;}
-.zobiris-dashboard .tactical-grid{gap:12px!important;}
-.zobiris-dashboard .tactical-grid.four h2{font-size:clamp(20px,1.8vw,26px);letter-spacing:-.4px;color:#cff9e9;}
-.zobiris-dashboard .tactical-terminal th{background:#081a2a;color:#9ab2c5;}
-.zobiris-dashboard .tactical-terminal td{font-variant-numeric:tabular-nums;}
-.zobiris-dashboard .tactical-terminal svg polyline{filter:drop-shadow(0 0 3px #06cba15c);}
-.zobiris-dashboard .tactical-badge{color:#f4d8a3;border-color:#6e6049;background:#2a261b;font-weight:770;}
+/* Margin Intelligence shares the screenshot's dense{max-width:1440px;margin:0 auto;gap:14px;}
+
+
+
+
+
+
+
+
+
+
 
 
 /* ================================================================
@@ -696,7 +692,7 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
   .zobiris-dashboard .dashboard-nav button .dashboard-icon{color:currentColor !important;width:17px;height:17px;}
 }
 .zobiris-dashboard header, .zobiris-dashboard > main, .zobiris-dashboard .dashboard-notice, .zobiris-dashboard footer,
-.zobiris-dashboard .portfolio-visuals, .zobiris-dashboard .daily-brief, .zobiris-dashboard .watch-page, .zobiris-dashboard .tactical-terminal,
+.zobiris-dashboard .portfolio-visuals, .zobiris-dashboard .daily-brief, .zobiris-dashboard .watch-page,
 .zobiris-dashboard section[aria-label="Profit protection"], .zobiris-dashboard .dashboard-metrics, .zobiris-dashboard .dashboard-panel, .zobiris-dashboard .dashboard-columns{
   max-width:none !important;margin-left:0 !important;margin-right:0 !important;
 }
@@ -724,7 +720,7 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 /* Cards / panels */
 .zobiris-dashboard .dashboard-panel,.zobiris-dashboard .dashboard-metric,.zobiris-dashboard .allocation-panel,.zobiris-dashboard .holdings-panel,
 .zobiris-dashboard .daily-brief,.zobiris-dashboard .watch-card,.zobiris-dashboard .watch-movers-panel,.zobiris-dashboard .zcc-panel,.zobiris-dashboard .zcc-stat,
-.zobiris-dashboard .market-ticker-card,.zobiris-dashboard .market-key-panel,.zobiris-dashboard .tactical-terminal .tactical-hero,.zobiris-dashboard .tactical-terminal article,
+.zobiris-dashboard .market-ticker-card,.zobiris-dashboard .market-key-panel,
 .zobiris-dashboard section[aria-label="Profit protection"],.zobiris-dashboard section[aria-label="Research evidence"]{
   background:linear-gradient(180deg,var(--zv-panel-2),var(--zv-panel)) !important;border:1px solid var(--zv-border) !important;border-top-color:#22386a !important;
   border-radius:12px !important;box-shadow:0 0 0 1px #0000,0 10px 30px -18px #000d,inset 0 1px 0 #ffffff08 !important;color:var(--zv-text) !important;
@@ -740,7 +736,7 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 .zobiris-dashboard .zcc-eyebrow,.zobiris-dashboard .protection-badge{color:#93b4f5 !important;}
 /* Tables */
 .zobiris-dashboard table{font-size:12.5px !important;font-variant-numeric:tabular-nums;}
-.zobiris-dashboard th,.zobiris-dashboard .dashboard-panel th,.zobiris-dashboard .watch-table th,.zobiris-dashboard .tactical-terminal th{background:transparent !important;color:var(--zv-muted) !important;font-size:11px !important;font-weight:500 !important;text-transform:none !important;letter-spacing:0 !important;padding:10px 12px !important;border-bottom:1px solid var(--zv-border) !important;}
+.zobiris-dashboard th,.zobiris-dashboard .dashboard-panel th,.zobiris-dashboard .watch-table th{background:transparent !important;color:var(--zv-muted) !important;font-size:11px !important;font-weight:500 !important;text-transform:none !important;letter-spacing:0 !important;padding:10px 12px !important;border-bottom:1px solid var(--zv-border) !important;}
 .zobiris-dashboard td,.zobiris-dashboard .dashboard-panel td,.zobiris-dashboard .watch-table td{padding:11px 12px !important;border-bottom:1px solid var(--zv-border-soft) !important;}
 .zobiris-dashboard tbody tr:hover > td,.zobiris-dashboard .watch-table tbody tr:hover td,.zobiris-dashboard .dashboard-panel tbody tr:hover td{background:#12224a66 !important;}
 .zobiris-dashboard .watch-table th:first-child,.zobiris-dashboard .watch-table td:first-child{background:var(--zv-panel) !important;}
@@ -774,11 +770,11 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 .zobiris-dashboard .watch-mover-track>.is-loss{background:linear-gradient(90deg,#991b1b,#ef4444) !important;}
 .zobiris-dashboard .watch-mover-track{background:#12224a !important;}
 /* Charts: green area look */
-.zobiris-dashboard .btc-chart-panel svg polyline,.zobiris-dashboard .tactical-terminal svg polyline,.zobiris-dashboard .zcc svg polyline{stroke:#22c55e !important;filter:none !important;}
+.zobiris-dashboard .btc-chart-panel svg polyline,.zobiris-dashboard .zcc svg polyline{stroke:#22c55e !important;filter:none !important;}
 .zobiris-dashboard .allocation-ring{filter:drop-shadow(0 0 10px #2563eb30) !important;}
 .zobiris-dashboard .market-key-panel>div strong{color:#e8eefb !important;}
-.zobiris-dashboard .tactical-grid.four h2{color:#fff !important;}
-.zobiris-dashboard .tactical-badge{color:#fcd34d !important;border-color:#92400e !important;background:#2a1d08 !important;}
+
+
 .zobiris-dashboard footer{border-top:1px solid var(--zv-border-soft) !important;color:var(--zv-dim) !important;font-size:11px !important;}
 .zobiris-dashboard :focus-visible{outline:2px solid var(--zv-blue-2) !important;outline-offset:2px !important;}
 @media (max-width:1039px){

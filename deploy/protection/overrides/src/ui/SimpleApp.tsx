@@ -1,4 +1,3 @@
-import { TacticalMargin } from './TacticalMargin';
 import { mergeAssetUniverse, visibleAssetData } from "../shared/assetUniverse";
 import {ResearchEvidencePanel,useResearchEvidence} from './ResearchEvidencePanel';
 import {entryReference,validateEntry,type EntryRules} from '../shared/entryPlan';
@@ -27,7 +26,7 @@ import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare" | "tactical";
+type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare";
 const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
   portfolio: { title: "Portfolio", description: "Your holdings, allocation and trading decisions at a glance." },
   market: { title: "Market Today", description: "Verified Bitcoin market conditions, trend and technical analysis." },
@@ -35,7 +34,6 @@ const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
   outlook: { title: "Time Outlook", description: "Separate long-term holdings from tactical opportunities." },
   history: { title: "History / Learning", description: "Your recorded trades and what they taught Zobiris." },
   compare: { title: "Compare Lab", description: "Compare coins side by side before you buy." },
-  tactical: { title: "Margin Intelligence", description: "Paper margin positions, funding and liquidation risk." },
 };
 
 type RankedAsset = Record<string, any>;
@@ -867,7 +865,6 @@ export function App() {
           ["market", "Market Today"],
           ["outlook", "Time Outlook"],
           ["watchlist", "Watchlist"],
-          ["tactical", "Margin Intelligence"],
           ["compare", "Compare Lab"],
           ["history", "History / Learning"],
         ] as Array<[View, string]>).map(([key, label]) => (
@@ -1055,7 +1052,6 @@ export function App() {
 
       {view === "compare" ? <><ResearchEvidencePanel symbols={watchlist.map(a=>a.symbol)} {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab onAnalyzeSymbol={setAnalysisSymbol} rankedAssets={mergeAssetUniverse(watchlist, rankedAssets)} focusSymbol={analysisSymbol} /></> : null}
 
-      {view === "tactical" ? <TacticalMargin operatorToken={operatorToken} /> : null}
 
 
       {view === "history" ? (
