@@ -1,4 +1,5 @@
 import { compareDaily, exitMarketContext } from '../compareLab/compare.js';
+import { buildBitcoinCycleResearch } from './bitcoinCycleResearch.js';
 export function summarizeMarket(series: {symbol:string;points:{time:number;close:number}[]}[], daily: Awaited<ReturnType<typeof exitMarketContext>>, now=Date.now()) {
  const btc=series.find(s=>s.symbol==='BTC'); const points=btc?.points??[]; const last=points.at(-1);
  if(!daily||!last||now-(last.time+86400)*1000>36*3600000||(last.time+86400)*1000>now||points.length<91) throw new Error('Fresh completed Bitcoin history unavailable');
@@ -13,6 +14,7 @@ export function summarizeMarket(series: {symbol:string;points:{time:number;close
  outlook:bias==='UPWARD BIAS'?'The daily structure favors continuation higher over the next several days, provided Bitcoin holds its 50-day trend and momentum stays positive.':bias==='DOWNWARD BIAS'?'The daily structure favors further downside over the next several days. A recovery needs a sustained reclaim of the 50-day trend and positive weekly momentum.':'There is no clean directional edge. Treat the recent range as unresolved until price and weekly momentum align with the daily trend.',
  counter:bias==='UPWARD BIAS'?'A rising trend can still reverse. A close below the 50-day EMA or a turn to negative weekly momentum would weaken this view.':bias==='DOWNWARD BIAS'?'Selling can exhaust. A close back above the 50-day EMA together with positive weekly momentum would weaken the bearish view.':'A sharp move can break the range in either direction; mixed indicators should not be read as low risk.',
  lower:Math.min(...points.slice(-20).map(p=>p.close)),upper:Math.max(...points.slice(-20).map(p=>p.close)),close:last.close,daily,returns,chart:points.slice(-90),
+ cycleResearch:buildBitcoinCycleResearch({asOf:new Date((last.time+86400)*1000).toISOString(),close:last.close,weeklyReturnPct:week,ema50:daily.ema50,rsi14:daily.rsi14,atrPct:daily.atrPct}),
  caveat:daily.rsi14>70?'Momentum is stretched: simple RSI is above 70, increasing pullback concern.':daily.rsi14<30?'Momentum is depressed: simple RSI is below 30, increasing rebound potential without confirming a bottom.':'Momentum is not at an extreme on the simple 14-day RSI.',
  volume:daily.volume7dVsPrior30d==null?'Volume confirmation is unavailable.':daily.volume7dVsPrior30d>=1?'Recent average volume exceeds its preceding 30-day baseline.':'Recent average volume is below its preceding 30-day baseline; directional conviction is weaker.'};
 }
