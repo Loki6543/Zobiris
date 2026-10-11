@@ -481,7 +481,10 @@ export function evaluateDelayedRotation(
       "research_prior_not_validated_alpha",
       ...(computeVolumeAccel(row) == null ? ["volume_acceleration_not_yet_available"] : []),
     ]);
-    result.qualifiesForNewCapital = true;
+    // Snapshot, fallback and synthetic observations may describe a research
+    // pattern, but only live provider evidence can mark it capital-qualified.
+    result.qualifiesForNewCapital = result.dataProvenance === 'PROVIDER_LIVE';
+    if (!result.qualifiesForNewCapital) result.reasonCodes.push('provider_live_quote_required_for_capital_qualification');
     result.recommendedPullbackPct = Math.round(clamp(
       4 + Math.max(0, row.change7dPct) * 0.15 + (relative90 < -35 ? 0.5 : 0),
       4,
