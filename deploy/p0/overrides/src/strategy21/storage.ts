@@ -119,7 +119,7 @@ export function loadStrategyLiquidity(dbPath: string | undefined, symbols: strin
       out.set(symbol, {
         pair,
         profile: buildLiquidityProfile({ snapshots, dailyCredibleNotionalUsd: daily }),
-        takerFeeBpsPerSide: Number(process.env.ZOBIRIS_KRAKEN_FEE_BPS ?? '40'),
+        takerFeeBpsPerSide: Number(process.env.ZOBIRIS_KRAKEN_FEE_BPS ?? '80'),
         currentTradeCount24h: latestActivity ? Number(latestActivity.trade_count_24h) : undefined,
         priorCompletedDayTradeCounts24h,
       });
