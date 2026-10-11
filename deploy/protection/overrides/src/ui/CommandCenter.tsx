@@ -29,7 +29,7 @@ type Props = {
   orders: Order[];
   watch: WatchItem[];
   trades: Trade[];
-  onNavigate: (view: "market" | "watchlist" | "history") => void;
+  onNavigate: (view: "market" | "watchlist" | "history" | "advisory" | "tactical") => void;
   onAnalyze: (symbol: string) => void;
 };
 
@@ -145,6 +145,13 @@ export function CommandCenter(props: Props) {
         <div className="zcc-stat"><span>Market regime</span><strong className="zcc-regime">{props.snapshotFresh ? props.regime : "Verify market"}</strong><small>Engine classification, not a forecast</small></div>
         <div className="zcc-stat"><span>Pending limits</span><strong>{props.accountSynced ? String(props.orders.length) : "Private"}</strong><small>{props.accountSynced ? "Reported by Kraken private account" : "Order states not available publicly"}</small></div>
       </div>
+
+      <nav className="zcc-desks" aria-label="Research and trading advisory categories">
+        <button type="button" onClick={()=>props.onNavigate('watchlist')}><span>01 / SPOT MARKETS</span><strong>Spot watchlist</strong><small>Live quote coverage · research rankings</small><b aria-hidden="true">↗</b></button>
+        <button type="button" onClick={()=>props.onNavigate('watchlist')}><span>02 / WAIT FOR PRICE</span><strong>Delayed entries</strong><small>Pullback evidence · market structure</small><b aria-hidden="true">↗</b></button>
+        <button type="button" onClick={()=>props.onNavigate('tactical')}><span>03 / RISK CONTROL</span><strong>Margin research</strong><small>1–1.5× paper study · no live orders</small><b aria-hidden="true">↗</b></button>
+        <button type="button" onClick={()=>props.onNavigate('advisory')}><span>04 / VALIDATION LAB</span><strong>Signals &amp; stress</strong><small>Model limits · funding evidence gaps</small><b aria-hidden="true">↗</b></button>
+      </nav>
 
       <div className="zcc-workspace">
         <div className="zcc-main">
