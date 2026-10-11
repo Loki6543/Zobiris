@@ -3,7 +3,7 @@ import path from 'node:path';
 import {entryRules} from '../server/entryRules.js';
 import {POLICY,COSTS,maintenance,signal,sizeTrade,netPnl,replay,type Candle,type Side} from './risk.js';
 type RecordRow={id:string;symbol:string;at:number;horizon:number;side:Side|null;reason:string;status:'rejected'|'open'|'closed';entry?:number;stop?:number;target?:number;quantity?:number;risk?:number;collateral?:number;leverage?:number;exit?:number;closedAt?:number;net?:number;gross?:number;costs?:number;coverageComplete:boolean;lastSeen?:number;mark?:number};
-type State={version:string;startedAt:number;paused:boolean;pauseReason:string|null;equity:number;peak:number;day:string;dayStart:number;records:RecordRow[];lastSuccess:number|null};
+type State={version:string;startedAt:number;paused:boolean;pauseReason:string|null;equity:number;peak:number;day:string;dayStart:number;records:RecordRow[];lastSuccess:number|null;archivedRecordCount?:number;archivedClosedCount?:number;archivedCompleteCount?:number};
 
 /** Fail closed on damaged or fabricated paper records rather than replaying NaN PnL. */
 function validStoredRecord(value: unknown): value is RecordRow {
@@ -37,6 +37,7 @@ function validStoredRecord(value: unknown): value is RecordRow {
 function validStoredState(value: any): value is State {
  return value&&typeof value==='object'&&value.version===POLICY.version
    &&Array.isArray(value.records)&&value.records.length<=20000
+   &&['archivedRecordCount','archivedClosedCount','archivedCompleteCount'].every(k=>value[k]===undefined||(Number.isSafeInteger(value[k])&&value[k]>=0))
    &&value.records.every(validStoredRecord)
    &&[value.equity,value.peak,value.dayStart,value.startedAt].every(Number.isFinite)
    &&value.startedAt>0&&value.peak>0&&value.dayStart>0
@@ -61,7 +62,27 @@ export class TacticalService{
   if(fs.existsSync(file)){try{const value=JSON.parse(fs.readFileSync(file,'utf8'));if(!validStoredState(value))throw Error();this.state=value;}catch{this.state.paused=true;this.state.pauseReason='Ledger unreadable: manual recovery required';this.error=this.state.pauseReason;}}
  }
  private save(){fs.mkdirSync(path.dirname(this.file),{recursive:true});const tmp=this.file+'.tmp';fs.writeFileSync(tmp,JSON.stringify(this.state));fs.renameSync(tmp,this.file);}
- status(){const closed=this.state.records.filter(r=>r.status==='closed');return {mode:'PAPER ONLY',liveEnabled:false,policy:POLICY,costs:COSTS,paused:this.state.paused,pauseReason:this.state.pauseReason,error:this.error,startedAt:this.state.startedAt,lastSuccess:this.state.lastSuccess,equity:this.state.equity,markets:this.markets,records:this.state.records.slice(-150).reverse(),counts:{proposals:this.state.records.length,closed:closed.length,complete:closed.filter(r=>r.coverageComplete).length,open:this.state.records.filter(r=>r.status==='open').length},locks:['2× and 3× require independent forward validation and manual review','U.S. product API permission, account eligibility and collateral isolation unverified','Liquidation thresholds and exchange margin health unavailable; live entries disabled']};}
+ status(){const closed=this.state.records.filter(r=>r.status==='closed');return {mode:'PAPER ONLY',liveEnabled:false,policy:POLICY,costs:COSTS,paused:this.state.paused,pauseReason:this.state.pauseReason,error:this.error,startedAt:this.state.startedAt,lastSuccess:this.state.lastSuccess,equity:this.state.equity,markets:this.markets,records:this.state.records.slice(-150).reverse(),counts:{proposals:this.state.records.length+(this.state.archivedRecordCount??0),closed:closed.length+(this.state.archivedClosedCount??0),complete:closed.filter(r=>r.coverageComplete).length+(this.state.archivedCompleteCount??0),open:this.state.records.filter(r=>r.status==='open').length},locks:['2× and 3× require independent forward validation and manual review','U.S. product API permission, account eligibility and collateral isolation unverified','Liquidation thresholds and exchange margin health unavailable; live entries disabled']};}
+ /** Archive terminal paper episodes without archiving active positions.
+  * Append precedes atomic active-file rename; after a crash, a JSONL consumer
+  * must deduplicate by id because archive lines may be repeated.
+  */
+ compactCompletedRecords():number{
+  if(this.error==='Ledger unreadable: manual recovery required')throw new Error('Ledger unreadable: manual recovery required');
+  if(this.state.records.length<18000)return 0;
+  const n=this.state.records.length-9000;
+  const ended=this.state.records.filter(r=>r.status!=='open').slice(0,n);
+  if(!ended.length)return 0;
+  fs.mkdirSync(path.dirname(this.file),{recursive:true});
+  fs.appendFileSync(this.file+'.archive.jsonl',ended.map(r=>JSON.stringify(r)).join('\n')+'\n','utf8');
+  const ids=new Set(ended.map(r=>r.id));
+  this.state.records=this.state.records.filter(r=>!ids.has(r.id));
+  this.state.archivedRecordCount=(this.state.archivedRecordCount??0)+ended.length;
+  this.state.archivedClosedCount=(this.state.archivedClosedCount??0)+ended.filter(r=>r.status==='closed').length;
+  this.state.archivedCompleteCount=(this.state.archivedCompleteCount??0)+ended.filter(r=>r.status==='closed'&&r.coverageComplete).length;
+  this.save();
+  return ended.length;
+ }
  pause(){if(this.error==='Ledger unreadable: manual recovery required')return this.status();this.state.paused=true;this.state.pauseReason='Operator paused new paper entries';this.save();return this.status();}
  async tick(){
   if(this.busy||this.error==='Ledger unreadable: manual recovery required')return;this.busy=true;
@@ -86,7 +107,8 @@ export class TacticalService{
    const equity=this.state.equity+unrealized;this.state.peak=Math.max(this.state.peak,equity);
    const day=new Date(now).toISOString().slice(0,10);if(day!==this.state.day){this.state.day=day;this.state.dayStart=equity;}
    if(equity<=this.state.dayStart*(1-POLICY.dailyLoss)||equity<=this.state.peak*(1-POLICY.drawdown)){this.state.paused=true;this.state.pauseReason='Paper loss limit reached; manual review required';}
-   const btc:any=markets.find(m=>m.symbol==='BTC');
+   this.compactCompletedRecords();
+    const btc:any=markets.find(m=>m.symbol==='BTC');
    for(const m of markets as any[]){if(m.error)continue;
     for(const horizon of [4,24,120]){
      if(this.state.records.length>=20000)break;
