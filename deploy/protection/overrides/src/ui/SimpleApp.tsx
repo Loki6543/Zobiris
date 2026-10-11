@@ -505,7 +505,7 @@ export function App() {
     const held = new Set(LIVE_HOLDINGS.map((holding) => holding.symbol));
     const existingBuy = new Set(LIVE_OPEN_ORDERS.filter((order) => order.side === "BUY").map((order) => order.symbol));
     const gateAt=Date.parse(String(gatedWatchlist?.asOf??""));
-    const gatedFresh=Number.isFinite(gateAt)&&gateAt<=nowMs&&nowMs-gateAt<=30*60000;
+    const gatedFresh=Number.isFinite(gateAt)&&gateAt<=nowMs+5000&&nowMs-gateAt<=30*60000;
     const approved=new Map<string,any>(gatedFresh&&Array.isArray(gatedWatchlist?.assets)?gatedWatchlist.assets.map((row:any)=>[String(row.symbol).toUpperCase(),row]):[]);
     return rankedAssets
       .filter((asset) => asset?.mappingStatus === "verified")
