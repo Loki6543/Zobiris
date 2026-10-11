@@ -25,8 +25,19 @@ export function sizeTrade(input:{equity:number;entry:number;stop:number;side:Sid
  return {quantity,notional,collateral:notional/leverage,risk:quantity*perUnit,riskBudget:risk,effectiveLeverage:notional/equity,eligible:quantity>=minQuantity&&notional>=minCost&&quantity>0,reason:quantity<minQuantity||notional<minCost?'Minimum position exceeds risk budget':null};
 }
 export type Candle={time:number;open:number;high:number;low:number;close:number;volume:number};
+/** Standalone callers and restored/replayed data must satisfy the same OHLC contract as parseBars. */
+export function assertValidCandles(bars:Candle[], minimum = 60): void {
+ if(!Array.isArray(bars)||bars.length<minimum)throw new Error('Insufficient completed candles');
+ for(let i=0;i<bars.length;i++){
+  const b=bars[i]!;
+  if(!b||![b.time,b.open,b.high,b.low,b.close,b.volume].every(Number.isFinite)
+     ||b.open<=0||b.high<=0||b.low<=0||b.close<=0||b.volume<0
+     ||b.high<Math.max(b.open,b.close,b.low)||b.low>Math.min(b.open,b.close)
+     ||(i>0&&b.time<=bars[i-1]!.time))throw new Error('Invalid or unordered candles');
+ }
+}
 export function signal(bars:Candle[]){
- if(bars.length<60)throw new Error('Insufficient completed candles');
+ assertValidCandles(bars);
  const closes=bars.map(b=>b.close),mean=(n:number)=>closes.slice(-n).reduce((a,b)=>a+b,0)/n;
  const fast=mean(20),slow=mean(50),last=bars[bars.length-1]!;
  let gain=0,loss=0;for(let i=closes.length-14;i<closes.length;i++){const d=closes[i]!-closes[i-1]!;gain+=Math.max(d,0);loss+=Math.max(-d,0);}
@@ -43,6 +54,8 @@ export function candleExit(side:Side,bar:Candle,stop:number,target:number):{pric
  return null;
 }
 export function replay(bars:Candle[],hours:number){
+ assertValidCandles(bars);
+ if(!Number.isSafeInteger(hours)||hours<=0)throw new Error('Invalid replay horizon');
  const boundary=Math.max(60,Math.floor(bars.length*.7));let equity=300,peak=300,drawdown=0,trades=0,longs=0,shorts=0,costs=0,gross=0;
  // Fixed rules; final 30% is chronological holdout, no training or parameter selection.
  for(let i=boundary;i+hours<bars.length;i++){
