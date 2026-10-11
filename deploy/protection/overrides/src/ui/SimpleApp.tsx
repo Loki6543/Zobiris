@@ -300,6 +300,7 @@ export function App() {
   const [showAllRankings, setShowAllRankings] = useState(false);
   const [analysisSymbol, setAnalysisSymbol] = useState("BTC");
   const [snapshot, setSnapshot] = useState<any>(null);
+  const [gatedWatchlist,setGatedWatchlist] = useState<any>(null);
   const [instrumentRules,setInstrumentRules] = useState<Record<string,EntryRules>>({});
   const [account, setAccount] = useState<any>(null);
   const researchEvidence=useResearchEvidence();
@@ -324,11 +325,13 @@ export function App() {
     void fetch("/api/entry-rules").then(async r=>{if(!r.ok)throw new Error();setInstrumentRules((await r.json()).rules??{});}).catch(()=>setInstrumentRules({}));
     setLoading(true);
     setError(null);
+    setGatedWatchlist(null);
     try {
-      const [snapshotResponse, watchlistResponse, accountResponse] = await Promise.all([
+      const [snapshotResponse, watchlistResponse, accountResponse, gateResponse] = await Promise.all([
         fetch("/api/snapshot/latest", { headers: authHeaders }),
         fetch("/api/watchlist"),
         fetch("/api/account", { headers: authHeaders }),
+        fetch("/api/zobiris/watchlist", { headers: authHeaders }),
       ]);
       if (!snapshotResponse.ok) throw new Error(`Snapshot load failed (HTTP ${snapshotResponse.status}).`);
       if (!watchlistResponse.ok) throw new Error(`Watchlist load failed (HTTP ${watchlistResponse.status}).`);
@@ -344,6 +347,7 @@ export function App() {
         const data = await accountResponse.json();
         setAccount(visibleAssetData(data?.account ?? null));
       }
+      if(gateResponse.ok){const data=await gateResponse.json();if(Array.isArray(data?.assets))setGatedWatchlist(data);}
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Market data could not be loaded.");
     } finally {
@@ -500,6 +504,9 @@ export function App() {
   const candidates = useMemo(() => {
     const held = new Set(LIVE_HOLDINGS.map((holding) => holding.symbol));
     const existingBuy = new Set(LIVE_OPEN_ORDERS.filter((order) => order.side === "BUY").map((order) => order.symbol));
+    const gateAt=Date.parse(String(gatedWatchlist?.asOf??""));
+    const gatedFresh=Number.isFinite(gateAt)&&gateAt<=nowMs&&nowMs-gateAt<=30*60000;
+    const approved=new Map<string,any>(gatedFresh&&Array.isArray(gatedWatchlist?.assets)?gatedWatchlist.assets.map((row:any)=>[String(row.symbol).toUpperCase(),row]):[]);
     return rankedAssets
       .filter((asset) => asset?.mappingStatus === "verified")
       .filter((asset) => !held.has(String(asset?.symbol ?? "")) && !existingBuy.has(String(asset?.symbol ?? "")))
@@ -510,14 +517,15 @@ export function App() {
         const score = researchScore(asset);
         const conf = confidencePct(asset);
         const rotation = asset?.strategy21?.delayedRotation ?? null;
+        const sourceRow=approved.get(symbol),portfolioDecision=sourceRow?.portfolioGate;
 
         // Pilot mode is intentionally fail-closed: deep research can keep running,
         // but new capital is only recommended for a strict delayed-rotation setup
         // that also passes the existing Kraken execution + research-integrity gates.
-        if (!snapshotFresh || !gate.pass || conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null || (rotation?.status !== "QUALIFIED" || rotation?.qualifiesForNewCapital !== true || rotation?.dataProvenance !== "PROVIDER_LIVE")) return [];
+        if (!snapshotFresh || !gate.pass || conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null || (rotation?.status !== "QUALIFIED" || rotation?.qualifiesForNewCapital !== true || rotation?.dataProvenance !== "PROVIDER_LIVE") || !gatedFresh || !["ALLOW","REDUCE"].includes(portfolioDecision?.decision) || sourceRow?.entry?.referenceLimit == null) return [];
 
-        const reference = entryReference(price,rotation?.recommendedPullbackPct,reentryRisk.has(symbol));
-        const budget = Math.max(0, Math.min(PROBE_TYPICAL_USD, gate.maxNextOrderUsd, freeCash / 1.01));
+        const reference = Number(sourceRow.entry.referenceLimit);
+        const budget = Math.max(0, Math.min(PROBE_TYPICAL_USD, gate.maxNextOrderUsd, freeCash / 1.01, portfolioDecision.allowedUsd, Number(sourceRow.entry.requestedNotionalUsd)));
         const checked = validateEntry(reference,budget,instrumentRules[symbol]);
         if (!checked.valid || checked.limit == null) return [];
         const limit=checked.limit, orderUsd=checked.notional, discount=1-limit/price;
@@ -540,7 +548,7 @@ export function App() {
       })
       .sort((a, b) => b.rotationScore - a.rotationScore || Number(b.asset?.strategy21?.nextDollarScore ?? 0) - Number(a.asset?.strategy21?.nextDollarScore ?? 0) || b.score - a.score)
       .slice(0, 5);
-  }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs, account, instrumentRules]);
+  }, [rankedAssets, regime, reentryRisk, assetDetails, freeCash, snapshotFresh, nowMs, account, instrumentRules, gatedWatchlist]);
 
   const watchlistRankings = useMemo(() => {
     const symbols = watchlist.length
