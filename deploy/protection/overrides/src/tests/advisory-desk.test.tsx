@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import {render,screen,fireEvent,waitFor} from '@testing-library/react';
+import {render,screen,fireEvent,waitFor,cleanup} from '@testing-library/react';
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {AdvisoryDesk} from '../ui/AdvisoryDesk';
 import {calculateGrossStress,ADVISORY_CATEGORIES} from '../ui/advisoryModel';
 
-afterEach(()=>vi.restoreAllMocks());
+afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();});
 
 describe('advisory research categories',()=>{
  it('defines four real, individually accessible category controls',()=>{
