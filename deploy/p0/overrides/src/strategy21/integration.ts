@@ -259,13 +259,30 @@ function claimDependency(family: string | undefined): string {
   }
 }
 
+/** Conservative defense-in-depth freshness check for caller-supplied liquidity profiles.
+ * This does not replace the collector's continuity/checksum/depth validation.
+ * Exchange event time and host receipt time are distinct clocks; this profile
+ * currently exposes observedAt, not a proven persisted receivedAt.
+ */
+export function isFreshBookSnapshot(decisionAsOf: string, observedAt: string, maxAgeMs = 15 * 60_000): boolean {
+  const decisionMs = Date.parse(decisionAsOf);
+  const observedMs = Date.parse(observedAt);
+  const ageMs = decisionMs - observedMs;
+  return Number.isFinite(decisionMs) && Number.isFinite(observedMs)
+    && Number.isFinite(maxAgeMs) && maxAgeMs >= 0
+    && ageMs >= 0 && ageMs <= maxAgeMs;
+}
+
 function toEvidence(claims: EvidenceClaimLike[], symbol: string, asOf: string): EvidenceItem[] {
   return claims.filter((c) => c.symbol.toUpperCase() === symbol.toUpperCase()).map((c): EvidenceItem | null => {
     const timing = evidenceTimingForFamily(c.factorFamily);
     const observedAt = c.observedAt ?? c.receivedAt ?? asOf;
     const retrievedAt = c.receivedAt ?? observedAt;
     const asOfMs = Date.parse(asOf);
-    if (Date.parse(observedAt) > asOfMs || Date.parse(retrievedAt) > asOfMs) return null;
+    const observedMs = Date.parse(observedAt);
+    const receivedMs = Date.parse(retrievedAt);
+    // Reject malformed or future-dated evidence before constructing expiresAt.
+    if (![asOfMs, observedMs, receivedMs].every(Number.isFinite) || observedMs > asOfMs || receivedMs > asOfMs) return null;
     return {
       id: c.id,
       type: c.factorFamily === 'socialAttention' || c.factorFamily === 'catalystsNarrative' ? 'NARRATIVE_SIGNAL' : 'OBSERVATION',
@@ -370,7 +387,7 @@ export function integrateStrategy21(input: IntegrateStrategy21Input): Integrated
         migrationResolved: true,
         exploitClear: !(asset.riskGates ?? []).some((g) => g.active && /exploit|identity/i.test(g.code ?? '')),
         tokenomicsComplete: (asset.evidenceCoverage ?? 0) >= 0.5,
-        bookFresh: liq.profile.snapshots.length > 0 && Date.parse(input.snapshot.asOf) - Date.parse(liq.profile.snapshots.at(-1)!.observedAt) <= 15*60*1000,
+        bookFresh: liq.profile.snapshots.length > 0 && isFreshBookSnapshot(input.snapshot.asOf, liq.profile.snapshots.at(-1)!.observedAt),
         takerFeeBpsPerSide: liq.takerFeeBpsPerSide,
         estimatedGrossExpectedReturnBps: liq.estimatedGrossExpectedReturnBps,
         currentTradeCount24h: liq.currentTradeCount24h,
