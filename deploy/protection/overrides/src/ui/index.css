@@ -521,3 +521,13 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 @media(max-width:620px){.zobiris-dashboard .zcc-desks,.zobiris-dashboard .advisor-shortcuts,.zobiris-dashboard .advisor-categories,.zobiris-dashboard .advisor-readouts,.zobiris-dashboard .advisor-checks{grid-template-columns:minmax(0,1fr);} .zobiris-dashboard .advisor-hero{flex-direction:column;align-items:stretch;padding:19px;} .zobiris-dashboard .advisor-provenance{min-width:0;} .zobiris-dashboard .advisor-analysis{padding:17px;} .zobiris-dashboard .zcc-desks button{min-height:100px;}}
 @media(prefers-reduced-motion:reduce){.zobiris-dashboard .zcc-desks button{transform:none!important;}}
 @media(forced-colors:active){.zobiris-dashboard .advisor-category[aria-pressed="true"]{outline:2px solid Highlight;}.zobiris-dashboard .advisor-shortcuts button,.zobiris-dashboard .advisor-readouts article{border:1px solid CanvasText;}}
+
+
+/* Grounded spot screening groups; never substitute demo-sector taxonomy. */
+.zobiris-dashboard .watch-categories{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:8px;}
+.zobiris-dashboard .watch-categories button{display:flex;align-items:center;gap:9px;min-height:37px;padding:8px 12px;border:1px solid #375168;border-radius:9px;background:#122237;color:#c3d5e4;font-size:12px;font-weight:680;cursor:pointer;}
+.zobiris-dashboard .watch-categories button span{background:#22374b;border-radius:99px;min-width:19px;padding:3px 6px;font-size:10px;text-align:center;color:#9fb7c5;}
+.zobiris-dashboard .watch-categories button[aria-pressed="true"]{background:#163e39;border-color:#62d9be;color:#bdf7e7;}
+.zobiris-dashboard .watch-categories button[aria-pressed="true"] span{background:#24554a;color:#cbfff0;}
+.zobiris-dashboard .watch-category-note{font-size:11px;color:#a4b6ca;margin:5px 0 14px;line-height:1.5;}
+@media(max-width:600px){.zobiris-dashboard .watch-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}.zobiris-dashboard .watch-categories button{justify-content:space-between;}}
