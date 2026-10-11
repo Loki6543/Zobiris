@@ -1,4 +1,5 @@
 import { TacticalMargin } from './TacticalMargin';
+import { AdvisoryDesk } from './AdvisoryDesk';
 import { mergeAssetUniverse, visibleAssetData } from "../shared/assetUniverse";
 import {ResearchEvidencePanel,useResearchEvidence} from './ResearchEvidencePanel';
 import {PilotScorecard} from './PilotScorecard';
@@ -29,7 +30,7 @@ import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare" | "tactical";
+type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare" | "tactical" | "advisory";
 type RankedAsset = Record<string, any>;
 
 const money = (value: number) => new Intl.NumberFormat("en-US", {
@@ -838,6 +839,7 @@ export function App() {
           ["history", "History / Learning"],
           ["compare", "Compare Lab"],
           ["tactical", "Margin Intelligence"],
+           ["advisory", "Advisory Research"],
         ] as Array<[View, string]>).map(([key, label]) => (
           <button aria-current={view === key ? "page" : undefined} key={key} onClick={() => setView(key)} style={view === key ? styles.navActive : styles.navButton}>
             <DashboardIcon name={key} />{label}
@@ -1078,6 +1080,8 @@ export function App() {
       {view === "compare" ? <><ResearchEvidencePanel symbols={watchlist.map(a=>a.symbol)} {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab onAnalyzeSymbol={setAnalysisSymbol} rankedAssets={mergeAssetUniverse(watchlist, rankedAssets)} focusSymbol={analysisSymbol} /></> : null}
 
       {view === "tactical" ? <TacticalMargin operatorToken={operatorToken} /> : null}
+
+       {view === "advisory" ? <AdvisoryDesk onNavigate={setView} /> : null}
 
       {view === "history" ? (
         <main>
@@ -1377,6 +1381,7 @@ function DashboardIcon({name}: {name: string}) {
     compare: "M9 3h6M10 3v7L4 20h16l-6-10V3M8 15h8",
     lock: "M7 10V7a5 5 0 0 1 10 0v3M6 10h12v11H6ZM12 14v3",
     refresh: "M20 7a9 9 0 1 0 1 8M20 3v5h-5",
+    advisory: "M12 3 4 7v10l8 4 8-4V7l-8-4ZM4 7l8 4 8-4M12 11v10",
   };
   return <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.portfolio}/></svg>;
 }
