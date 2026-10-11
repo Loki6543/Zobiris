@@ -514,7 +514,7 @@ export function App() {
         // Pilot mode is intentionally fail-closed: deep research can keep running,
         // but new capital is only recommended for a strict delayed-rotation setup
         // that also passes the existing Kraken execution + research-integrity gates.
-        if (!snapshotFresh || !gate.pass || conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null || rotation?.status !== "QUALIFIED") return [];
+        if (!snapshotFresh || !gate.pass || conf <= STRATEGY21_MIN_ORDER_CONFIDENCE_PCT || price == null || (rotation?.status !== "QUALIFIED" || rotation?.qualifiesForNewCapital !== true || rotation?.dataProvenance !== "PROVIDER_LIVE")) return [];
 
         const reference = entryReference(price,rotation?.recommendedPullbackPct,reentryRisk.has(symbol));
         const budget = Math.max(0, Math.min(PROBE_TYPICAL_USD, gate.maxNextOrderUsd, freeCash / 1.01));
