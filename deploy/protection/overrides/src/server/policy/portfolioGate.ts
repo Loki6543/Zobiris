@@ -71,10 +71,26 @@ function finiteNonNeg(x: unknown): x is number {
   return typeof x === 'number' && Number.isFinite(x) && x >= 0;
 }
 
+/** Gate compares canonical exchange symbols, not input letter case or whitespace. */
+const symbolKey = (symbol: string): string => symbol.trim().toUpperCase();
+
+function validPolicy(policy: PortfolioPolicy): boolean {
+  const t = policy.intentionalHoldingsTarget;
+  return Array.isArray(t) && t.length === 2
+    && t.every(x => Number.isSafeInteger(x) && x >= 0)
+    && t[0] <= t[1]
+    && Number.isSafeInteger(policy.intentionalHoldingsMax)
+    && policy.intentionalHoldingsMax >= t[1]
+    && Number.isFinite(policy.meaningfulActionFloorUsd) && policy.meaningfulActionFloorUsd >= 0
+    && Number.isFinite(policy.typicalProbeUsd) && policy.typicalProbeUsd >= 0
+    && Number.isFinite(policy.cashBufferDivisor) && policy.cashBufferDivisor > 0
+    && Number.isFinite(policy.maxAccountDataAgeMin) && policy.maxAccountDataAgeMin > 0;
+}
+
 function slotSymbols(state: PortfolioState): Set<string> {
   const s = new Set<string>();
-  for (const h of state.holdings) if (h.intentional !== false && h.valueUsd > 0) s.add(h.symbol);
-  for (const o of state.openOrders) if (o.side === 'buy') s.add(o.symbol);
+  for (const h of state.holdings) if (h.intentional !== false && h.valueUsd > 0) s.add(symbolKey(h.symbol));
+  for (const o of state.openOrders) if (o.side === 'buy') s.add(symbolKey(o.symbol));
   return s;
 }
 
@@ -99,17 +115,23 @@ export function evaluatePortfolioGate(state: PortfolioState, c: GateCandidate, p
   });
 
   // Fail closed on account data the gate cannot trust.
+  if (!validPolicy(policy)) reasons.push('PORTFOLIO_POLICY_INVALID');
+  if (state.cashBasis !== 'TOTAL' && state.cashBasis !== 'NET_OF_OPEN_ORDERS') reasons.push('CASH_BASIS_INVALID');
+  if (!['NEW_BUY', 'ADD', 'PARTIAL_SELL', 'FULL_EXIT'].includes(c.action)) reasons.push('ACTION_INVALID');
+  if (typeof c.symbol !== 'string' || symbolKey(c.symbol).length === 0) reasons.push('SYMBOL_INVALID');
   const asOf = Date.parse(state.asOf);
-  if (!Number.isFinite(asOf) || asOf > nowMs + 5000) reasons.push('ACCOUNT_STATE_TIME_INVALID');
+  if (!Number.isFinite(nowMs) || !Number.isFinite(asOf) || asOf > nowMs + 5000) reasons.push('ACCOUNT_STATE_TIME_INVALID');
   else if (nowMs - asOf > policy.maxAccountDataAgeMin * 60_000) reasons.push('ACCOUNT_STATE_STALE');
   if (!finiteNonNeg(state.cashUsd)) reasons.push('CASH_INVALID');
   if (!(requested > 0)) reasons.push('REQUESTED_SIZE_INVALID');
-  if (state.holdings.some((h) => !finiteNonNeg(h.valueUsd)) || state.openOrders.some((o) => !finiteNonNeg(o.notionalUsd))) reasons.push('POSITION_DATA_INVALID');
+  if (state.holdings.some(h => !finiteNonNeg(h.valueUsd) || typeof h.symbol !== 'string' || !h.symbol.trim())
+      || state.openOrders.some(o => !finiteNonNeg(o.notionalUsd) || typeof o.symbol !== 'string' || !o.symbol.trim()
+        || (o.side !== 'buy' && o.side !== 'sell'))) reasons.push('POSITION_DATA_INVALID');
   if (reasons.length) return result('BLOCK', 0, slots.size, null, null);
 
-  const held = state.holdings.find((h) => h.symbol === c.symbol && h.intentional !== false && h.valueUsd > 0);
+  const held = state.holdings.find((h) => symbolKey(h.symbol) === symbolKey(c.symbol) && h.intentional !== false && h.valueUsd > 0);
   const openBuys = state.openOrders.filter((o) => o.side === 'buy');
-  const openSellSameSymbol = state.openOrders.filter((o) => o.side === 'sell' && o.symbol === c.symbol).reduce((a, o) => a + o.notionalUsd, 0);
+  const openSellSameSymbol = state.openOrders.filter((o) => o.side === 'sell' && symbolKey(o.symbol) === symbolKey(c.symbol)).reduce((a, o) => a + o.notionalUsd, 0);
   if ((state.pendingSellProceedsUsd ?? 0) > 0) warnings.push('PENDING_SELL_PROCEEDS_NOT_COUNTED');
 
   if (c.action === 'NEW_BUY' || c.action === 'ADD') {
@@ -122,8 +144,8 @@ export function evaluatePortfolioGate(state: PortfolioState, c: GateCandidate, p
       reasons.push('ADD_REQUIRES_INTENTIONAL_HOLDING');
       return result('BLOCK', 0, slots.size, null, null);
     }
-    if (openBuys.some((o) => o.symbol === c.symbol)) warnings.push('EXISTING_OPEN_BUY_NEEDS_REVIEW');
-    const after = slots.has(c.symbol) ? slots.size : slots.size + 1;
+    if (openBuys.some((o) => symbolKey(o.symbol) === symbolKey(c.symbol))) warnings.push('EXISTING_OPEN_BUY_NEEDS_REVIEW');
+    const after = slots.has(symbolKey(c.symbol)) ? slots.size : slots.size + 1;
     if (after > policy.intentionalHoldingsMax) {
       reasons.push('HOLDINGS_MAX_REACHED');
       return result('BLOCK', 0, slots.size, null, null);
