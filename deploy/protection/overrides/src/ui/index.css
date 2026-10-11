@@ -666,3 +666,131 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 .zobiris-dashboard .tactical-terminal td{font-variant-numeric:tabular-nums;}
 .zobiris-dashboard .tactical-terminal svg polyline{filter:drop-shadow(0 0 3px #06cba15c);}
 .zobiris-dashboard .tactical-badge{color:#f4d8a3;border-color:#6e6049;background:#2a261b;font-weight:770;}
+
+
+/* ================================================================
+   ZOBIRIS v2 visual system — navy + electric blue (owner mockup).
+   Final layer: overrides earlier teal styling. Data bindings unchanged.
+   ================================================================ */
+.zobiris-dashboard {
+  --zv-bg:#060d1a; --zv-panel:#0b1630; --zv-panel-2:#0e1b38; --zv-border:#1b2d52; --zv-border-soft:#15264a;
+  --zv-text:#e8eefb; --zv-muted:#8a9bb8; --zv-dim:#6b7c99;
+  --zv-blue:#2563eb; --zv-blue-2:#3b82f6; --zv-blue-soft:#1e3a8a55;
+  --zv-green:#22c55e; --zv-red:#ef4444; --zv-amber:#f59e0b;
+  background:radial-gradient(1200px 600px at 70% -10%,#0f2350 0%,transparent 60%),var(--zv-bg) !important;
+  color:var(--zv-text) !important;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif !important;
+}
+/* Layout: sidebar + full-width content (removes the old empty gutter) */
+@media (min-width:1040px){
+  .zobiris-dashboard{padding:20px 24px 28px 220px !important;}
+  .zobiris-dashboard > .dashboard-nav, .zobiris-dashboard .dashboard-nav{
+    position:fixed !important;top:0 !important;left:0 !important;bottom:0 !important;width:196px !important;max-width:none !important;height:auto !important;
+    padding:18px 12px 14px !important;margin:0 !important;border-radius:0 !important;border:0 !important;border-right:1px solid var(--zv-border) !important;
+    background:linear-gradient(180deg,#0a1530,#08112a) !important;box-shadow:none !important;gap:4px !important;
+  }
+  .zobiris-dashboard > .dashboard-nav:before,.zobiris-dashboard > .dashboard-nav:after{content:none !important;display:none !important;}
+  .zobiris-dashboard .dashboard-nav button{min-height:38px !important;padding:8px 12px !important;font-size:13px !important;font-weight:500 !important;color:#9fb0cc !important;border:1px solid transparent !important;border-radius:8px !important;background:transparent !important;box-shadow:none !important;}
+  .zobiris-dashboard .dashboard-nav button[aria-current="page"]{background:linear-gradient(90deg,#1d4ed8,#2563eb) !important;color:#fff !important;border-color:#3b82f6 !important;border-left-width:1px !important;box-shadow:0 0 18px #2563eb40 !important;font-weight:600 !important;}
+  .zobiris-dashboard .dashboard-nav button:not([aria-current]):hover{background:#12224a !important;color:#e8eefb !important;}
+  .zobiris-dashboard .dashboard-nav button .dashboard-icon{color:currentColor !important;width:17px;height:17px;}
+}
+.zobiris-dashboard header, .zobiris-dashboard > main, .zobiris-dashboard .dashboard-notice, .zobiris-dashboard footer,
+.zobiris-dashboard .portfolio-visuals, .zobiris-dashboard .daily-brief, .zobiris-dashboard .watch-page, .zobiris-dashboard .tactical-terminal,
+.zobiris-dashboard section[aria-label="Profit protection"], .zobiris-dashboard .dashboard-metrics, .zobiris-dashboard .dashboard-panel, .zobiris-dashboard .dashboard-columns{
+  max-width:none !important;margin-left:0 !important;margin-right:0 !important;
+}
+.zobiris-dashboard header > div:first-child > div:nth-child(2){margin-left:0 !important;}
+.zobiris-dashboard .dashboard-sidebar-brand{border-bottom:0 !important;padding:4px 10px 22px !important;margin:0 !important;}
+.zobiris-dashboard .dashboard-sidebar-brand svg{filter:drop-shadow(0 0 8px #3b82f680) !important;}
+.zobiris-dashboard .dashboard-sidebar-brand svg path:first-child{stroke:#38bdf8 !important;}
+.zobiris-dashboard .dashboard-sidebar-brand svg path:last-child{stroke:#2563eb !important;}
+.zobiris-dashboard .dashboard-sidebar-brand strong{font-size:18px !important;letter-spacing:1.5px !important;color:#fff !important;}
+.zobiris-dashboard .dashboard-sidebar-bottom{border-top:1px solid var(--zv-border-soft) !important;color:var(--zv-muted) !important;font-size:11px !important;}
+/* Top bar */
+.zobiris-dashboard .dashboard-topbar{display:flex !important;align-items:flex-start !important;justify-content:space-between !important;min-height:0 !important;padding:2px 0 16px !important;margin-bottom:6px !important;border:0 !important;}
+.zobiris-dashboard .dashboard-topbar h1{font-size:26px !important;font-weight:650 !important;letter-spacing:-.4px !important;margin:0 0 4px !important;color:#fff !important;}
+.zobiris-dashboard .dashboard-topbar p{font-size:13px !important;color:var(--zv-muted) !important;margin:0 !important;}
+.zobiris-dashboard .dashboard-topbar-right{display:flex !important;align-items:center !important;gap:10px !important;flex-wrap:nowrap !important;}
+.zobiris-dashboard .dashboard-asof{display:inline-flex;align-items:center;gap:6px;font-size:12px !important;color:var(--zv-muted) !important;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .dashboard-asof .sidebar-market-dot{margin:0 !important;width:7px;height:7px;}
+.zobiris-dashboard .topbar-currency{font-size:12px;font-weight:600;color:#cbd6ec;padding:6px 10px;border:1px solid var(--zv-border);border-radius:7px;background:var(--zv-panel);}
+.zobiris-dashboard .topbar-icon-button,.zobiris-dashboard .topbar-avatar{display:inline-grid;place-items:center;width:34px;height:34px;padding:0 !important;border-radius:50% !important;border:1px solid var(--zv-border) !important;background:var(--zv-panel) !important;color:#cbd6ec !important;cursor:pointer;font-weight:700;font-size:13px;}
+.zobiris-dashboard .topbar-icon-button .dashboard-icon,.zobiris-dashboard .topbar-avatar .dashboard-icon{width:16px;height:16px;margin:0 !important;}
+.zobiris-dashboard .topbar-avatar.is-unlocked{background:linear-gradient(135deg,#1d4ed8,#3b82f6) !important;color:#fff !important;border-color:#3b82f6 !important;}
+.zobiris-dashboard .dashboard-mobile-brand .brand-mark{color:#38bdf8 !important;}
+/* Status line */
+.zobiris-dashboard .dashboard-notice{background:#0b1630 !important;border:1px solid var(--zv-border) !important;border-left:3px solid var(--zv-amber) !important;color:#cbd6ec !important;font-size:12px !important;padding:9px 12px !important;border-radius:8px !important;margin:0 0 14px !important;}
+/* Cards / panels */
+.zobiris-dashboard .dashboard-panel,.zobiris-dashboard .dashboard-metric,.zobiris-dashboard .allocation-panel,.zobiris-dashboard .holdings-panel,
+.zobiris-dashboard .daily-brief,.zobiris-dashboard .watch-card,.zobiris-dashboard .watch-movers-panel,.zobiris-dashboard .zcc-panel,.zobiris-dashboard .zcc-stat,
+.zobiris-dashboard .market-ticker-card,.zobiris-dashboard .market-key-panel,.zobiris-dashboard .tactical-terminal .tactical-hero,.zobiris-dashboard .tactical-terminal article,
+.zobiris-dashboard section[aria-label="Profit protection"],.zobiris-dashboard section[aria-label="Research evidence"]{
+  background:linear-gradient(180deg,var(--zv-panel-2),var(--zv-panel)) !important;border:1px solid var(--zv-border) !important;border-top-color:#22386a !important;
+  border-radius:12px !important;box-shadow:0 0 0 1px #0000,0 10px 30px -18px #000d,inset 0 1px 0 #ffffff08 !important;color:var(--zv-text) !important;
+}
+.zobiris-dashboard .dashboard-metric:first-child,.zobiris-dashboard .zcc-stat:first-child{background:linear-gradient(180deg,#10224a,#0b1630) !important;border-color:#24418a !important;}
+.zobiris-dashboard .dashboard-metrics{gap:12px !important;margin:0 0 14px !important;}
+.zobiris-dashboard .dashboard-metric{min-height:96px !important;padding:14px 16px !important;}
+.zobiris-dashboard .dashboard-metric > div:first-child{color:var(--zv-muted) !important;font-size:12px !important;font-weight:500 !important;}
+.zobiris-dashboard .dashboard-metric > div:nth-child(2){font-size:24px !important;font-weight:650 !important;color:#fff !important;margin-top:8px !important;}
+.zobiris-dashboard .dashboard-panel{padding:16px 18px !important;margin-bottom:14px !important;}
+.zobiris-dashboard .dashboard-panel h2,.zobiris-dashboard .zcc-panel-title h2,.zobiris-dashboard .visual-title h2{font-size:15px !important;font-weight:600 !important;color:#fff !important;letter-spacing:-.1px !important;}
+.zobiris-dashboard .dashboard-columns{gap:14px !important;}
+.zobiris-dashboard .zcc-eyebrow,.zobiris-dashboard .protection-badge{color:#93b4f5 !important;}
+/* Tables */
+.zobiris-dashboard table{font-size:12.5px !important;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard th,.zobiris-dashboard .dashboard-panel th,.zobiris-dashboard .watch-table th,.zobiris-dashboard .tactical-terminal th{background:transparent !important;color:var(--zv-muted) !important;font-size:11px !important;font-weight:500 !important;text-transform:none !important;letter-spacing:0 !important;padding:10px 12px !important;border-bottom:1px solid var(--zv-border) !important;}
+.zobiris-dashboard td,.zobiris-dashboard .dashboard-panel td,.zobiris-dashboard .watch-table td{padding:11px 12px !important;border-bottom:1px solid var(--zv-border-soft) !important;}
+.zobiris-dashboard tbody tr:hover > td,.zobiris-dashboard .watch-table tbody tr:hover td,.zobiris-dashboard .dashboard-panel tbody tr:hover td{background:#12224a66 !important;}
+.zobiris-dashboard .watch-table th:first-child,.zobiris-dashboard .watch-table td:first-child{background:var(--zv-panel) !important;}
+/* Coin icons */
+.zobiris-dashboard .asset-monogram{display:inline-grid !important;place-items:center;width:24px !important;height:24px !important;border-radius:50% !important;border:0 !important;font-size:11px !important;font-weight:800 !important;color:#fff !important;background:#475569 !important;box-shadow:none !important;flex:0 0 auto;}
+.zobiris-dashboard .asset-monogram[data-symbol="BTC"]{background:#f7931a !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="ETH"]{background:#627eea !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="SOL"]{background:linear-gradient(135deg,#9945ff,#14f195) !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="AVAX"]{background:#e84142 !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="LINK"]{background:#2a5ada !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="USDC"]{background:#2775ca !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="KAS"]{background:#49c5b6 !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="QNT"]{background:#111827 !important;border:1px solid #475569 !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="EGLD"]{background:#23f7dd !important;color:#06202a !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="ATOM"]{background:#2e3148 !important;}
+.zobiris-dashboard .asset-monogram[data-symbol="NEAR"]{background:#00c08b !important;}
+.zobiris-dashboard .market-coin-badge{background:#f7931a !important;box-shadow:none !important;}
+.zobiris-dashboard .market-coin-eth{background:#627eea !important;}
+.zobiris-dashboard .market-coin-sol{background:linear-gradient(135deg,#9945ff,#14f195) !important;}
+/* Segmented controls / range toggles / pills / buttons */
+.zobiris-dashboard .btc-windows button,.zobiris-dashboard .watch-movers-switch button,.zobiris-dashboard .watch-categories button{background:transparent !important;color:var(--zv-muted) !important;border:1px solid transparent !important;border-radius:6px !important;padding:6px 11px !important;font-size:12px !important;font-weight:500 !important;}
+.zobiris-dashboard .btc-windows button[aria-pressed=true],.zobiris-dashboard .watch-movers-switch button[aria-pressed="true"],.zobiris-dashboard .watch-categories button[aria-pressed="true"]{background:var(--zv-blue) !important;color:#fff !important;border-color:var(--zv-blue-2) !important;box-shadow:none !important;}
+.zobiris-dashboard .watch-movers-switch{background:#081129 !important;border-color:var(--zv-border) !important;}
+.zobiris-dashboard .dashboard-panel button:not(.topbar-avatar):not(.topbar-icon-button),.zobiris-dashboard .zcc-panel-title button,.zobiris-dashboard .zcc-watch-row button{background:#12224a !important;color:#cfe0ff !important;border:1px solid #24418a !important;border-radius:7px !important;}
+.zobiris-dashboard .dashboard-panel table button[aria-label$="order analysis"]{background:transparent !important;border:0 !important;color:inherit !important;}
+.zobiris-dashboard .watch-summary span{background:#10224a !important;color:#93c5fd !important;border-color:#24418a !important;}
+/* Positive / negative */
+.zobiris-dashboard .brief-positive,.zobiris-dashboard .market-ticker-change.is-gain{color:var(--zv-green) !important;}
+.zobiris-dashboard .brief-negative,.zobiris-dashboard .market-ticker-change.is-loss{color:var(--zv-red) !important;}
+.zobiris-dashboard .watch-mover-track>.is-gain{background:linear-gradient(90deg,#15803d,#22c55e) !important;}
+.zobiris-dashboard .watch-mover-track>.is-loss{background:linear-gradient(90deg,#991b1b,#ef4444) !important;}
+.zobiris-dashboard .watch-mover-track{background:#12224a !important;}
+/* Charts: green area look */
+.zobiris-dashboard .btc-chart-panel svg polyline,.zobiris-dashboard .tactical-terminal svg polyline,.zobiris-dashboard .zcc svg polyline{stroke:#22c55e !important;filter:none !important;}
+.zobiris-dashboard .allocation-ring{filter:drop-shadow(0 0 10px #2563eb30) !important;}
+.zobiris-dashboard .market-key-panel>div strong{color:#e8eefb !important;}
+.zobiris-dashboard .tactical-grid.four h2{color:#fff !important;}
+.zobiris-dashboard .tactical-badge{color:#fcd34d !important;border-color:#92400e !important;background:#2a1d08 !important;}
+.zobiris-dashboard footer{border-top:1px solid var(--zv-border-soft) !important;color:var(--zv-dim) !important;font-size:11px !important;}
+.zobiris-dashboard :focus-visible{outline:2px solid var(--zv-blue-2) !important;outline-offset:2px !important;}
+@media (max-width:1039px){
+  .zobiris-dashboard .dashboard-nav{background:var(--zv-panel) !important;border:1px solid var(--zv-border) !important;}
+  .zobiris-dashboard .dashboard-nav button[aria-current="page"]{background:var(--zv-blue) !important;color:#fff !important;border-color:var(--zv-blue-2) !important;box-shadow:none !important;}
+}
+@media (max-width:720px){
+  .zobiris-dashboard .dashboard-topbar{flex-direction:column !important;}
+  .zobiris-dashboard .dashboard-topbar-right{flex-wrap:wrap !important;}
+}
+@media (min-width:1040px){
+  .zobiris-dashboard> :not(.dashboard-nav){margin-left:0 !important;width:auto !important;max-width:none !important;}
+}
+.zobiris-dashboard .dashboard-panel table button[aria-label$="order analysis"]{box-shadow:none !important;padding:0 !important;}
+.zobiris-dashboard .dashboard-panel table button[aria-label$="order analysis"] > span:last-child{background:#12224a !important;color:#93b4f5 !important;border-radius:6px !important;}

@@ -196,8 +196,9 @@ describe("simplified Zobiris Core", () => {
     const ranking = screen.getByText("Watchlist ranking").closest("section");
     expect(ranking?.querySelector("tbody tr td:nth-child(2)")?.textContent).toBe("ATOM");
     expect(screen.getByText("QNT")).toBeTruthy();
-    expect(screen.getAllByText(/PAUSE/).length).toBeGreaterThan(0);
-    expect(screen.getByText("Rules learned from you")).toBeTruthy();
+    // Order review and learned rules live on Portfolio / History only; Market Today no longer duplicates them.
+    expect(screen.queryByText("Existing orders review")).toBeNull();
+    expect(screen.queryByText("Rules learned from you")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Time Outlook" }));
     expect(await screen.findByText("Investment horizons")).toBeTruthy();
