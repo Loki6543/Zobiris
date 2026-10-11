@@ -652,3 +652,17 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 .zobiris-dashboard .watch-mover-row strong{font-size:12px;min-width:68px;text-align:right;font-variant-numeric:tabular-nums;}
 .zobiris-dashboard .watch-movers-empty{font-size:12px;color:#9cb9c7;grid-column:1/-1;}
 @media(max-width:700px){.zobiris-dashboard .watch-movers-list{grid-template-columns:minmax(0,1fr);}.zobiris-dashboard .watch-movers-panel{padding:16px;}}
+
+
+/* Margin Intelligence shares the screenshot's dense, professional card geometry; paper status stays explicit. */
+.zobiris-dashboard .tactical-terminal{max-width:1440px;margin:0 auto;gap:14px;}
+.zobiris-dashboard .tactical-terminal .tactical-hero,.zobiris-dashboard .tactical-terminal article{background:linear-gradient(130deg,#102439,#0a1929)!important;border:1px solid #25435a!important;box-shadow:0 8px 26px #0109124a!important;border-radius:13px!important;}
+.zobiris-dashboard .tactical-terminal .tactical-hero{padding:21px 24px!important;min-height:0;}
+.zobiris-dashboard .tactical-terminal .tactical-hero h1{font-size:clamp(23px,2.3vw,32px);margin:7px 0 2px;}
+.zobiris-dashboard .tactical-terminal article{padding:18px!important;}
+.zobiris-dashboard .tactical-grid{gap:12px!important;}
+.zobiris-dashboard .tactical-grid.four h2{font-size:clamp(20px,1.8vw,26px);letter-spacing:-.4px;color:#cff9e9;}
+.zobiris-dashboard .tactical-terminal th{background:#081a2a;color:#9ab2c5;}
+.zobiris-dashboard .tactical-terminal td{font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .tactical-terminal svg polyline{filter:drop-shadow(0 0 3px #06cba15c);}
+.zobiris-dashboard .tactical-badge{color:#f4d8a3;border-color:#6e6049;background:#2a261b;font-weight:770;}
