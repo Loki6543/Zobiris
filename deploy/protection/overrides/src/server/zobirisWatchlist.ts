@@ -212,6 +212,8 @@ export function buildZobirisWatchlist({
       );
     if (state !== "QUALIFIED")
       reasons.push(`Pilot state: ${state}; not an exit instruction`);
+    if (rotation?.qualifiesForNewCapital !== true || rotation?.dataProvenance !== "PROVIDER_LIVE")
+      reasons.push("Live-provider rotation qualification is required");
     if (asset?.mappingStatus !== "verified")
       reasons.push("Asset identity is not verified");
     if (price === null) reasons.push("Price unavailable");
