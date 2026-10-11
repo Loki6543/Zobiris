@@ -280,3 +280,18 @@ it("keeps the screenshot-inspired sidebar connected to real pages and quote-base
   expect(screen.getByRole("region", {name: "Verified top watchlist movers"})).toBeTruthy();
   expect(within(navigation).getByRole("button", {name: "Watchlist"}).getAttribute("aria-current")).toBe("page");
 });
+
+
+it("does not advertise a buy when the server-side portfolio gate denies it",async()=>{
+ const original=globalThis.fetch;
+ globalThis.fetch=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
+  if(String(input)==="/api/zobiris/watchlist")
+   return new Response(JSON.stringify({asOf:new Date().toISOString(),assets:[{symbol:"ATOM",entry:{referenceLimit:null,requestedNotionalUsd:null},portfolioGate:{decision:"BLOCK",allowedUsd:0,reasons:["HOLDINGS_MAX_REACHED"]}}]}),{status:200});
+  return original(input,init);
+ }) as typeof fetch;
+ render(<App/>);
+ await screen.findByText("Current positions");
+ fireEvent.click(screen.getByRole("button",{name:"Market Today"}));
+ expect(await screen.findByText("New positions to consider")).toBeTruthy();
+ expect(screen.queryByText(/LIMIT CANDIDATE/)).toBeNull();
+});
