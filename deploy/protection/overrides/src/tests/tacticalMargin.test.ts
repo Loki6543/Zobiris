@@ -65,3 +65,23 @@ describe('public observer lifecycle',()=>{
   try{const file=path.join(dir,'ledger.json'),service=new TacticalService(file);await service.tick();expect(service.status().error).toBe(null);expect(service.status().counts.proposals).toBe(9);expect(service.status().counts.open).toBe(0);await service.tick();expect(service.status().counts.proposals).toBe(9);mock.mockRejectedValue(new Error('offline'));await service.tick();expect(service.status().error).toBe('offline');expect(service.status().counts.open).toBe(0);expect(new TacticalService(file).status().counts.proposals).toBe(9);}finally{vi.unstubAllGlobals();fs.rmSync(dir,{recursive:true});}
  });
 });
+
+
+it('archives only finished paper records before ledger capacity, preserving active trades and historical counts',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tactical-rollover-'));const file=path.join(dir,'ledger.json');
+ try{
+  const at=Date.parse('2026-10-10T10:00:00Z');
+  const rejected=Array.from({length:18001},(_,i)=>({id:'rejected-'+i,symbol:'BTC',at:at+i,horizon:4,side:null,reason:'not selected',status:'rejected',coverageComplete:true}));
+  const open={id:'still-open',symbol:'BTC',at,horizon:24,side:'long',reason:'paper',status:'open',entry:100,stop:95,target:110,quantity:.1,risk:.5,collateral:10,leverage:1,coverageComplete:true,mark:100};
+  fs.writeFileSync(file,JSON.stringify({version:'tactical-v1',startedAt:at,paused:false,pauseReason:null,equity:300,peak:300,day:'2026-10-10',dayStart:300,records:[...rejected,open],lastSuccess:null}));
+  const service=new TacticalService(file);
+  const archived=service.compactCompletedRecords();
+  expect(archived).toBeGreaterThan(8000);
+  expect(service.status().counts.proposals).toBe(18002);
+  expect(service.status().counts.open).toBe(1);
+  expect(service.status().paused).toBe(false);
+  expect(fs.existsSync(file+'.archive.jsonl')).toBe(true);
+  expect(new TacticalService(file).status().counts.proposals).toBe(18002);
+  expect(JSON.parse(fs.readFileSync(file,'utf8')).records.some((row:any)=>row.id==='still-open')).toBe(true);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
