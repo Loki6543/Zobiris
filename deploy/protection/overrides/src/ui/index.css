@@ -599,3 +599,35 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
  .zobiris-dashboard .portfolio-visuals{grid-template-columns:minmax(0,1fr)!important;}
 }
 @media(max-width:420px){.zobiris-dashboard .dashboard-metrics{grid-template-columns:minmax(0,1fr)!important;}}
+
+
+/* Live Market Today: observed Kraken values only; no counterfeit 1h OHLC or alt quotes. */
+.zobiris-dashboard .market-ticker-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:16px 0;}
+.zobiris-dashboard .market-ticker-card{min-width:0;padding:16px 18px;min-height:120px;background:linear-gradient(128deg,#102a3c,#0b1b2b);border:1px solid #264358;border-radius:13px;box-shadow:0 7px 24px #02080f50;}
+.zobiris-dashboard .market-ticker-top{display:flex;align-items:center;gap:9px;font-size:12px;}
+.zobiris-dashboard .market-ticker-top strong{color:#f1f7fc;font-weight:730;}
+.zobiris-dashboard .market-ticker-top small{color:#8daabd;}
+.zobiris-dashboard .market-coin-badge{display:inline-grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#f6a021;color:#fff;font-size:16px;font-weight:850;box-shadow:0 0 8px #f59b204b;}
+.zobiris-dashboard .market-coin-eth{background:#656fe6;}
+.zobiris-dashboard .market-coin-sol{background:#217e95;}
+.zobiris-dashboard .market-ticker-value{margin:10px 0 3px;font-size:clamp(18px,2vw,25px);letter-spacing:-.6px;font-weight:790;color:#effaff;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .market-ticker-change{font-size:13px;font-weight:700;}
+.zobiris-dashboard .market-ticker-change.is-gain{color:#1fe4ae;}
+.zobiris-dashboard .market-ticker-change.is-loss{color:#ff8293;}
+.zobiris-dashboard .market-ticker-foot{display:block;margin-top:6px;font-size:10px;color:#8eacbf;line-height:1.4;}
+.zobiris-dashboard .market-detail-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(200px,1fr);gap:12px;align-items:stretch;margin:0 0 21px;}
+.zobiris-dashboard .market-detail-layout .btc-chart-panel{margin:0;min-width:0;padding:19px;}
+.zobiris-dashboard .market-key-panel{padding:18px;background:linear-gradient(145deg,#10253a,#0a1829);border:1px solid #26465b;border-radius:13px;min-width:0;}
+.zobiris-dashboard .market-key-panel h2{font-size:16px;margin:0;color:#edf9ff;}
+.zobiris-dashboard .market-key-panel>p{color:#88a8bf;font-size:10px;line-height:1.6;}
+.zobiris-dashboard .market-key-panel>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 0;border-bottom:1px solid #1e3446;font-size:12px;}
+.zobiris-dashboard .market-key-panel>div span{color:#9bb4c5;}
+.zobiris-dashboard .market-key-panel>div strong{font-variant-numeric:tabular-nums;font-weight:710;color:#bff2e6;white-space:nowrap;}
+.zobiris-dashboard .market-key-panel .market-key-foot{margin-top:16px;}
+.zobiris-dashboard .daily-brief{max-width:1440px;padding:20px;}
+.zobiris-dashboard .daily-brief>h1{font-size:clamp(24px,2.6vw,31px);margin:6px 0;}
+.zobiris-dashboard .brief-grid{gap:12px;margin-top:20px;}
+.zobiris-dashboard .brief-grid article{background:#0b1929;border:1px solid #294457;border-radius:11px;padding:17px;}
+.zobiris-dashboard .brief-grid article h2{font-size:16px;}
+@media(max-width:1250px){.zobiris-dashboard .market-detail-layout{grid-template-columns:minmax(0,1fr)}.zobiris-dashboard .market-key-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 15px}.zobiris-dashboard .market-key-panel h2,.zobiris-dashboard .market-key-panel>p{grid-column:1/-1}}
+@media(max-width:700px){.zobiris-dashboard .market-ticker-strip{grid-template-columns:1fr;}.zobiris-dashboard .market-key-panel{grid-template-columns:repeat(2,minmax(0,1fr));}.zobiris-dashboard .market-key-panel>div{flex-wrap:wrap;}.zobiris-dashboard .btc-chart-panel{padding:12px!important;}}
