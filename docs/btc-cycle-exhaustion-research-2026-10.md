@@ -15,6 +15,19 @@ User-provided **Cosmic_Whale's 5-Indicator System — A Methodology Revealed** (
 
 The paper is internally inconsistent about the description of “2x SLIT” (section 2 versus appendix source transcription). It asserts post-2023 methodology explained 2022 forecasts, but cannot prove the 2022 forecasts came from those tools as they were then. Its “95% → 97% credibility” uses subjective weights, not calibrated forecast accuracy. Historical pivot irreversibility is knowable only retrospectively; no certain pivot should be identified in real time. Its 2026/2027 price ranges are **author-attributed scenarios**, not verified outputs or probability bands.
 
+## Forecast claims retained for verification (NOT adopted)
+
+The document attributes the following date/price scenarios to Cosmic_Whale or its V5.3.2 discussion. These are *claimed forecasts*, not observations from running the original five indicators and not ZOBIRIS targets:
+
+| Attributed scenario | Claimed window | Claimed BTC USD range | Status |
+| --- | --- | --- | --- |
+| Intermediate cycle bottom | July 14–November 16, 2026 | $30,000–$56,000 | Unverified forecast; evaluate only against pre-registered definition of a bottom |
+| Document appendix Q4 first bottom | October–December 2026 | $45,000–$50,000 | Unverified scenario |
+| Subsequent “true bottom” | Q1–Q2 2027 (appendix says April–June) | $30,000–$40,000 | Unverified future scenario |
+| Recovery rally between lows | January–February 2027 | $65,000–$75,000 | Unverified scenario |
+
+Record the specific original post time, prospective price and date before resolving the outcome. Do not retrospectively relabel a temporary low as a permanent pivot or count 5 correlated indicators as 5 independent confirmations. Their predicted ranges are not entry/exit prices or probabilistic intervals.
+
 ## What ZOBIRIS implements (independent transparent proxy)
 
 `deploy/protection/overrides/src/server/bitcoinCycleResearch.ts` derives one research-only observation from the **existing, completed daily BTC market brief**. It does not fetch new provider data or change the decision engine.
