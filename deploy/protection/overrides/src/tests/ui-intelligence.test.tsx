@@ -54,6 +54,7 @@ const rankedAssets = [
         mode: "DELAYED_ROTATION_PILOT_V1",
         status: "QUALIFIED",
         qualifiesForNewCapital: true,
+        dataProvenance: "PROVIDER_LIVE",
         score: 84,
         change24hPct: -1,
         change7dPct: 5,
