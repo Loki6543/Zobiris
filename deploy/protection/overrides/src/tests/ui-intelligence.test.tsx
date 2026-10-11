@@ -97,6 +97,12 @@ beforeEach(() => {
       }), { status: 200, headers: { "content-type": "application/json" } });
     }
     if(url.includes('/api/entry-rules'))return new Response(JSON.stringify({rules:{ATOM:{symbol:'ATOM',pair:'ATOMUSD',tickSize:0.001,lotDecimals:8,orderMin:0.1,costMin:0.5,status:'online',observedAt:new Date().toISOString()}}}),{status:200});
+    if (url.includes("/api/zobiris/watchlist")) {
+      return new Response(JSON.stringify({asOf:new Date().toISOString(),assets:[{
+        symbol:"ATOM",entry:{referenceLimit:2.375,requestedNotionalUsd:37},
+        portfolioGate:{decision:"ALLOW",allowedUsd:37,reasons:[],warnings:[],authority:"VETO_OR_REDUCE_ONLY"}
+      }]}),{status:200,headers:{"content-type":"application/json"}});
+    }
     if (url.includes("/api/watchlist")) {
       return new Response(JSON.stringify({ watchlist: [{ symbol: "BTC" }, { symbol: "ETH" }, ...rankedAssets.map(asset => ({symbol: asset.symbol}))] }), { status: 200, headers: { "content-type": "application/json" } });
     }
