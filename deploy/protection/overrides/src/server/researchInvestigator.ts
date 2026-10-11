@@ -83,7 +83,7 @@ const MATERIAL_PATTERNS: Array<{ topic: EvidenceTopic; re: RegExp }> = [
   { topic: "GOVERNANCE", re: /\b(governance|proposal|vote|validator|dao)\b/i },
 ];
 
-const NEGATIVE_RE = /\b(exploit|hack(?:ed)?|breach|drain(?:ed)?|vulnerab(?:ility|le)|delist(?:ed|ing)?|lawsuit|enforcement|outage|halt(?:ed)?|suspend(?:ed)?|dilution|unlock|sell(?:ing|off)?|risk|warning)\b/i;
+const NEGATIVE_RE = /\b(exploit|hack(?:ed)?|breach|drain(?:ed)?|vulnerab(?:ility|le)|delist(?:ed|ing)?|lawsuit|enforcement|outage|halt(?:ed)?|suspend(?:ed)?|dilution|unlock|sell(?:ing|off)?)\b/i;
 const POSITIVE_RE = /\b(list(?:ed|ing)?|approval|approved|partnership|integrat(?:e|ed|ion)|adoption|upgrade|launch|release|burn(?:ed|ing)?|growth|expand(?:ed|ing)?)\b/i;
 
 function hostname(url: string): string {
