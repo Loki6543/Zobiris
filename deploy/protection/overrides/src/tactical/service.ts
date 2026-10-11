@@ -4,6 +4,48 @@ import {entryRules} from '../server/entryRules.js';
 import {POLICY,COSTS,maintenance,signal,sizeTrade,netPnl,replay,type Candle,type Side} from './risk.js';
 type RecordRow={id:string;symbol:string;at:number;horizon:number;side:Side|null;reason:string;status:'rejected'|'open'|'closed';entry?:number;stop?:number;target?:number;quantity?:number;risk?:number;collateral?:number;leverage?:number;exit?:number;closedAt?:number;net?:number;gross?:number;costs?:number;coverageComplete:boolean;lastSeen?:number;mark?:number};
 type State={version:string;startedAt:number;paused:boolean;pauseReason:string|null;equity:number;peak:number;day:string;dayStart:number;records:RecordRow[];lastSuccess:number|null};
+
+/** Fail closed on damaged or fabricated paper records rather than replaying NaN PnL. */
+function validStoredRecord(value: unknown): value is RecordRow {
+ if(!value||typeof value!=='object')return false;
+ const r=value as Partial<RecordRow>;
+ const positive=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>0;
+ const nonNegative=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)&&v>=0;
+ if(typeof r.id!=='string'||!r.id||typeof r.symbol!=='string'||!r.symbol
+    ||!positive(r.at)||!positive(r.horizon)||typeof r.reason!=='string'
+    ||!['rejected','open','closed'].includes(String(r.status))
+    ||(r.side!==null&&r.side!=='long'&&r.side!=='short')
+    ||typeof r.coverageComplete!=='boolean')return false;
+ if(r.lastSeen!==undefined&&!positive(r.lastSeen))return false;
+ if(r.mark!==undefined&&!positive(r.mark))return false;
+ if(r.entry!==undefined&&!positive(r.entry))return false;
+ if(r.stop!==undefined&&!positive(r.stop))return false;
+ if(r.target!==undefined&&!positive(r.target))return false;
+ for(const field of ['quantity','risk','collateral'] as const){
+  if(r[field]!==undefined&&!nonNegative(r[field]))return false;
+ }
+ if(r.leverage!==undefined&&![1,1.25,1.5].includes(r.leverage))return false;
+ if(r.status==='open'||r.status==='closed'){
+  if(!r.side||!positive(r.entry)||!positive(r.stop)||!positive(r.target)
+     ||!positive(r.quantity)||!nonNegative(r.risk)||!nonNegative(r.collateral)
+     ||!positive(r.leverage))return false;
+ }
+ if(r.status==='closed'&&(!positive(r.exit)||!positive(r.closedAt)
+    ||![r.net,r.gross,r.costs].every(Number.isFinite)))return false;
+ return true;
+}
+function validStoredState(value: any): value is State {
+ return value&&typeof value==='object'&&value.version===POLICY.version
+   &&Array.isArray(value.records)&&value.records.length<=20000
+   &&value.records.every(validStoredRecord)
+   &&[value.equity,value.peak,value.dayStart,value.startedAt].every(Number.isFinite)
+   &&value.startedAt>0&&value.peak>0&&value.dayStart>0
+   &&typeof value.paused==='boolean'
+   &&(value.pauseReason===null||typeof value.pauseReason==='string')
+   &&typeof value.day==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(value.day)
+   &&(value.lastSuccess===null||Number.isFinite(value.lastSuccess));
+}
+
 async function publicData(route:string){const response=await fetch(`https://api.kraken.com/0/public/${route}`,{signal:AbortSignal.timeout(12000)});if(!response.ok)throw new Error('Public market request failed');const body=await response.json() as any;if(body.error?.length||!body.result)throw new Error('Public market unavailable');return body.result;}
 export function parseBars(rows:unknown,now:number):Candle[]{
  if(!Array.isArray(rows))throw new Error('Missing candles');
@@ -16,7 +58,7 @@ export class TacticalService{
  private state:State;private busy=false;private error:string|null=null;private markets:any[]=[];
  constructor(private file:string){
   const now=Date.now();this.state={version:POLICY.version,startedAt:now,paused:false,pauseReason:null,equity:300,peak:300,day:new Date(now).toISOString().slice(0,10),dayStart:300,records:[],lastSuccess:null};
-  if(fs.existsSync(file)){try{const value=JSON.parse(fs.readFileSync(file,'utf8'));if(value.version!==POLICY.version||!Array.isArray(value.records)||![value.equity,value.peak,value.dayStart,value.startedAt].every(Number.isFinite))throw Error();this.state=value;}catch{this.state.paused=true;this.state.pauseReason='Ledger unreadable: manual recovery required';this.error=this.state.pauseReason;}}
+  if(fs.existsSync(file)){try{const value=JSON.parse(fs.readFileSync(file,'utf8'));if(!validStoredState(value))throw Error();this.state=value;}catch{this.state.paused=true;this.state.pauseReason='Ledger unreadable: manual recovery required';this.error=this.state.pauseReason;}}
  }
  private save(){fs.mkdirSync(path.dirname(this.file),{recursive:true});const tmp=this.file+'.tmp';fs.writeFileSync(tmp,JSON.stringify(this.state));fs.renameSync(tmp,this.file);}
  status(){const closed=this.state.records.filter(r=>r.status==='closed');return {mode:'PAPER ONLY',liveEnabled:false,policy:POLICY,costs:COSTS,paused:this.state.paused,pauseReason:this.state.pauseReason,error:this.error,startedAt:this.state.startedAt,lastSuccess:this.state.lastSuccess,equity:this.state.equity,markets:this.markets,records:this.state.records.slice(-150).reverse(),counts:{proposals:this.state.records.length,closed:closed.length,complete:closed.filter(r=>r.coverageComplete).length,open:this.state.records.filter(r=>r.status==='open').length},locks:['2× and 3× require independent forward validation and manual review','U.S. product API permission, account eligibility and collateral isolation unverified','Liquidation thresholds and exchange margin health unavailable; live entries disabled']};}
@@ -26,7 +68,7 @@ export class TacticalService{
   try{
    const now=Date.now(),status=await publicData('SystemStatus');if(status.status!=='online')throw new Error('Exchange is not online');
    const rules=await entryRules();const markets=await Promise.all(['BTC','ETH','SOL'].map(async symbol=>{
-    try{const rule=rules[symbol];if(!rule||rule.status!=='online'||now-Date.parse(rule.observedAt)>16*60000)throw Error('Instrument metadata unavailable');
+    try{const rule=rules[symbol];const ruleAgeMs=rule?now-Date.parse(rule.observedAt):NaN;if(!rule||rule.status!=='online'||!Number.isFinite(ruleAgeMs)||ruleAgeMs<0||ruleAgeMs>16*60000)throw Error('Instrument metadata unavailable');
      const [ohlc,depth]=await Promise.all([publicData(`OHLC?pair=${encodeURIComponent(rule.pair)}&interval=60`),publicData(`Depth?pair=${encodeURIComponent(rule.pair)}&count=5`)]);
      const bars=parseBars(ohlc[rule.pair]??Object.entries(ohlc).find(([k])=>k!=='last')?.[1],Date.now());const book:any=Object.values(depth)[0];const bid=Number(book?.bids?.[0]?.[0]),ask=Number(book?.asks?.[0]?.[0]);
      if(!Number.isFinite(bid)||!Number.isFinite(ask)||bid<=0||ask<bid||(ask-bid)/bid>.005)throw Error('Invalid or wide order book');
