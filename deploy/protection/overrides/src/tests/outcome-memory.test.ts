@@ -128,3 +128,24 @@ it('preserves overflow before pruning the active window and refuses corrupt hist
  expect(await readFile(path,'utf8')).toBe('corrupted');
  }finally{await rm(dir,{recursive:true,force:true});}
 });
+
+
+it('captures a newly QUALIFIED cohort even when a NEAR_ROTATION episode was sampled two days earlier',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'outcome-cohort-'));const file=join(dir,'memory.json');
+ try{
+  const near=snapshot('2026-09-25T20:00:00.000Z',100);
+  near.rankedAssets[0]!.strategy21.researchIntegrity.outcomeSeed.strategyStatus='NEAR_ROTATION';
+  await updateOutcomeMemory(file,near);
+  const qualified=snapshot('2026-09-27T20:00:00.000Z',104);
+  qualified.rankedAssets[0]!.strategy21.researchIntegrity.outcomeSeed.outcomeId='btc-qualified-later';
+  qualified.rankedAssets[0]!.strategy21.researchIntegrity.outcomeSeed.generatedAt=qualified.asOf;
+  const m=await updateOutcomeMemory(file,qualified);
+  expect(m.records).toHaveLength(2);
+  expect(m.records.map(r=>r.strategyStatus)).toEqual(['NEAR_ROTATION','QUALIFIED']);
+  expect(m.records[1]!.samplingRule).toBe('COHORT_SPACED_7D');
+  const same=snapshot('2026-09-28T20:00:00.000Z',105);
+  same.rankedAssets[0]!.strategy21.researchIntegrity.outcomeSeed.outcomeId='btc-qualified-next-day';
+  same.rankedAssets[0]!.strategy21.researchIntegrity.outcomeSeed.generatedAt=same.asOf;
+  expect((await updateOutcomeMemory(file,same)).records).toHaveLength(2);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
