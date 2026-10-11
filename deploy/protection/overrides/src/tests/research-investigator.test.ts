@@ -3,6 +3,7 @@ import {
   assessEvidenceIntegrity,
   chooseInvestigationCandidates,
   extractAtomicClaims,
+  rankInvestigationCandidates,
 } from "../server/researchInvestigator.js";
 
 const now = Date.parse("2026-10-06T23:00:00Z");
@@ -12,6 +13,15 @@ const current = {
 };
 
 describe("research evidence investigator", () => {
+  it("classifies CoinDesk reporting under its recognized source-authority policy",()=>{
+    const items=rankInvestigationCandidates([{
+      sourceUrl:"https://www.coindesk.com/markets/market-report",
+      title:"Solana exchange listing investigation",
+      description:"A published report about exchange listings.",
+    }]);
+    expect(items[0]?.sourceAuthorityScore).toBeGreaterThanOrEqual(.75);
+  });
+
   it("escalates high-value discovery and rejects generic low-value SERP results", () => {
     const selected = chooseInvestigationCandidates(
       [
