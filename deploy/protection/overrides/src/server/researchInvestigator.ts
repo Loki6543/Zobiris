@@ -118,7 +118,7 @@ function authorityFor(url: string, title: string, description: string): {
     return { score: 0.93, primarySourceLikely: true };
   if (/(^|\.)(reuters|bloomberg)\.com$/.test(host))
     return { score: 0.88, primarySourceLikely: false };
-  if (/(^|\.)(coindesk|theblock)\.co$/.test(host) || /(^|\.)decrypt\.co$/.test(host))
+  if (/(^|\.)coindesk\.com$/.test(host) || /(^|\.)theblock\.co$/.test(host) || /(^|\.)decrypt\.co$/.test(host))
     return { score: 0.76, primarySourceLikely: false };
 
   const officialLanguage =
