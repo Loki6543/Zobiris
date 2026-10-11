@@ -31,6 +31,17 @@ import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
 type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare" | "tactical" | "advisory";
+const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
+  portfolio: { title: "Portfolio", description: "Your holdings, allocation and trading decisions at a glance." },
+  market: { title: "Market Today", description: "Verified Bitcoin market conditions, trend and technical analysis." },
+  watchlist: { title: "Watchlist", description: "Spot prices, asset performance and entry research." },
+  outlook: { title: "Time Outlook", description: "Separate long-term holdings from tactical opportunities." },
+  history: { title: "History / Learning", description: "Evidence, recorded decisions and outcomes." },
+  compare: { title: "Compare Lab", description: "Investigate ideas and challenge investment assumptions." },
+  tactical: { title: "Margin Intelligence", description: "Paper-only margin research, position risk and liquidity." },
+  advisory: { title: "Advisory Research", description: "Signal validation, funding gaps and stress scenarios." },
+};
+
 type RankedAsset = Record<string, any>;
 
 const money = (value: number) => new Intl.NumberFormat("en-US", {
@@ -792,11 +803,14 @@ export function App() {
 
   return (
     <div className="zobiris-dashboard" style={styles.page}>
-      <header style={styles.header}>
-        <div>
-          <div aria-label="ZOBIRIS CORE" style={styles.brand}><span className="brand-mark" aria-hidden="true">Z</span> ZOBIRIS <span className="brand-core">CORE</span></div>
-          <div style={styles.subtle}>Portfolio decisions, market limits, and trade memory.</div>
+      <header className="dashboard-topbar" style={styles.header}>
+        <div className="dashboard-topbar-heading">
+          <div className="dashboard-mobile-brand" aria-label="ZOBIRIS CORE"><span className="brand-mark" aria-hidden="true">Z</span><strong>ZOBIRIS</strong></div>
+          <h1>{PAGE_HEADINGS[view].title}</h1>
+          <p>{PAGE_HEADINGS[view].description}</p>
         </div>
+        <div className="dashboard-topbar-right">
+          <span className="dashboard-asof">Market {snapshotFresh ? "current" : "needs refresh"} · {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "time unavailable"}</span>
         <div className="header-actions" style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap"}}>
           {operatorToken ? (
             <button
@@ -828,9 +842,15 @@ export function App() {
             <DashboardIcon name="refresh" />{refreshing ? "Refreshing…" : "Refresh market"}
           </button>
         </div>
+        </div>
       </header>
 
       <nav className="dashboard-nav" aria-label="Dashboard" style={styles.nav}>
+        <div className="dashboard-sidebar-brand" aria-label="ZOBIRIS CORE">
+          <svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="M3 28 15 6l6 11 4-7 8 18h-7l-3-7-6 10-6-13-5 10Z" stroke="#2eeccf" strokeWidth="2.3" strokeLinejoin="round"/><path d="m12 28 5-8 3 5 5-9" stroke="#0f99e0" strokeWidth="2" strokeLinecap="round"/></svg>
+          <strong>ZOBIRIS</strong>
+        </div>
+        <div className="dashboard-sidebar-label">WORKSPACES</div>
         {([
           ["portfolio", "Portfolio"],
           ["market", "Market Today"],
@@ -845,6 +865,7 @@ export function App() {
             <DashboardIcon name={key} />{label}
           </button>
         ))}
+        <div className="dashboard-sidebar-bottom"><span className={snapshotFresh ? "sidebar-market-dot" : "sidebar-market-dot is-stale"} aria-hidden="true"></span>{snapshotFresh ? "Market snapshot current" : "Refresh market evidence"}<small>Research and portfolio decision support</small></div>
       </nav>
 
       <div className="dashboard-notice" style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. {accountSynced ? `Kraken account synced ${account?.syncMode === "websocket+poll" ? "live by WebSocket + REST reconciliation" : "by automatic REST polling"} · account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}.` : "Private Kraken account data is locked on the public view."}</div>
@@ -853,6 +874,15 @@ export function App() {
 
       {view === "portfolio" ? (
         <main>
+          <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
+            <Metric label="Portfolio" value={accountSynced ? money(total) : "Private"} />
+            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Private account is locked on the public view"} />
+            <Metric label="Reserved buys" value={accountSynced ? money(reservedBuys) : "Private"} />
+            <Metric label="Free cash" value={accountSynced ? money(freeCash) : "Private"} />
+            <Metric label="Maneuver capital" value={accountSynced ? money(MANEUVER_CAPITAL_USD) : "Private"} note={accountSynced ? "Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD) : "Unlock to view capital limits"} />
+          </section>
+
+          <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
           <CommandCenter
             refreshKey={snapshotMs}
             snapshotAsOf={snapshotMs}
@@ -870,15 +900,6 @@ export function App() {
             onNavigate={(next) => setView(next)}
             onAnalyze={(symbol) => { setAnalysisSymbol(symbol); setView("compare"); }}
           />
-          <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
-            <Metric label="Portfolio" value={accountSynced ? money(total) : "Private"} />
-            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Private account is locked on the public view"} />
-            <Metric label="Reserved buys" value={accountSynced ? money(reservedBuys) : "Private"} />
-            <Metric label="Free cash" value={accountSynced ? money(freeCash) : "Private"} />
-            <Metric label="Maneuver capital" value={accountSynced ? money(MANEUVER_CAPITAL_USD) : "Private"} note={accountSynced ? "Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD) : "Unlock to view capital limits"} />
-          </section>
-
-          <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
           <ProfitProtection operatorToken={operatorToken} />
           <section className="dashboard-panel" style={styles.card}>
             <div style={styles.sectionHead}>

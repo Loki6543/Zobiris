@@ -257,3 +257,19 @@ it("expires quote-derived actions while an otherwise fresh page remains open", a
 });
 
 
+
+
+it("keeps the screenshot-inspired sidebar connected to real pages and quote-based movers", async () => {
+  render(<App />);
+  await screen.findByText("Current positions");
+  const navigation = screen.getByRole("navigation", {name: "Dashboard"});
+  expect(navigation.querySelector(".dashboard-sidebar-brand")?.textContent).toContain("ZOBIRIS");
+  expect(screen.getByRole("heading", {name: "Portfolio"})).toBeTruthy();
+  expect(within(navigation).getByRole("button", {name: "Portfolio"}).getAttribute("aria-current")).toBe("page");
+  fireEvent.click(within(navigation).getByRole("button", {name: "Market Today"}));
+  expect(screen.getByRole("heading", {name: "Market Today"})).toBeTruthy();
+  fireEvent.click(within(navigation).getByRole("button", {name: "Watchlist"}));
+  expect(screen.getByRole("heading", {name: "Watchlist"})).toBeTruthy();
+  expect(screen.getByRole("region", {name: "Verified top watchlist movers"})).toBeTruthy();
+  expect(within(navigation).getByRole("button", {name: "Watchlist"}).getAttribute("aria-current")).toBe("page");
+});

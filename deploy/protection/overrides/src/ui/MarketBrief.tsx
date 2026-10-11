@@ -11,10 +11,31 @@ export function MarketBrief({refreshKey}:{refreshKey:number}){
  return <section className="daily-brief" aria-label="Zobiris daily signal">
   <div className="visual-title"><span className="visual-kicker">ZOBIRIS DAILY SIGNAL</span><span className="visual-tag">DAILY TECHNICAL VIEW · 3–7 DAYS</span></div>
   <h1>Market & Bitcoin outlook</h1><p className="visual-muted">Completed daily data through {new Date(data.asOf).toLocaleString()} · Kraken · refreshes automatically</p>
+  <div className="market-ticker-strip" aria-label="Verified major cryptocurrency performance">
+   {data.returns.map(r=><article key={r.symbol} className="market-ticker-card">
+     <div className="market-ticker-top"><span className={'market-coin-badge market-coin-'+r.symbol.toLowerCase()} aria-hidden="true">{r.symbol==='BTC'?'₿':r.symbol==='ETH'?'Ξ':'S'}</span><strong>{r.symbol==='BTC'?'Bitcoin':r.symbol==='ETH'?'Ethereum':r.symbol==='SOL'?'Solana':r.symbol}</strong><small>{r.symbol}</small></div>
+     <div className="market-ticker-value">{r.symbol==='BTC'?usd(data.close):pct(r.week)}</div>
+     <div className={r.week>=0?'market-ticker-change is-gain':'market-ticker-change is-loss'}>{pct(r.week)} / 7d</div>
+     <small className="market-ticker-foot">{r.symbol==='BTC'?'Last completed daily BTC close':'7-day return · spot close price unavailable in this feed'}</small>
+   </article>)}
+  </div>
+  <div className="market-detail-layout">
+    <BitcoinChart points={data.chart} lower={data.lower} upper={data.upper} ema50={data.daily.ema50}/>
+    <aside className="market-key-panel" aria-label="Bitcoin market key indicators">
+      <h2>Key indicators</h2>
+      <p>Latest completed daily candle · Kraken</p>
+      <div><span>RSI (14)</span><strong>{data.daily.rsi14.toFixed(1)}</strong></div>
+      <div><span>Daily ATR</span><strong>{data.daily.atrPct.toFixed(2)}%</strong></div>
+      <div><span>EMA (50)</span><strong>{usd(data.daily.ema50)}</strong></div>
+      <div><span>EMA (200)</span><strong>{usd(data.daily.ema200)}</strong></div>
+      <div><span>20d close low</span><strong>{usd(data.lower)}</strong></div>
+      <div><span>20d close high</span><strong>{usd(data.upper)}</strong></div>
+      <p className="market-key-foot">Observed daily reference levels, not intraday candles, support/resistance promises, or entry signals.</p>
+    </aside>
+  </div>
   <div className="brief-grid"><article><span className="brief-number">01 / MARKET CONDITION</span><h2>{data.returns.filter(r=>r.week>0).length===3?'Recovery across the majors':data.returns.every(r=>r.week<=0)?'Risk appetite is weak':'Uneven participation'}</h2><p>{data.market}</p><div className="brief-returns">{data.returns.map(r=><div key={r.symbol}><strong>{r.symbol}</strong><span className={r.week>=0?'brief-positive':'brief-negative'}>{pct(r.week)} / 7d</span></div>)}</div><p className="visual-footnote">Three-coin sample, not total-market breadth.</p></article>
   <article><span className="brief-number">02 / WHERE BITCOIN LEANS</span><h2>{data.bias}</h2><p>{data.outlook}</p><p>{data.caveat} {data.volume}</p><strong>Last daily close {usd(data.close)}</strong></article>
   <article><span className="brief-number">03 / WHAT COULD PROVE IT WRONG</span><h2>The opposing case</h2><p>{data.counter}</p><div className="brief-levels"><div><span>20-day closing range low</span><strong>{usd(data.lower)}</strong></div><div><span>20-day closing range high</span><strong>{usd(data.upper)}</strong></div><div><span>50-day EMA</span><strong>{usd(data.daily.ema50)}</strong></div></div><p className="visual-footnote">A daily close above the range high strengthens a breakout case; below the range low strengthens a breakdown case. These are observed reference levels, not price targets.</p></article></div>
-  <BitcoinChart points={data.chart} lower={data.lower} upper={data.upper} ema50={data.daily.ema50}/>
   <section className="btc-cycle-research" aria-label="Bitcoin cycle turning-point research">
     <span className="visual-kicker">CYCLE PIVOT &amp; EXHAUSTION · RESEARCH ONLY</span>
     <h2>{data.cycleResearch.watch==='POSSIBLE_SELLER_EXHAUSTION'?'Potential seller exhaustion watch':data.cycleResearch.watch==='POSSIBLE_BUYER_EXHAUSTION'?'Potential buyer exhaustion watch':data.cycleResearch.watch==='EVIDENCE_UNAVAILABLE'?'Cycle evidence unavailable':'No clustered exhaustion observation'}</h2>
