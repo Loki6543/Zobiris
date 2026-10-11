@@ -2,11 +2,24 @@
 import {render,screen,fireEvent,waitFor,cleanup} from '@testing-library/react';
 import {afterEach,describe,expect,it,vi} from 'vitest';
 import {AdvisoryDesk} from '../ui/AdvisoryDesk';
+import {CommandCenter} from '../ui/CommandCenter';
 import {calculateGrossStress,ADVISORY_CATEGORIES} from '../ui/advisoryModel';
 
 afterEach(()=>{cleanup();vi.unstubAllGlobals();vi.restoreAllMocks();});
 
 describe('advisory research categories',()=>{
+ it('routes dashboard category shortcuts to their existing analysis workspaces',()=>{
+  vi.stubGlobal('fetch',vi.fn(async()=>new Response('offline',{status:503})));
+  const onNavigate=vi.fn();
+  render(<CommandCenter refreshKey={1} snapshotAsOf={Date.now()} snapshotFresh={true}
+    regime="RANGE" accountSynced={false} accountAsOf="" portfolioValue={0}
+    cash={0} freeCash={0} reservedBuys={0} orders={[]} watch={[]} trades={[]}
+    onNavigate={onNavigate} onAnalyze={()=>{}}/>);
+  fireEvent.click(screen.getByRole('button',{name:/Signals & stress/i}));
+  expect(onNavigate).toHaveBeenCalledWith('advisory');
+  fireEvent.click(screen.getByRole('button',{name:/Margin research/i}));
+  expect(onNavigate).toHaveBeenCalledWith('tactical');
+ });
  it('defines four real, individually accessible category controls',()=>{
   expect(ADVISORY_CATEGORIES.map(item=>item.id)).toEqual(['signal','margin','funding','stress']);
  });
