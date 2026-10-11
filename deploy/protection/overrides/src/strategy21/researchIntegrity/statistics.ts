@@ -200,7 +200,7 @@ export function pboFromSplitMatrix(rows: PboMatrixRow[], expectedCandidateCount?
   }
   if (!logits.length) return null;
   return {
-    pbo: logits.filter((value) => value < 0).length / logits.length,
+    pbo: logits.filter((value) => value <= 0).length / logits.length,
     logits,
     validSplits: logits.length,
     droppedSplits,
