@@ -20,6 +20,8 @@ function fixture() {
       delayedRotationCalibration: calibration,
       delayedRotation: {
         status: "QUALIFIED",
+        qualifiesForNewCapital: true,
+        dataProvenance: "PROVIDER_LIVE",
         score: 72,
         priceUsd: 10,
         observedAt: new Date(now).toISOString(),
