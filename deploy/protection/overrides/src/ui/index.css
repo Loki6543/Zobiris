@@ -531,3 +531,71 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 .zobiris-dashboard .watch-categories button[aria-pressed="true"] span{background:#24554a;color:#cbfff0;}
 .zobiris-dashboard .watch-category-note{font-size:11px;color:#a4b6ca;margin:5px 0 14px;line-height:1.5;}
 @media(max-width:600px){.zobiris-dashboard .watch-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}.zobiris-dashboard .watch-categories button{justify-content:space-between;}}
+
+
+/* Reference-inspired live dashboard shell (Oct 2026). Design only: no mock balances or order authority. */
+.zobiris-dashboard{--z-surface:#091724;--z-raised:#102136;--z-border:#20374b;--z-mint:#17e5bd;--z-panel:linear-gradient(145deg,#0d1e30,#091522 84%);--z-elevation:0 0 0 1px #0d25348a,0 9px 24px #0003;color:#eaf5fc;background:radial-gradient(ellipse at 60% -5%,#10344a46,transparent 55%),#040b13!important;}
+.zobiris-dashboard > header.dashboard-topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;max-width:1440px;margin:0 auto 18px;padding:6px 4px 17px;border-bottom:1px solid #1d3546;min-height:75px;}
+.zobiris-dashboard .dashboard-topbar-heading{min-width:0;}
+.zobiris-dashboard .dashboard-topbar-heading h1{font-size:clamp(25px,2.3vw,34px);font-weight:760;margin:0 0 5px;color:#f0f8ff;letter-spacing:-.85px;}
+.zobiris-dashboard .dashboard-topbar-heading p{font-size:12px;color:#8daabd;margin:0;line-height:1.5;}
+.zobiris-dashboard .dashboard-topbar-right{display:flex;align-items:center;justify-content:flex-end;gap:16px;flex-wrap:wrap;}
+.zobiris-dashboard .dashboard-asof{color:#96b3c4;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.zobiris-dashboard .dashboard-mobile-brand{display:none;align-items:center;gap:9px;font-size:16px;letter-spacing:.8px;}
+.zobiris-dashboard .dashboard-mobile-brand .brand-mark{width:28px;height:28px;font-size:20px;letter-spacing:0;margin:0;border-radius:7px;}
+.zobiris-dashboard .dashboard-sidebar-brand{display:flex;align-items:center;gap:10px;padding:14px 11px 22px;margin-bottom:12px;border-bottom:1px solid #193244;}
+.zobiris-dashboard .dashboard-sidebar-brand svg{width:37px;height:37px;filter:drop-shadow(0 0 9px #04d5c55c);}
+.zobiris-dashboard .dashboard-sidebar-brand strong{font-size:17px;font-weight:820;letter-spacing:1px;color:#f3faff;}
+.zobiris-dashboard .dashboard-sidebar-label{font-size:10px;font-weight:720;letter-spacing:1.65px;color:#698da5;margin:3px 12px 8px;}
+.zobiris-dashboard .dashboard-sidebar-bottom{margin-top:auto;padding:16px 11px;color:#c0d8e1;font-size:11px;border-top:1px solid #183148;line-height:1.5;}
+.zobiris-dashboard .dashboard-sidebar-bottom small{display:block;color:#779aaf;margin-top:6px;font-size:10px;}
+.zobiris-dashboard .sidebar-market-dot{display:inline-block;width:8px;height:8px;border-radius:100%;margin-right:9px;box-shadow:0 0 10px #1ee4b977;background:#1de2ae;}
+.zobiris-dashboard .sidebar-market-dot.is-stale{background:#dda85c;box-shadow:none;}
+.zobiris-dashboard .dashboard-metric{background:linear-gradient(135deg,#102638,#0b1a29)!important;border:1px solid #234257!important;box-shadow:0 9px 26px #01070f45!important;border-radius:12px!important;min-height:105px!important;}
+.zobiris-dashboard .dashboard-metric:first-child{background:linear-gradient(135deg,#103c3d,#0c1f30)!important;border-color:#23635b!important;}
+.zobiris-dashboard .dashboard-metric > div:nth-child(2){color:#effaff!important;}
+.zobiris-dashboard .dashboard-panel,.zobiris-dashboard .zcc-panel,.zobiris-dashboard .allocation-panel,.zobiris-dashboard .holdings-panel,.zobiris-dashboard .watch-card,.zobiris-dashboard .daily-brief,.zobiris-dashboard .btc-chart-panel,.zobiris-dashboard .advisor-analysis{border-radius:13px!important;background:linear-gradient(140deg,#0d2031,#0a1928)!important;border:1px solid #244154!important;box-shadow:0 10px 25px #02091040!important;}
+.zobiris-dashboard .dashboard-metrics{grid-template-columns:repeat(5,minmax(0,1fr));gap:10px!important;max-width:1440px;margin-bottom:13px!important;}
+.zobiris-dashboard .dashboard-metric{padding:14px 16px!important;}
+.zobiris-dashboard .portfolio-visuals{gap:12px;margin-bottom:16px;}
+.zobiris-dashboard .allocation-panel,.zobiris-dashboard .holdings-panel{min-height:255px;padding:19px!important;}
+.zobiris-dashboard .allocation-body{gap:14px;margin-top:10px;}
+.zobiris-dashboard .allocation-ring{width:166px;}
+.zobiris-dashboard .allocation-stats strong{font-size:15px;}
+.zobiris-dashboard .portfolio-visuals h2{font-size:18px;}
+.zobiris-dashboard .zcc-metrics{gap:10px;}
+.zobiris-dashboard .zcc-stat{border-color:#274c5c;background:#0b1d2c;}
+.zobiris-dashboard .zcc-chart{background:linear-gradient(135deg,#0c2430,#0a1725);border:1px solid #244256;}
+.zobiris-dashboard .zcc-chart svg polyline{filter:drop-shadow(0 0 3px #19e8a95c);}
+.zobiris-dashboard .zcc-desks button{border-color:#264759;background:linear-gradient(135deg,#0d2733,#0b1829);}
+.zobiris-dashboard .zcc-desks button:hover{border-color:#12d7b7;}
+.zobiris-dashboard .watch-table tr,.zobiris-dashboard .dashboard-panel table tr{font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .watch-table tbody tr:hover td,.zobiris-dashboard .dashboard-panel tbody tr:hover td{background:#0e2d39!important;}
+.zobiris-dashboard .watch-table th,.zobiris-dashboard .dashboard-panel th{background:#0b1c2a!important;color:#90acbe;letter-spacing:.5px;}
+.zobiris-dashboard .dashboard-notice{max-width:1440px;margin:0 auto 14px!important;background:#0a1a27!important;border-left-color:#1ed3b2!important;}
+.zobiris-dashboard .watch-categories button[aria-pressed="true"],.zobiris-dashboard .advisor-category[aria-pressed="true"]{box-shadow:inset 3px 0 #26e7c1;background:#102f35;}
+@media(min-width:1040px){
+ .zobiris-dashboard{padding:18px 24px 28px 248px!important;}
+ .zobiris-dashboard .dashboard-nav{position:fixed!important;top:0;left:0;bottom:0;z-index:150;display:flex!important;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:3px!important;width:221px!important;max-width:none!important;min-width:0;margin:0!important;padding:15px 9px 12px!important;background:linear-gradient(150deg,#07131e,#0c1e2d 72%,#071522)!important;border:0!important;border-right:1px solid #173b51!important;border-radius:0!important;box-shadow:12px 0 36px #0003!important;overflow-x:hidden!important;overflow-y:auto!important;}
+ .zobiris-dashboard .dashboard-nav button{display:flex;flex:0 0 auto!important;align-items:center;justify-content:flex-start!important;gap:10px;text-align:left;min-height:38px!important;border:1px solid transparent!important;border-radius:8px!important;padding:8px 12px!important;font-size:12px;color:#9fbace!important;background:transparent!important;box-shadow:none!important;font-weight:580!important;}
+ .zobiris-dashboard .dashboard-nav button .dashboard-icon{height:16px;width:16px;color:#a9c4d3;}
+ .zobiris-dashboard .dashboard-nav button[aria-current="page"]{background:linear-gradient(90deg,#07365e,#103d69)!important;color:#edfcff!important;border:1px solid #115493!important;border-left:3px solid #14b7ff!important;box-shadow:0 0 14px #006dad22!important;font-weight:750!important;}
+ .zobiris-dashboard .dashboard-nav button:not([aria-current]):hover{background:#152c3f!important;color:#effaff!important;border-color:#274859!important;}
+}
+@media(max-width:1039px){
+ .zobiris-dashboard .dashboard-sidebar-brand,.zobiris-dashboard .dashboard-sidebar-label,.zobiris-dashboard .dashboard-sidebar-bottom{display:none;}
+ .zobiris-dashboard .dashboard-mobile-brand{display:flex;margin:0 0 6px;}
+ .zobiris-dashboard .dashboard-nav{display:flex!important;flex-direction:row;align-items:stretch;overflow-x:auto!important;gap:5px!important;max-width:1440px;margin:0 auto 16px!important;padding:5px!important;}
+ .zobiris-dashboard .dashboard-nav button{flex:0 0 auto!important;white-space:nowrap;min-height:41px!important;}
+ .zobiris-dashboard .dashboard-metrics{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+}
+@media(max-width:720px){
+ .zobiris-dashboard{padding:12px!important;}
+ .zobiris-dashboard .dashboard-topbar{flex-direction:column;align-items:stretch!important;gap:12px!important;}
+ .zobiris-dashboard .dashboard-topbar-right{justify-content:flex-start;gap:7px;}
+ .zobiris-dashboard .dashboard-asof{width:100%;white-space:normal;}
+ .zobiris-dashboard .dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+ .zobiris-dashboard .dashboard-metric:last-child{grid-column:auto;min-height:105px!important;}
+ .zobiris-dashboard .portfolio-visuals{grid-template-columns:minmax(0,1fr)!important;}
+}
+@media(max-width:420px){.zobiris-dashboard .dashboard-metrics{grid-template-columns:minmax(0,1fr)!important;}}
