@@ -15,6 +15,22 @@ export function MarketBrief({refreshKey}:{refreshKey:number}){
   <article><span className="brief-number">02 / WHERE BITCOIN LEANS</span><h2>{data.bias}</h2><p>{data.outlook}</p><p>{data.caveat} {data.volume}</p><strong>Last daily close {usd(data.close)}</strong></article>
   <article><span className="brief-number">03 / WHAT COULD PROVE IT WRONG</span><h2>The opposing case</h2><p>{data.counter}</p><div className="brief-levels"><div><span>20-day closing range low</span><strong>{usd(data.lower)}</strong></div><div><span>20-day closing range high</span><strong>{usd(data.upper)}</strong></div><div><span>50-day EMA</span><strong>{usd(data.daily.ema50)}</strong></div></div><p className="visual-footnote">A daily close above the range high strengthens a breakout case; below the range low strengthens a breakdown case. These are observed reference levels, not price targets.</p></article></div>
   <BitcoinChart points={data.chart} lower={data.lower} upper={data.upper} ema50={data.daily.ema50}/>
+  <section className="btc-cycle-research" aria-label="Bitcoin cycle turning-point research">
+    <span className="visual-kicker">CYCLE PIVOT &amp; EXHAUSTION · RESEARCH ONLY</span>
+    <h2>{data.cycleResearch.watch==='POSSIBLE_SELLER_EXHAUSTION'?'Potential seller exhaustion watch':data.cycleResearch.watch==='POSSIBLE_BUYER_EXHAUSTION'?'Potential buyer exhaustion watch':data.cycleResearch.watch==='EVIDENCE_UNAVAILABLE'?'Cycle evidence unavailable':'No clustered exhaustion observation'}</h2>
+    <p>{data.cycleResearch.explanation}</p>
+    <div className="btc-cycle-facts">
+      <span>Weekly move: <strong>{pct(data.returns.find(r=>r.symbol==='BTC')!.week)}</strong></span>
+      <span>RSI(14): <strong>{data.daily.rsi14.toFixed(1)}</strong></span>
+      <span>Shock proxy threshold: <strong>{data.cycleResearch.thresholds.weeklyAbsPct===null?'unavailable':data.cycleResearch.thresholds.weeklyAbsPct.toFixed(1)+'%'}</strong></span>
+      <span>Candle: <strong>completed daily</strong></span>
+    </div>
+    <p className="visual-footnote">This is an independently defined, uncalibrated proxy using completed daily closes, RSI and ATR — NOT an output from Cosmic_Whale's TradingView scripts. An exhaustion watch does not establish a reversal, price target or trade.</p>
+    <details><summary>Five-indicator research context and limitations</summary>
+      <p>The supplied methodology describes 2x SLIT (shock zones), 0xTime (close-based timing), Double Slit (potential pivot markers), 0xTimeless (pinch/exhaustion zones), and OldPNAR+Timeless (variant pivot zones). All five original scripts are <strong>not run</strong>; 1-hour and 6-hour signals are not evaluated in this daily view.</p>
+      <p>The document's 97% credibility score, claimed 2022 attribution and projected 2026–2027 bottoms are unverified hypotheses, not calibrated probabilities. Pivot permanence cannot be known at signal time. There is no added order, entry-price or position-sizing authority.</p>
+    </details>
+  </section>
   <div className="btc-indicators">
    <article><span className="visual-kicker">TREND</span><h3>{data.daily.trend}</h3><p>Close is {data.close>=data.daily.ema50?'above':'below'} the 50-day EMA and {data.close>=data.daily.ema200?'above':'below'} the 200-day EMA ({usd(data.daily.ema200)}). Agreement between price and both averages gives a clearer trend; disagreement suggests transition.</p></article>
    <article><span className="visual-kicker">MOMENTUM</span><h3>RSI {data.daily.rsi14.toFixed(1)} / 100</h3><p>{data.caveat} RSI above 70 is stretched; below 30 is depressed. Neither alone signals a reversal.</p></article>
