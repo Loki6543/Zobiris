@@ -42,7 +42,7 @@ function validStoredState(value: any): value is State {
    &&value.startedAt>0&&value.peak>0&&value.dayStart>0
    &&typeof value.paused==='boolean'
    &&(value.pauseReason===null||typeof value.pauseReason==='string')
-   &&typeof value.day==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(value.day)
+   &&typeof value.day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value.day)
    &&(value.lastSuccess===null||Number.isFinite(value.lastSuccess));
 }
 
@@ -68,7 +68,7 @@ export class TacticalService{
   try{
    const now=Date.now(),status=await publicData('SystemStatus');if(status.status!=='online')throw new Error('Exchange is not online');
    const rules=await entryRules();const markets=await Promise.all(['BTC','ETH','SOL'].map(async symbol=>{
-    try{const rule=rules[symbol];const ruleAgeMs=rule?now-Date.parse(rule.observedAt):NaN;if(!rule||rule.status!=='online'||!Number.isFinite(ruleAgeMs)||ruleAgeMs<0||ruleAgeMs>16*60000)throw Error('Instrument metadata unavailable');
+    try{const rule=rules[symbol];const ruleAgeMs=rule?Date.now()-Date.parse(rule.observedAt):NaN;if(!rule||rule.status!=='online'||!Number.isFinite(ruleAgeMs)||ruleAgeMs<0||ruleAgeMs>16*60000)throw Error('Instrument metadata unavailable');
      const [ohlc,depth]=await Promise.all([publicData(`OHLC?pair=${encodeURIComponent(rule.pair)}&interval=60`),publicData(`Depth?pair=${encodeURIComponent(rule.pair)}&count=5`)]);
      const bars=parseBars(ohlc[rule.pair]??Object.entries(ohlc).find(([k])=>k!=='last')?.[1],Date.now());const book:any=Object.values(depth)[0];const bid=Number(book?.bids?.[0]?.[0]),ask=Number(book?.asks?.[0]?.[0]);
      if(!Number.isFinite(bid)||!Number.isFinite(ask)||bid<=0||ask<bid||(ask-bid)/bid>.005)throw Error('Invalid or wide order book');
