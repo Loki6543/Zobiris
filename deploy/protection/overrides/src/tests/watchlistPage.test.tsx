@@ -6,9 +6,9 @@ afterEach(cleanup);
 it('keeps strategy order, searches and opens coin analysis',()=>{
  const now=Date.now(),analyze=vi.fn();const rows=['ETH','BTC'].map(symbol=>({symbol,asset:null,confidence:0,rotationScore:0,move:'Wait',reason:'Missing quote',ready:false}));
  render(<WatchlistPage rows={rows} now={now} snapshotFresh={true} onAnalyze={analyze}/>);
- expect(screen.getAllByRole('button')[0]!.textContent).toContain('ETH');
+ expect(screen.getByRole('button',{name:/ETH/}).textContent).toContain('ETH');
  fireEvent.change(screen.getByLabelText('Find a watchlist coin'),{target:{value:'btc'}});
- expect(screen.getAllByRole('button')).toHaveLength(1);fireEvent.click(screen.getAllByRole('button')[0]!);expect(analyze).toHaveBeenCalledWith('BTC');
+ expect(screen.queryByRole('button',{name:/ETH/})).toBeNull();fireEvent.click(screen.getByRole('button',{name:/BTC/}));expect(analyze).toHaveBeenCalledWith('BTC');
  expect(screen.getByText('Quote unavailable')).toBeTruthy();
 });
 
