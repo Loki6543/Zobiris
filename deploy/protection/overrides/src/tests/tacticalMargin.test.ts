@@ -1,5 +1,5 @@
 import {describe,it,expect,vi} from 'vitest';
-import {sizeTrade,netPnl,maintenance,candleExit,signal} from '../tactical/risk';
+import {sizeTrade,netPnl,maintenance,candleExit,signal,replay} from '../tactical/risk';
 import {parseBars,TacticalService} from '../tactical/service';
 import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
 const input={equity:300,entry:100,stop:95,side:'long' as const,leverage:1,hours:24,step:.000001,minQuantity:0,minCost:0,riskFraction:.01};
@@ -15,6 +15,42 @@ describe('tactical authority and economic boundaries',()=>{
  it('stays cash for flat prices',()=>expect(signal(Array.from({length:60},(_,i)=>({time:i,open:100,high:101,low:99,close:100,volume:1}))).side).toBe(null));
  it('persists a pause and always denies live authority',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tactical-'));try{const file=path.join(dir,'ledger.json');new TacticalService(file).pause();const s=new TacticalService(file).status();expect(s.paused).toBe(true);expect(s.liveEnabled).toBe(false);expect(s.counts.closed).toBe(0);}finally{fs.rmSync(dir,{recursive:true});}});
  it('does not overwrite a corrupt ledger on collection',async()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tactical-'));try{const file=path.join(dir,'ledger.json');fs.writeFileSync(file,'broken');const s=new TacticalService(file);await s.tick();expect(s.status().paused).toBe(true);expect(fs.readFileSync(file,'utf8')).toBe('broken');}finally{fs.rmSync(dir,{recursive:true});}});
+});
+
+
+
+describe('verification-release paper data guards',()=>{
+ const candle=(time:number)=>({time,open:100,high:102,low:98,close:100,volume:1});
+ it('refuses nonfinite, inverted and unordered OHLC data in standalone signal/replay',()=>{
+  const valid=Array.from({length:100},(_,i)=>candle(i*3600000));
+  expect(signal(valid).side).toBe(null);
+  const nan=valid.map(x=>({...x}));nan[40]!.close=NaN;
+  expect(()=>signal(nan)).toThrow(/Invalid or unordered candles/);
+  expect(()=>replay(nan,4)).toThrow(/Invalid or unordered candles/);
+  const reversed=valid.map(x=>({...x}));reversed[20]!.high=90;
+  expect(()=>signal(reversed)).toThrow();
+  const duplicate=valid.map(x=>({...x}));duplicate[25]!.time=duplicate[24]!.time;
+  expect(()=>signal(duplicate)).toThrow();
+  expect(()=>replay(valid,0)).toThrow(/Invalid replay horizon/);
+ });
+ it('accepts a structurally valid paper position but refuses a malformed restored position',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tactical-ledger-check-'));
+  try{
+   const file=path.join(dir,'ledger.json'),at=Date.parse('2026-10-10T10:00:00Z');
+   const row={id:'tactical-v1:BTC:4:1',symbol:'BTC',at,horizon:4,side:'long',reason:'paper',
+    status:'open',entry:100,stop:95,target:110,quantity:.1,risk:.5,collateral:10,leverage:1,
+    coverageComplete:true,lastSeen:at,mark:100};
+   const ledger={version:'tactical-v1',startedAt:at,paused:false,pauseReason:null,equity:300,
+    peak:300,day:'2026-10-10',dayStart:300,records:[row],lastSuccess:null};
+   fs.writeFileSync(file,JSON.stringify(ledger));
+   expect(new TacticalService(file).status().counts.open).toBe(1);
+   fs.writeFileSync(file,JSON.stringify({...ledger,records:[{...row,stop:null}]}));
+   const broken=new TacticalService(file);
+   expect(broken.status().paused).toBe(true);
+   expect(broken.status().pauseReason).toMatch(/Ledger unreadable/);
+   expect(JSON.parse(fs.readFileSync(file,'utf8')).records[0].stop).toBe(null);
+  }finally{fs.rmSync(dir,{recursive:true});}
+ });
 });
 
 

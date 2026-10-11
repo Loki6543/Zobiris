@@ -64,4 +64,31 @@ describe('v3.1 portfolio gate',()=>{
     expect(r.allowedUsd).toBe(37);
     expect(r.decision).toBe('REDUCE');
   });
+  it('fails closed on corrupt policy caps, cash basis and unrecognized actions',()=>{
+    const state={asOf:'2026-10-03T00:00:00.000Z',cashUsd:100,cashBasis:'TOTAL' as const,
+      holdings:[],openOrders:[]};
+    const candidate={symbol:'SOL',action:'NEW_BUY' as const,requestedUsd:25};
+    const now=Date.parse('2026-10-03T00:01:00.000Z');
+    const badCap=evaluatePortfolioGate(state,candidate,{...p,typicalProbeUsd:NaN},now);
+    expect(badCap).toMatchObject({decision:'BLOCK',allowedUsd:0});
+    expect(badCap.reasons).toContain('PORTFOLIO_POLICY_INVALID');
+    const badDivisor=evaluatePortfolioGate(state,candidate,{...p,cashBufferDivisor:0},now);
+    expect(badDivisor.decision).toBe('BLOCK');
+    const badBasis=evaluatePortfolioGate({...state,cashBasis:'UNVERIFIED' as any},candidate,p,now);
+    expect(badBasis.reasons).toContain('CASH_BASIS_INVALID');
+    const invalidAction=evaluatePortfolioGate(state,{...candidate,action:'EXECUTE' as any},p,now);
+    expect(invalidAction.decision).toBe('BLOCK');
+    expect(evaluatePortfolioGate(state,candidate,p,Number.NaN).decision).toBe('BLOCK');
+  });
+  it('recognizes held assets regardless of case and does not create a new slot',()=>{
+    const now=Date.parse('2026-10-03T00:05:00.000Z');
+    const state={asOf:'2026-10-03T00:00:00.000Z',cashUsd:100,cashBasis:'TOTAL' as const,
+      holdings:[{symbol:'btc',valueUsd:30}],openOrders:[]};
+    const r=evaluatePortfolioGate(state,{symbol:' BTC ',action:'ADD',requestedUsd:20},p,now);
+    expect(r.decision).not.toBe('BLOCK');
+    expect(r.slots.current).toBe(1);
+    expect(r.slots.afterAction).toBe(1);
+    expect(r.allowedUsd).toBeLessThanOrEqual(20);
+  });
+
 });
