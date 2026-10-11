@@ -39,7 +39,7 @@ export function PortfolioVisuals({ rows, cash, reserved, accountSynced }: { rows
             <circle cx="80" cy="80" r="71" fill="none" stroke="#afcad5" strokeOpacity=".45" strokeWidth=".7" />
             <circle cx="80" cy="80" r="53" fill="none" stroke="#b6d8e1" strokeOpacity=".24" strokeWidth=".7" />
           </svg>
-          <div className="ring-label"><strong>{accountSynced ? `${cashPct}%` : '—'}</strong><span>{accountSynced ? 'IN CASH' : 'PRIVATE'}</span></div>
+          <div className="ring-label"><strong>{accountSynced ? (total>=100000?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',notation:'compact',maximumFractionDigits:1}).format(total):new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(total)) : '—'}</strong><span>{accountSynced ? `${cashPct}% CASH · TOTAL` : 'PRIVATE'}</span></div>
         </div>
         {accountSynced ? <div className="allocation-stats">
           <div><span><i style={{ background: '#75eed6' }} />Cash balance</span><strong>{money(cash)}</strong></div>
