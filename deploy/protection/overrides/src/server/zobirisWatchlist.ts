@@ -144,14 +144,18 @@ export function buildZobirisWatchlist({
     )
       reentries.add(t.symbol);
   }
+  // Known BABY reward-lot ceiling is a registry-backed fallback when protection metadata
+  // is temporarily absent; do not silently treat that dust as an intentional slot.
+  const registryRewardLot = number((POLICY_REGISTRY?.registry as any)?.parameters?.['rewards.confirmedBabyRewardLotMax']?.value);
+  const confirmedRewardRemaining = rewardRemaining ?? registryRewardLot;
   const intentional = holdings.filter((h) => {
     const q = number(h.quantity);
     return (
       q !== null &&
       q > 0 &&
       (h.symbol !== "BABY" ||
-        rewardRemaining == null ||
-        q - rewardRemaining > 1e-12)
+        confirmedRewardRemaining == null ||
+        q - confirmedRewardRemaining > 1e-12)
     );
   });
   const symbols = [
@@ -348,12 +352,13 @@ export function buildZobirisWatchlist({
         const symbol = String(holding.symbol ?? "").toUpperCase();
         const quantity = number(holding.quantity);
         const mark = byAsset.get(symbol)?.price ?? null;
-        const valueUsd = quantity !== null && quantity >= 0 && typeof mark === "number" && mark > 0
-          ? quantity * mark
-          : Number.NaN;
+        const valueUsd = quantity === null || quantity < 0
+          ? Number.NaN
+          : typeof mark === "number" && Number.isFinite(mark) && mark > 0
+            ? quantity * mark : null;
         const intentionalHolding = symbol !== "BABY"
-          || rewardRemaining == null
-          || (quantity ?? 0) - rewardRemaining > 1e-12;
+          || confirmedRewardRemaining == null
+          || (quantity ?? 0) - confirmedRewardRemaining > 1e-12;
         return { symbol, valueUsd, intentional: intentionalHolding };
       }),
       openOrders: list(account.openOrders).map((order) => ({
