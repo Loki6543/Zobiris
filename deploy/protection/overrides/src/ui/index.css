@@ -631,3 +631,24 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 .zobiris-dashboard .brief-grid article h2{font-size:16px;}
 @media(max-width:1250px){.zobiris-dashboard .market-detail-layout{grid-template-columns:minmax(0,1fr)}.zobiris-dashboard .market-key-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 15px}.zobiris-dashboard .market-key-panel h2,.zobiris-dashboard .market-key-panel>p{grid-column:1/-1}}
 @media(max-width:700px){.zobiris-dashboard .market-ticker-strip{grid-template-columns:1fr;}.zobiris-dashboard .market-key-panel{grid-template-columns:repeat(2,minmax(0,1fr));}.zobiris-dashboard .market-key-panel>div{flex-wrap:wrap;}.zobiris-dashboard .btc-chart-panel{padding:12px!important;}}
+
+
+/* Evidence-backed compact watchlist movers: no invented return series. */
+.zobiris-dashboard .watch-movers-panel{max-width:1440px;margin:13px auto 23px;padding:19px 22px;border:1px solid #25465b;border-radius:13px;background:linear-gradient(135deg,#0c2233,#091825);box-shadow:0 8px 27px #0004;}
+.zobiris-dashboard .watch-movers-head{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;flex-wrap:wrap;margin-bottom:15px;}
+.zobiris-dashboard .watch-movers-head h2{margin:5px 0;font-size:20px;color:#eff8ff;}
+.zobiris-dashboard .watch-movers-head p{margin:0;color:#92aec1;font-size:11px;}
+.zobiris-dashboard .watch-movers-switch{display:flex;gap:5px;padding:3px;background:#071525;border:1px solid #29485d;border-radius:9px;}
+.zobiris-dashboard .watch-movers-switch button{min-height:32px;padding:7px 13px;border:0;border-radius:6px;background:none;color:#99b1c2;cursor:pointer;font-size:11px;font-weight:700;}
+.zobiris-dashboard .watch-movers-switch button[aria-pressed="true"]{background:#1263b8;color:#fff;}
+.zobiris-dashboard .watch-movers-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 22px;}
+.zobiris-dashboard .watch-mover-row{display:flex;align-items:center;gap:10px;border-bottom:1px solid #21394a;padding:11px 4px;}
+.zobiris-dashboard .watch-mover-index{color:#7096ae;font-size:11px;}
+.zobiris-dashboard .watch-mover-row button{border:0;background:none;color:#e4f6fa;text-align:left;cursor:pointer;font-weight:760;min-width:55px;}
+.zobiris-dashboard .watch-mover-track{height:7px;border-radius:5px;background:#153045;flex:1;min-width:10px;overflow:hidden;}
+.zobiris-dashboard .watch-mover-track>div{height:100%;border-radius:5px;}
+.zobiris-dashboard .watch-mover-track>.is-gain{background:linear-gradient(90deg,#027969,#22e6ae);}
+.zobiris-dashboard .watch-mover-track>.is-loss{background:linear-gradient(90deg,#ac334d,#f67d8c);}
+.zobiris-dashboard .watch-mover-row strong{font-size:12px;min-width:68px;text-align:right;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .watch-movers-empty{font-size:12px;color:#9cb9c7;grid-column:1/-1;}
+@media(max-width:700px){.zobiris-dashboard .watch-movers-list{grid-template-columns:minmax(0,1fr);}.zobiris-dashboard .watch-movers-panel{padding:16px;}}
