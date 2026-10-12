@@ -18,6 +18,7 @@ import { readSwarmLedger, summarizeSwarmAttribution, summarizeSwarmCalibration, 
 import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readLatestHyperliquidPositioning, type HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
 import { marketBrief } from './marketBrief.js';
 import { getStrategyReport, startStrategyV2Timer } from './strategyV2Service.js';
+import { getMarketOverview, getPriceHistory } from './marketOverviewService.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
 import { accountCapital, accountProvenance, accountMappings, buildAccountDependency, getAccountView, refreshAccountContextFromKraken, startAccountContextSync } from "./accountContext.js";
@@ -875,6 +876,18 @@ const API: ApiRouter = {
   },
   "GET /api/strategy-v2": async (_req, res) => {
     try { jsonResponse(res, 200, await getStrategyReport()); }
+    catch (e) { errorResponse(res, 503, e); }
+  },
+  "GET /api/market-overview": async (req, res) => {
+    const limit = checkRateLimit('market-overview:' + clientIpFrom(req), Date.now(), 240);
+    if (!limit.allowed) return send429(res, limit.retryAfterSec);
+    try { jsonResponse(res, 200, await getMarketOverview(new URL(req.url ?? "/", "http://localhost").searchParams.get("symbols"))); }
+    catch (e) { errorResponse(res, 503, e); }
+  },
+  "GET /api/price-history": async (req, res) => {
+    const limit = checkRateLimit('price-history:' + clientIpFrom(req), Date.now(), 60);
+    if (!limit.allowed) return send429(res, limit.retryAfterSec);
+    try { jsonResponse(res, 200, await getPriceHistory(new URL(req.url ?? "/", "http://localhost").searchParams.get("symbols"))); }
     catch (e) { errorResponse(res, 503, e); }
   },
   "GET /api/market-brief": async (_req, res) => {

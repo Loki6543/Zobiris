@@ -24,6 +24,8 @@ export interface MarketCoin {
   change200dPct: number | null;
   change1yPct: number | null;
   lastUpdated: string | null;
+  /** 7-day price sparkline, downsampled to every 4 hours (empty when not requested). */
+  sparkline7d: number[];
 }
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -49,6 +51,7 @@ export function parseCoinGeckoMarkets(raw: unknown): MarketCoin[] {
     change200dPct: num(r.price_change_percentage_200d_in_currency),
     change1yPct: num(r.price_change_percentage_1y_in_currency),
     lastUpdated: typeof r.last_updated === "string" ? r.last_updated : null,
+    sparkline7d: Array.isArray(r.sparkline_in_7d?.price) ? (r.sparkline_in_7d.price as unknown[]).filter((_, i) => i % 4 === 0).map(Number).filter((v) => Number.isFinite(v) && v > 0) : [],
   }));
 }
 
@@ -83,14 +86,17 @@ export function parseKrakenUsdPairs(raw: unknown): Map<string, string> {
   return out;
 }
 
-/** Completed daily candles (unix seconds, close), oldest first. Kraken's last row is still forming and is dropped. */
-export function parseKrakenDailyCandles(raw: unknown): Array<{ time: number; close: number }> {
+export interface Candle { time: number; open: number; high: number; low: number; close: number; volume: number }
+
+/** Completed daily candles (unix seconds, OHLCV), oldest first. Kraken's last row is still forming and is dropped. */
+export function parseKrakenDailyCandles(raw: unknown): Candle[] {
   const result = (raw as any)?.result;
   if (!result || typeof result !== "object") throw new Error("Kraken OHLC: missing result");
   const key = Object.keys(result).find((k) => k !== "last");
   const rows: unknown = key ? result[key] : null;
   if (!Array.isArray(rows) || rows.length < 2) throw new Error("Kraken OHLC: no candles");
-  return rows.slice(0, -1).map((r: any) => ({ time: Number(r[0]), close: Number(r[4]) })).filter((c) => Number.isFinite(c.time) && Number.isFinite(c.close) && c.close > 0);
+  return rows.slice(0, -1).map((r: any) => ({ time: Number(r[0]), open: Number(r[1]), high: Number(r[2]), low: Number(r[3]), close: Number(r[4]), volume: Number(r[6]) }))
+    .filter((c) => Number.isFinite(c.time) && Number.isFinite(c.close) && c.close > 0);
 }
 
 /** Completed daily closes, oldest first. */
@@ -107,7 +113,7 @@ async function getJson(fetcher: FetchLike, url: string): Promise<unknown> {
 }
 
 export const fetchCoinGeckoTop500 = async (fetcher: FetchLike): Promise<MarketCoin[]> => {
-  const page = (n: number) => `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${n}&price_change_percentage=7d,30d,200d,1y`;
+  const page = (n: number) => `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${n}&price_change_percentage=7d,30d,200d,1y&sparkline=true`;
   const [a, b] = [parseCoinGeckoMarkets(await getJson(fetcher, page(1))), parseCoinGeckoMarkets(await getJson(fetcher, page(2)))];
   return [...a, ...b];
 };
@@ -115,3 +121,29 @@ export const fetchPaprikaFirstSeen = async (fetcher: FetchLike) => parsePaprikaF
 export const fetchKrakenUsdPairs = async (fetcher: FetchLike) => parseKrakenUsdPairs(await getJson(fetcher, "https://api.kraken.com/0/public/AssetPairs"));
 export const fetchKrakenDailyCandles = async (fetcher: FetchLike, pair: string) => parseKrakenDailyCandles(await getJson(fetcher, `https://api.kraken.com/0/public/OHLC?pair=${encodeURIComponent(pair)}&interval=1440`));
 export const fetchKrakenDailyCloses = async (fetcher: FetchLike, pair: string) => parseKrakenDailyCloses(await getJson(fetcher, `https://api.kraken.com/0/public/OHLC?pair=${encodeURIComponent(pair)}&interval=1440`));
+
+/** CoinGecko /global: total market cap, volume and BTC dominance. */
+export function parseCoinGeckoGlobal(raw: unknown) {
+  const d = (raw as any)?.data;
+  if (!d || typeof d !== "object") throw new Error("CoinGecko global: missing data");
+  const mcap = num(d.total_market_cap?.usd), vol = num(d.total_volume?.usd);
+  return {
+    totalMarketCapUsd: mcap,
+    // CoinGecko occasionally reports a corrupt aggregate volume (hundreds of times market cap); hide it rather than show it.
+    totalVolumeUsd: vol != null && mcap != null && vol > mcap ? null : vol,
+    btcDominancePct: num(d.market_cap_percentage?.btc),
+    ethDominancePct: num(d.market_cap_percentage?.eth),
+    marketCapChange24hPct: num(d.market_cap_change_percentage_24h_usd),
+  };
+}
+
+/** alternative.me Fear & Greed index, newest first in the API; returned oldest first. */
+export function parseFearGreed(raw: unknown): Array<{ time: number; value: number; label: string }> {
+  const rows = (raw as any)?.data;
+  if (!Array.isArray(rows)) throw new Error("Fear & Greed: missing data");
+  return rows.map((r: any) => ({ time: Number(r.timestamp), value: Number(r.value), label: String(r.value_classification ?? "") }))
+    .filter((r) => Number.isFinite(r.time) && Number.isFinite(r.value)).reverse();
+}
+
+export const fetchCoinGeckoGlobal = async (fetcher: FetchLike) => parseCoinGeckoGlobal(await getJson(fetcher, "https://api.coingecko.com/api/v3/global"));
+export const fetchFearGreed = async (fetcher: FetchLike) => parseFearGreed(await getJson(fetcher, "https://api.alternative.me/fng/?limit=30"));

@@ -7,7 +7,6 @@ import { MarketBrief } from './MarketBrief';
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   MANEUVER_CAPITAL_USD,
-  PROBE_MAX_USD,
   PROBE_TYPICAL_USD,
   type HoldingSeed,
   type OrderSeed,
@@ -21,9 +20,12 @@ const LEARNING_RULES = [
   { title: "Limit-order discipline gets extra weight", detail: "New-position ideas default to reviewed limits rather than implied market orders." },
 ];
 
-import { PortfolioVisuals } from "./PortfolioVisuals";
 import { Portfolio3D } from "./Portfolio3D";
 import { EnginePage } from "./EnginePage";
+import { PortfolioOverview } from "./PortfolioOverview";
+import { MarketToday, type MarketOverview } from "./MarketToday";
+import { WatchlistInsights } from "./WatchlistInsights";
+import { Sparkline, useApi } from "./charts";
 import { useTiltCards } from "./useTiltCards";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
@@ -817,6 +819,9 @@ export function App() {
     setRecordOpen(false);
   }
 
+  const overviewSymbols = useMemo(() => [...new Set([...portfolioRows.map((r) => r.symbol), ...watchlistRankings.map((r) => r.symbol)])].sort().join(","), [portfolioRows, watchlistRankings]);
+  const { data: marketOverviewRaw } = useApi<MarketOverview>(`/api/market-overview?symbols=${encodeURIComponent(overviewSymbols)}`, 5 * 60_000);
+  const marketOverview = marketOverviewRaw && typeof marketOverviewRaw.quotes === "object" && marketOverviewRaw.quotes && marketOverviewRaw.btc ? marketOverviewRaw : null;
   return (
     <div ref={dashboardRef} className="zobiris-dashboard" style={styles.page}>
       <header className="dashboard-topbar" style={styles.header}>
@@ -895,17 +900,7 @@ export function App() {
 
       {view === "portfolio" ? (
         <main>
-          <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
-            <Metric label="Portfolio" value={accountSynced ? money(total) : "Private"} />
-            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Private account is locked on the public view"} />
-            <Metric label="Reserved buys" value={accountSynced ? money(reservedBuys) : "Private"} />
-            <Metric label="Free cash" value={accountSynced ? money(freeCash) : "Private"} />
-            <Metric label="Maneuver capital" value={accountSynced ? money(MANEUVER_CAPITAL_USD) : "Private"} note={accountSynced ? "Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD) : "Unlock to view capital limits"} />
-          </section>
-
-          <Portfolio3D rows={portfolioRows} cash={LIVE_CASH_USD} accountSynced={accountSynced} />
-          <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
-          <ProfitProtection operatorToken={operatorToken} />
+          <PortfolioOverview rows={portfolioRows} cashUsd={LIVE_CASH_USD} freeCashUsd={freeCash} reservedUsd={reservedBuys} accountSynced={accountSynced} quotes={marketOverview?.quotes ?? {}} />
           <section className="dashboard-panel" style={styles.card}>
             <div style={styles.sectionHead}>
               <div>
@@ -916,7 +911,7 @@ export function App() {
             <div style={styles.tableWrap}>
               <table style={styles.table}>
                 <thead>
-                  <tr><th>Asset</th><th>Amount</th><th>Avg. Price</th><th>Current Price</th><th>Value</th><th>P/L</th><th>P/L %</th><th>Signal</th></tr>
+                  <tr><th>Asset</th><th>Amount</th><th>Avg. Price</th><th>Current Price</th><th>Value</th><th>P/L</th><th>P/L %</th><th>24h</th><th>7d</th><th>Signal</th></tr>
                 </thead>
                 <tbody>
                   {portfolioRows.map((row) => (
@@ -940,11 +935,13 @@ export function App() {
                         <td>{money(row.value)}</td>
                         <td style={row.avgPriceUsd ? (row.upl >= 0 ? styles.good : styles.bad) : undefined}>{row.avgPriceUsd ? (row.value - row.avgPriceUsd * row.quantity >= 0 ? "+" : "−") + money(Math.abs(row.value - row.avgPriceUsd * row.quantity)) : "—"}</td>
                         <td style={row.upl >= 0 ? styles.good : styles.bad}>{pct(row.upl)}</td>
+                        <td className={marketOverview?.quotes[row.symbol]?.change24hPct == null ? undefined : marketOverview.quotes[row.symbol]!.change24hPct! >= 0 ? "is-gain" : "is-loss"}>{marketOverview?.quotes[row.symbol]?.change24hPct == null ? "—" : pct(marketOverview.quotes[row.symbol]!.change24hPct!)}</td>
+                        <td>{marketOverview?.quotes[row.symbol]?.sparkline7d.length ? <Sparkline values={marketOverview.quotes[row.symbol]!.sparkline7d} width={72} height={24} /> : "—"}</td>
                         <td><span style={actionStyle(row.action)}>{row.action}</span></td>
                       </tr>
                       {expandedSymbol === row.symbol ? (
                         <tr>
-                          <td colSpan={8} style={styles.analysisCell}>
+                          <td colSpan={10} style={styles.analysisCell}>
                             <OrderPlanPanel
                               row={row}
                               regime={regime}
@@ -965,6 +962,8 @@ export function App() {
             </div>
             {!portfolioRows.length && <div className="dashboard-empty"><strong>{accountSynced ? "No positions to display" : "Private account"}</strong>{accountSynced ? "Your synchronized positions will appear here." : "Unlock your portfolio above to view your current positions."}</div>}
           </section>
+          <Portfolio3D rows={portfolioRows} cash={LIVE_CASH_USD} accountSynced={accountSynced} />
+          <ProfitProtection operatorToken={operatorToken} />
 
           <section className="dashboard-columns" style={styles.twoCol}>
             <div className="dashboard-panel" style={styles.card}>
@@ -995,9 +994,11 @@ export function App() {
       ) : null}
 
       {view === "watchlist" ? <WatchlistPage research={researchEvidence.data?.assets??[]} refreshSummary={lastRefreshEvaluation} rows={watchlistRankings} now={nowMs} snapshotFresh={snapshotFresh} onAnalyze={symbol=>{setAnalysisSymbol(symbol);setView("compare");}} /> : null}
+      {view === "watchlist" ? <WatchlistInsights asOf={marketOverview?.asOf ?? null} quotes={marketOverview ? watchlistRankings.map((r) => marketOverview.quotes[r.symbol]).filter((q): q is NonNullable<typeof q> => Boolean(q)) : []} /> : null}
 
       {view === "market" ? (
         <main>
+          <MarketToday data={marketOverview} />
           <MarketBrief refreshKey={snapshotMs} />
           <section className="dashboard-panel" style={styles.heroCard}>
             <div style={styles.eyebrow}>TODAY</div>

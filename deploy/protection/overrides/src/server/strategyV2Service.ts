@@ -1,6 +1,6 @@
 // Builds and caches the Strategy v2 report from free, keyless public APIs.
 // Refreshes in the background; requests always get the last good report (or a clear warming-up error).
-import { fetchCoinGeckoTop500, fetchKrakenDailyCandles, fetchKrakenDailyCloses, fetchKrakenUsdPairs, fetchPaprikaFirstSeen, type FetchLike, type MarketCoin } from "../strategyV2/feed.js";
+import { fetchCoinGeckoTop500, fetchKrakenDailyCandles, fetchKrakenDailyCloses, fetchKrakenUsdPairs, fetchPaprikaFirstSeen, type Candle, type FetchLike, type MarketCoin } from "../strategyV2/feed.js";
 import { buildStrategyReport, tierFor, type FeedStatus, type StrategyReport } from "../strategyV2/report.js";
 import { CMC_WATCHLIST } from "../strategyV2/watchlist.js";
 import { SMALL_CAP_RULES } from "../strategyV2/smallCapScreen.js";
@@ -18,7 +18,23 @@ let pairs: Cached<Map<string, string>> | null = null;
 let ages: Cached<Map<string, { firstDataAt: string; rank: number; name: string }>> | null = null;
 const histories = new Map<string, Cached<number[]>>();
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+let krakenChain: Promise<void> = Promise.resolve();
+/** Every Kraken public request in the server waits its turn here (~1 request/second shared). */
+export function krakenSlot(): Promise<void> {
+  const turn = krakenChain.then(() => sleep(KRAKEN_SPACING_MS));
+  krakenChain = turn.catch(() => {});
+  return turn;
+}
+let latestMarket: Cached<MarketCoin[]> | null = null;
+let latestBtc: Cached<Candle[]> | null = null;
+export const getLatestMarket = () => latestMarket;
+export const getLatestBtcCandles = () => latestBtc;
+/** Kraken USD pairs (cached 6h), fetched on demand when the strategy feed has not loaded them yet. */
+export async function getKrakenPairs(fetcher: FetchLike = fetch as unknown as FetchLike): Promise<Map<string, string>> {
+  if (!fresh(pairs, SLOW_TTL_MS, Date.now())) { await krakenSlot(); pairs = { value: await fetchKrakenUsdPairs(fetcher), at: Date.now() }; }
+  return pairs.value;
+}
 const fresh = <T>(c: Cached<T> | null, ttl: number, now: number): c is Cached<T> => Boolean(c && now - c.at < ttl);
 
 /** Coins worth spending a Kraken history request on: rank 101-500, Kraken-listed, liquid. */
@@ -40,15 +56,17 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
     catch { ages = ages ?? { value: new Map(), at: 0 }; } // age unknown => screen fails closed on age
   }
   const btcPair = pairs.value.get("BTC") ?? "XXBTZUSD";
-  await sleep(KRAKEN_SPACING_MS);
+  await krakenSlot();
   const btcCandles = await fetchKrakenDailyCandles(fetcher, btcPair);
   const btcDailyCloses = btcCandles.map((c) => c.close);
+  latestMarket = { value: market, at: now };
+  latestBtc = { value: btcCandles, at: now };
   const coinDailyCloses = new Map<string, number[]>();
   const wanted = historyCandidates(market, pairs.value);
   for (const coin of wanted) {
     const cached = histories.get(coin.symbol);
     if (fresh(cached ?? null, SLOW_TTL_MS, now)) { coinDailyCloses.set(coin.symbol, cached!.value); continue; }
-    await sleep(KRAKEN_SPACING_MS);
+    await krakenSlot();
     try {
       const closes = await fetchKrakenDailyCloses(fetcher, pairs.value.get(coin.symbol)!);
       histories.set(coin.symbol, { value: closes, at: now });
