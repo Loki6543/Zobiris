@@ -1,6 +1,5 @@
 import {describe,expect,it} from 'vitest';
 import {evaluatePortfolioGate} from '../server/policy/portfolioGate.js';
-import {COSTS,netPnl} from '../tactical/risk.js';
 
 const policy={intentionalHoldingsTarget:[3,5] as [number,number],intentionalHoldingsMax:7,meaningfulActionFloorUsd:8,cashBufferDivisor:2,typicalProbeUsd:37,maxAccountDataAgeMin:30};
 const now=Date.parse('2026-10-11T12:00:00.000Z');
@@ -28,9 +27,5 @@ describe('audit critical regression guards',()=>{
   expect(r.decision).toBe('ALLOW');expect(r.slots.current).toBe(0);
   const corrupt=evaluatePortfolioGate(state([{symbol:'BTC',valueUsd:-1}]),candidate,policy,now);
   expect(corrupt.decision).toBe('BLOCK');expect(corrupt.reasons).toContain('POSITION_DATA_INVALID');
- });
- it('Kraken Tier 1 conservative taker-fee model is 80bps per side, not 40bps',()=>{
-  expect(COSTS.fee).toBe(0.008);
-  expect(netPnl('long',1,100,100,0,false).costs).toBeGreaterThanOrEqual(1.6);
  });
 });

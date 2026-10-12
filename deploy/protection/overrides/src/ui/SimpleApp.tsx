@@ -1,10 +1,8 @@
-import { TacticalMargin } from './TacticalMargin';
-import { AdvisoryDesk } from './AdvisoryDesk';
 import { mergeAssetUniverse, visibleAssetData } from "../shared/assetUniverse";
 import {ResearchEvidencePanel,useResearchEvidence} from './ResearchEvidencePanel';
-import {PilotScorecard} from './PilotScorecard';
 import {entryReference,validateEntry,type EntryRules} from '../shared/entryPlan';
 import { WatchlistPage } from './WatchlistPage';
+import { StrategyPage } from './StrategyPage';
 import { MarketBrief } from './MarketBrief';
 import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
@@ -24,25 +22,25 @@ const LEARNING_RULES = [
 ];
 
 import { PortfolioVisuals } from "./PortfolioVisuals";
-import { CommandCenter } from "./CommandCenter";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare" | "tactical" | "advisory";
+type View = "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
 const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
+  strategy: { title: "Opportunities", description: "Bitcoin direction, top-100 rotation entries and small-cap bets for your watchlist." },
   portfolio: { title: "Portfolio", description: "Your holdings, allocation and trading decisions at a glance." },
   market: { title: "Market Today", description: "Verified Bitcoin market conditions, trend and technical analysis." },
   watchlist: { title: "Watchlist", description: "Spot prices, asset performance and entry research." },
   outlook: { title: "Time Outlook", description: "Separate long-term holdings from tactical opportunities." },
-  history: { title: "History / Learning", description: "Evidence, recorded decisions and outcomes." },
-  compare: { title: "Compare Lab", description: "Investigate ideas and challenge investment assumptions." },
-  tactical: { title: "Margin Intelligence", description: "Paper-only margin research, position risk and liquidity." },
-  advisory: { title: "Advisory Research", description: "Signal validation, funding gaps and stress scenarios." },
+  history: { title: "History / Learning", description: "Your recorded trades and what they taught Zobiris." },
+  compare: { title: "Compare Lab", description: "Compare coins side by side before you buy." },
 };
 
 type RankedAsset = Record<string, any>;
+
+const utcStamp = (ms: number) => new Date(ms).toLocaleString("en-US", { timeZone: "UTC", month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) + " UTC";
 
 const money = (value: number) => new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -818,24 +816,34 @@ export function App() {
           <p>{PAGE_HEADINGS[view].description}</p>
         </div>
         <div className="dashboard-topbar-right">
-          <span className="dashboard-asof">Market {snapshotFresh ? "current" : "needs refresh"} · {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "time unavailable"}</span>
-        <div className="header-actions" style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap"}}>
+          <span className="dashboard-asof" title={snapshotFresh ? "Market data current" : "Market data needs refresh"}>
+            <span className={snapshotFresh ? "sidebar-market-dot" : "sidebar-market-dot is-stale"} aria-hidden="true"></span>
+            {Number.isFinite(snapshotMs) ? utcStamp(snapshotMs) : "Time unavailable"}
+          </span>
+          <span className="topbar-currency" aria-label="Display currency">USD</span>
+          <button className="topbar-icon-button" type="button" aria-label="Refresh market" title={refreshing ? "Refreshing…" : "Refresh market"} onClick={() => void refresh()} disabled={refreshing}>
+            <DashboardIcon name="refresh" />
+          </button>
           {operatorToken ? (
             <button
               type="button"
-              style={{...styles.refreshButton,background:"linear-gradient(145deg,#243c47,#12232d)",color:"#edf5fa",border:"1px solid #54727f"}}
+              className="topbar-avatar is-unlocked"
+              aria-label="Lock private portfolio"
+              title="Lock private portfolio"
               onClick={() => {
                 try { window.sessionStorage.removeItem("zobiris.operatorToken.v1"); } catch {}
                 setOperatorToken("");
                 setAccount(null);
               }}
             >
-              <DashboardIcon name="lock" />Lock private portfolio
+              A
             </button>
           ) : (
             <button
               type="button"
-              style={{...styles.refreshButton,background:"linear-gradient(145deg,#243c47,#12232d)",color:"#edf5fa",border:"1px solid #54727f"}}
+              className="topbar-avatar"
+              aria-label="Unlock private portfolio"
+              title="Unlock private portfolio"
               onClick={() => {
                 const value = window.prompt("Enter the ZOBIRIS operator token")?.trim() ?? "";
                 if (!value) return;
@@ -843,13 +851,9 @@ export function App() {
                 setOperatorToken(value);
               }}
             >
-              <DashboardIcon name="lock" />Unlock private portfolio
+              <DashboardIcon name="lock" />
             </button>
           )}
-          <button style={styles.refreshButton} onClick={() => void refresh()} disabled={refreshing}>
-            <DashboardIcon name="refresh" />{refreshing ? "Refreshing…" : "Refresh market"}
-          </button>
-        </div>
         </div>
       </header>
 
@@ -858,25 +862,23 @@ export function App() {
           <svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="M3 28 15 6l6 11 4-7 8 18h-7l-3-7-6 10-6-13-5 10Z" stroke="#2eeccf" strokeWidth="2.3" strokeLinejoin="round"/><path d="m12 28 5-8 3 5 5-9" stroke="#0f99e0" strokeWidth="2" strokeLinecap="round"/></svg>
           <strong>ZOBIRIS</strong>
         </div>
-        <div className="dashboard-sidebar-label">WORKSPACES</div>
         {([
           ["portfolio", "Portfolio"],
+          ["strategy", "Opportunities"],
           ["market", "Market Today"],
-          ["watchlist", "Watchlist"],
           ["outlook", "Time Outlook"],
-          ["history", "History / Learning"],
+          ["watchlist", "Watchlist"],
           ["compare", "Compare Lab"],
-          ["tactical", "Margin Intelligence"],
-           ["advisory", "Advisory Research"],
+          ["history", "History / Learning"],
         ] as Array<[View, string]>).map(([key, label]) => (
           <button aria-current={view === key ? "page" : undefined} key={key} onClick={() => setView(key)} style={view === key ? styles.navActive : styles.navButton}>
             <DashboardIcon name={key} />{label}
           </button>
         ))}
-        <div className="dashboard-sidebar-bottom"><span className={snapshotFresh ? "sidebar-market-dot" : "sidebar-market-dot is-stale"} aria-hidden="true"></span>{snapshotFresh ? "Market snapshot current" : "Refresh market evidence"}<small>Research and portfolio decision support</small></div>
+        <div className="dashboard-sidebar-bottom"><span className={snapshotFresh ? "sidebar-market-dot" : "sidebar-market-dot is-stale"} aria-hidden="true"></span>{snapshotFresh ? "Market data current" : "Market data needs refresh"}</div>
       </nav>
 
-      <div className="dashboard-notice" style={styles.notice}>Market as of {Number.isFinite(snapshotMs) ? new Date(snapshotMs).toLocaleString() : "unavailable"}{snapshotFresh ? "" : " — refresh required"}. {accountSynced ? `Kraken account synced ${account?.syncMode === "websocket+poll" ? "live by WebSocket + REST reconciliation" : "by automatic REST polling"} · account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}.` : "Private Kraken account data is locked on the public view."}</div>
+      {!snapshotFresh || !accountSynced ? <div className="dashboard-notice dashboard-status-line" style={styles.notice}>{snapshotFresh ? "" : "Market data is out of date — refresh before acting. "}{accountSynced ? "" : "Kraken account is locked — unlock to see your positions."}</div> : null}
       {error ? <div className="dashboard-notice" role="alert" style={styles.notice}>{error}</div> : null}
       {loading && !snapshot ? <div className="dashboard-notice" style={styles.notice}>Loading live Zobiris market data…</div> : null}
 
@@ -891,35 +893,18 @@ export function App() {
           </section>
 
           <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
-          <CommandCenter
-            refreshKey={snapshotMs}
-            snapshotAsOf={snapshotMs}
-            snapshotFresh={snapshotFresh}
-            regime={regime}
-            accountSynced={accountSynced}
-            accountAsOf={LIVE_CAPTURED_AT}
-            portfolioValue={total}
-            cash={LIVE_CASH_USD}
-            freeCash={freeCash}
-            reservedBuys={reservedBuys}
-            orders={LIVE_OPEN_ORDERS}
-            watch={watchlistRankings}
-            trades={LIVE_TRADE_MEMORY}
-            onNavigate={(next) => setView(next)}
-            onAnalyze={(symbol) => { setAnalysisSymbol(symbol); setView("compare"); }}
-          />
           <ProfitProtection operatorToken={operatorToken} />
           <section className="dashboard-panel" style={styles.card}>
             <div style={styles.sectionHead}>
               <div>
                 <h2 style={styles.h2}>Current positions</h2>
-                <div style={styles.subtle}>{accountSynced ? `Kraken account snapshot ${new Date(LIVE_CAPTURED_AT).toLocaleString()}; prices refresh from the live Zobiris engine.` : "Private Kraken account snapshot is hidden; market prices still refresh from the live Zobiris engine."}</div>
+                <div style={styles.subtle}>{accountSynced ? `Holdings · Kraken account as of ${new Date(LIVE_CAPTURED_AT).toLocaleString()}` : "Holdings are private until you unlock the account."}</div>
               </div>
             </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
                 <thead>
-                  <tr><th>Asset</th><th>Value</th><th>Avg</th><th>Now</th><th>P/L</th><th>Zobiris</th></tr>
+                  <tr><th>Asset</th><th>Amount</th><th>Avg. Price</th><th>Current Price</th><th>Value</th><th>P/L</th><th>P/L %</th><th>Signal</th></tr>
                 </thead>
                 <tbody>
                   {portfolioRows.map((row) => (
@@ -933,19 +918,21 @@ export function App() {
                             aria-expanded={expandedSymbol === row.symbol}
                             aria-label={(expandedSymbol === row.symbol ? "Close " : "Open ") + row.symbol + " order analysis"}
                           >
-                            <span className="asset-identity"><span className="asset-monogram" aria-hidden="true">{row.symbol.slice(0, 1)}</span><span><strong>{row.symbol}</strong><span className="asset-name" style={styles.tiny}>{row.name}</span></span></span>
+                            <span className="asset-identity"><span className="asset-monogram" data-symbol={row.symbol} aria-hidden="true">{row.symbol.slice(0, 1)}</span><span><strong>{row.symbol}</strong><span className="asset-name" style={styles.tiny}>{row.name}</span></span></span>
                             <span style={styles.chevron}>{expandedSymbol === row.symbol ? "−" : "+"}</span>
                           </button>
                         </td>
-                        <td>{money(row.value)}</td>
+                        <td>{num(row.quantity, 6)}</td>
                         <td>{row.avgPriceUsd == null ? "—" : money(row.avgPriceUsd)}</td>
                         <td>{money(row.livePrice)}{!row.priceAvailable ? <div style={styles.tiny}>Snapshot estimate — verify</div> : null}</td>
+                        <td>{money(row.value)}</td>
+                        <td style={row.avgPriceUsd ? (row.upl >= 0 ? styles.good : styles.bad) : undefined}>{row.avgPriceUsd ? (row.value - row.avgPriceUsd * row.quantity >= 0 ? "+" : "−") + money(Math.abs(row.value - row.avgPriceUsd * row.quantity)) : "—"}</td>
                         <td style={row.upl >= 0 ? styles.good : styles.bad}>{pct(row.upl)}</td>
                         <td><span style={actionStyle(row.action)}>{row.action}</span></td>
                       </tr>
                       {expandedSymbol === row.symbol ? (
                         <tr>
-                          <td colSpan={6} style={styles.analysisCell}>
+                          <td colSpan={8} style={styles.analysisCell}>
                             <OrderPlanPanel
                               row={row}
                               regime={regime}
@@ -1000,7 +987,6 @@ export function App() {
       {view === "market" ? (
         <main>
           <MarketBrief refreshKey={snapshotMs} />
-          <ResearchEvidencePanel symbols={watchlist.map(a=>a.symbol)} {...researchEvidence} />
           <section className="dashboard-panel" style={styles.heroCard}>
             <div style={styles.eyebrow}>TODAY</div>
             <h1 style={styles.h1}>{regime}</h1>
@@ -1015,11 +1001,6 @@ export function App() {
             </div>
           </section>
 
-          <section className="dashboard-panel" style={styles.card}>
-            <h2 style={styles.h2}>Entry policy · consistent across every buy plan</h2>
-            <div style={styles.subtle}>Live pilot: 4–8% pullback prior, plus 2 percentage points for recent re-entry risk (10% maximum). Buy prices and quantities round down to Kraken requirements. A lower price never overrides strategy, liquidity or capital gates.</div>
-            <details style={{marginTop:12}}><summary>Upgraded entry research · shadow only</summary><p style={styles.tiny}>Structural support/retest, ATR, spread, fees and adverse selection belong in the next entry model. Minimum-edge research rule: max(all-in costs + adverse-selection buffer, 0.25 × ATR, 1.5 × spread), in basis points. LOQS and fill/missed-fill proxies remain unavailable until real inputs and forward validation exist. No fixture probabilities or invented optimal price.</p></details>
-          </section>
           <section className="dashboard-panel" style={styles.card}>
             <h2 style={styles.h2}>New positions to consider</h2>
             <div style={styles.subtle}>Pilot mode: new capital only goes to 30d + 90d laggards with a fresh 7d recovery, and only through a pullback limit after Kraken execution gates pass.</div>
@@ -1067,54 +1048,19 @@ export function App() {
             </div>
           </section>
 
-          <section className="dashboard-columns" style={styles.twoCol}>
-            <div className="dashboard-panel" style={styles.card}>
-              <h2 style={styles.h2}>Existing orders review</h2>
-              {orderEvaluations.map((order) => (
-                <div key={order.key} style={styles.orderReviewRow}>
-                  <div style={{ flex: 1 }}>
-                    <div style={styles.limitLabel}>{order.side} {order.symbol} · {order.status}</div>
-                    <strong>{money(order.amountUsd)} @ {money(order.targetPriceUsd)}</strong>
-                    <div style={styles.tiny}>{order.reason}</div>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={styles.tiny}>Zobiris target</div>
-                    <strong>{order.suggestedPrice == null ? "—" : entryPrice(order.suggestedPrice)}</strong>
-                    <div style={styles.tiny}>{order.suggestedAmountUsd == null ? "reviewing size" : order.suggestedAmountUsd <= 0 ? "pause / no add" : money(order.suggestedAmountUsd)}</div>
-                  </div>
-                </div>
-              ))}
-              {!orderEvaluations.length ? <div className="dashboard-notice" style={styles.notice}>{accountSynced
-                ? Number(account?.openOrdersReceivedCount ?? 0) > Number(account?.openOrdersParsedCount ?? 0)
-                  ? `Kraken returned orders that Zobiris could not parse (${account.openOrdersParsedCount} of ${account.openOrdersReceivedCount}). Verify orders directly in Kraken until this is resolved.`
-                  : "Kraken returned no open orders for this API key. If Kraken shows active limits, check that the API key belongs to the same Kraken account and has Query Open Orders & Trades access."
-                : "Kraken account sync is unavailable. Verify active orders directly in Kraken."}</div> : null}
-            </div>
-
-            <div className="dashboard-panel" style={styles.card}>
-              <h2 style={styles.h2}>Rules learned from you</h2>
-              {LEARNING_RULES.map((rule) => (
-                <div key={rule.title} style={styles.rule}>
-                  <strong>{rule.title}</strong>
-                  <div style={styles.tiny}>{rule.detail}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </main>
+                  </main>
       ) : null}
+
+      {view === "strategy" ? <StrategyPage portfolioUsd={total} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, quantity: row.quantity, avgPriceUsd: row.avgPriceUsd ?? null, value: row.value }))} /> : null}
 
       {view === "outlook" ? <TimeOutlookPage watchlist={watchlist} holdingSymbols={portfolioRows.map((row) => row.symbol)} /> : null}
 
       {view === "compare" ? <><ResearchEvidencePanel symbols={watchlist.map(a=>a.symbol)} {...researchEvidence} symbol={analysisSymbol??undefined} /><CompareLab onAnalyzeSymbol={setAnalysisSymbol} rankedAssets={mergeAssetUniverse(watchlist, rankedAssets)} focusSymbol={analysisSymbol} /></> : null}
 
-      {view === "tactical" ? <TacticalMargin operatorToken={operatorToken} /> : null}
 
-       {view === "advisory" ? <AdvisoryDesk onNavigate={setView} /> : null}
 
       {view === "history" ? (
         <main>
-          <PilotScorecard />
           <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
             <Metric label="Unique trades" value={String(mergedTrades.length)} note="USD legs merged; duplicates removed" />
             <Metric label="Approx. realized" value={money(learning.realized)} note="gross FIFO on matched known-cost trades" />
@@ -1410,7 +1356,7 @@ function DashboardIcon({name}: {name: string}) {
     compare: "M9 3h6M10 3v7L4 20h16l-6-10V3M8 15h8",
     lock: "M7 10V7a5 5 0 0 1 10 0v3M6 10h12v11H6ZM12 14v3",
     refresh: "M20 7a9 9 0 1 0 1 8M20 3v5h-5",
-    advisory: "M12 3 4 7v10l8 4 8-4V7l-8-4ZM4 7l8 4 8-4M12 11v10",
+    strategy: "M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
   };
   return <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.portfolio}/></svg>;
 }
@@ -1423,59 +1369,59 @@ function actionStyle(action: string): CSSProperties {
 }
 
 const styles: Record<string, CSSProperties> = {
-  page: { minHeight: "100vh", background: "#0a1118", color: "#f3f6fb", fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", padding: "20px", boxSizing: "border-box" },
+  page: { minHeight: "100vh", background: "#060d1a", color: "#f3f6fb", fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif", padding: "20px", boxSizing: "border-box" },
   header: { maxWidth: 1440, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "10px 0 18px" },
   brand: { fontWeight: 900, letterSpacing: 2, fontSize: 28 },
-  subtle: { color: "#a7bdc9", fontSize: 13, lineHeight: 1.45 },
-  tiny: { color: "#a7bdc9", fontSize: 12, lineHeight: 1.45, marginTop: 3 },
-  nav: { maxWidth: 1440, margin: "0 auto 18px", display: "flex", gap: 8, borderBottom: "1px solid #304853", overflowX: "auto" },
-  navButton: { background: "transparent", color: "#a7bdc9", borderTop: 0, borderLeft: 0, borderRight: 0, borderBottom: "2px solid transparent", padding: "12px 14px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" },
-  navActive: { background: "#75eed6", color: "#082c2a", borderTop: 0, borderLeft: 0, borderRight: 0, borderBottom: "2px solid #a4fff0", padding: "12px 14px", cursor: "pointer", fontWeight: 800, whiteSpace: "nowrap" },
-  refreshButton: { background: "linear-gradient(135deg,#8ff4df,#50d9ca)", color: "#082c2a", border: 0, borderRadius: 8, padding: "10px 14px", fontWeight: 800, cursor: "pointer" },
-  secondaryButton: { background: "#182b35", color: "#d7dee9", border: "1px solid #36505c", borderRadius: 8, padding: "8px 11px", fontWeight: 700, cursor: "pointer" },
+  subtle: { color: "#8a9bb8", fontSize: 13, lineHeight: 1.45 },
+  tiny: { color: "#8a9bb8", fontSize: 12, lineHeight: 1.45, marginTop: 3 },
+  nav: { maxWidth: 1440, margin: "0 auto 18px", display: "flex", gap: 8, borderBottom: "1px solid #1b2d52", overflowX: "auto" },
+  navButton: { background: "transparent", color: "#8a9bb8", borderTop: 0, borderLeft: 0, borderRight: 0, borderBottom: "2px solid transparent", padding: "12px 14px", cursor: "pointer", fontWeight: 700, whiteSpace: "nowrap" },
+  navActive: { background: "#2563eb", color: "#ffffff", borderTop: 0, borderLeft: 0, borderRight: 0, borderBottom: "2px solid #3b82f6", padding: "12px 14px", cursor: "pointer", fontWeight: 800, whiteSpace: "nowrap" },
+  refreshButton: { background: "linear-gradient(135deg,#1d4ed8,#3b82f6)", color: "#ffffff", border: 0, borderRadius: 8, padding: "10px 14px", fontWeight: 800, cursor: "pointer" },
+  secondaryButton: { background: "#10224a", color: "#d7dee9", border: "1px solid #1f3566", borderRadius: 8, padding: "8px 11px", fontWeight: 700, cursor: "pointer" },
   metrics: { maxWidth: 1440, margin: "0 auto 16px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 },
-  metric: { background: "#111e27", border: "1px solid #304853", borderRadius: 12, padding: 16 },
+  metric: { background: "#0b1630", border: "1px solid #1b2d52", borderRadius: 12, padding: 16 },
   metricValue: { fontSize: 28, fontWeight: 750, marginTop: 10, letterSpacing: -0.8 },
-  card: { maxWidth: 1440, margin: "0 auto 16px", background: "#111e27", border: "1px solid #304853", borderRadius: 14, padding: 18, boxSizing: "border-box" },
-  heroCard: { maxWidth: 1440, margin: "0 auto 16px", background: "linear-gradient(120deg, #1d393d, #11212b)", border: "1px solid #2a3040", borderRadius: 16, padding: 24, boxSizing: "border-box" },
-  eyebrow: { color: "#88e9d0", fontSize: 11, fontWeight: 900, letterSpacing: 2 },
+  card: { maxWidth: 1440, margin: "0 auto 16px", background: "#0b1630", border: "1px solid #1b2d52", borderRadius: 14, padding: 18, boxSizing: "border-box" },
+  heroCard: { maxWidth: 1440, margin: "0 auto 16px", background: "linear-gradient(120deg, #10224a, #0b1630)", border: "1px solid #2a3040", borderRadius: 16, padding: 24, boxSizing: "border-box" },
+  eyebrow: { color: "#93b4f5", fontSize: 11, fontWeight: 900, letterSpacing: 2 },
   h1: { fontSize: 36, margin: "6px 0 8px" },
   h2: { fontSize: 18, fontWeight: 700, margin: 0, letterSpacing: -0.2 },
   heroText: { color: "#c5ccd8", maxWidth: 760, lineHeight: 1.6, margin: "0 0 16px" },
-  heroStats: { display: "flex", gap: 18, flexWrap: "wrap", color: "#a8bbd6", fontSize: 13 },
+  heroStats: { display: "flex", gap: 18, flexWrap: "wrap", color: "#8a9bb8", fontSize: 13 },
   sectionHead: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 12 },
   twoCol: { maxWidth: 1440, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: 16 },
   tableWrap: { overflowX: "auto" },
   table: { width: "100%", borderCollapse: "collapse", minWidth: 680 },
   assetButton: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: "transparent", color: "inherit", border: 0, padding: 0, textAlign: "left", cursor: "pointer", font: "inherit" },
-  chevron: { width: 24, height: 24, borderRadius: 7, display: "grid", placeItems: "center", background: "#28434e", color: "#c8d1df", fontWeight: 900, flex: "0 0 auto" },
+  chevron: { width: 24, height: 24, borderRadius: 7, display: "grid", placeItems: "center", background: "#152a5a", color: "#c8d1df", fontWeight: 900, flex: "0 0 auto" },
   analysisCell: { padding: "8px 0 16px" },
-  analysisPanel: { background: "#0c1922", border: "1px solid #365260", borderRadius: 12, padding: 16, marginTop: 6 },
+  analysisPanel: { background: "#081129", border: "1px solid #365260", borderRadius: 12, padding: 16, marginTop: 6 },
   analysisHeader: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 },
   analysisTitle: { fontSize: 20, fontWeight: 900, marginTop: 4 },
-  firstAction: { background: "#1b343d", border: "1px solid #4c6178", borderRadius: 12, padding: 15, marginBottom: 12 },
-  firstActionLabel: { color: "#8fbfff", fontSize: 10, fontWeight: 900, letterSpacing: 1.2, marginBottom: 5 },
+  firstAction: { background: "#10224a", border: "1px solid #24418a", borderRadius: 12, padding: 15, marginBottom: 12 },
+  firstActionLabel: { color: "#93c5fd", fontSize: 10, fontWeight: 900, letterSpacing: 1.2, marginBottom: 5 },
   firstActionTitle: { fontSize: 21, fontWeight: 950, lineHeight: 1.2 },
   firstActionDetail: { color: "#eef3f9", fontSize: 14, lineHeight: 1.5, marginTop: 6 },
   learnedWhy: { color: "#9facbd", fontSize: 12, lineHeight: 1.5, marginTop: 7 },
-  existingPlan: { background: "#182b35", border: "1px solid #365260", borderRadius: 10, padding: 12, marginBottom: 12 },
+  existingPlan: { background: "#10224a", border: "1px solid #365260", borderRadius: 10, padding: 12, marginBottom: 12 },
   warningText: { color: "#ffd67a", fontSize: 12, lineHeight: 1.45, marginTop: 7 },
   planGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 10 },
-  planCard: { background: "#142731", border: "1px solid #36505c", borderRadius: 10, padding: 12, minHeight: 96 },
-  analysisText: { marginTop: 12, paddingTop: 12, borderTop: "1px solid #36505c", lineHeight: 1.45 },
-  good: { color: "#4be2a0", fontWeight: 800 },
-  bad: { color: "#ff708e", fontWeight: 800 },
+  planCard: { background: "#0d1b3a", border: "1px solid #1f3566", borderRadius: 10, padding: 12, minHeight: 96 },
+  analysisText: { marginTop: 12, paddingTop: 12, borderTop: "1px solid #1f3566", lineHeight: 1.45 },
+  good: { color: "#22c55e", fontWeight: 800 },
+  bad: { color: "#ef4444", fontWeight: 800 },
   pill: { display: "inline-block", border: "1px solid", borderRadius: 999, padding: "5px 8px", fontSize: 11, fontWeight: 900, letterSpacing: 0.3 },
-  orderRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 0", borderBottom: "1px solid #304853" },
-  orderReviewRow: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, padding: "13px 0", borderBottom: "1px solid #304853" },
-  rule: { padding: "12px 0", borderBottom: "1px solid #304853", lineHeight: 1.45 },
-  candidate: { display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: "1px solid #304853" },
-  rank: { width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#28434e", color: "#b9c5d6", fontWeight: 900 },
-  limitLabel: { color: "#88e9d0", fontWeight: 900, fontSize: 10, letterSpacing: 1.1 },
-  notice: { maxWidth: 1440, margin: "0 auto 18px", lineHeight: 1.6, background: "#182b35", border: "1px solid #36505c", borderRadius: 10, padding: 12, color: "#a8bbd6", fontSize: 13 },
+  orderRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 0", borderBottom: "1px solid #1b2d52" },
+  orderReviewRow: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14, padding: "13px 0", borderBottom: "1px solid #1b2d52" },
+  rule: { padding: "12px 0", borderBottom: "1px solid #1b2d52", lineHeight: 1.45 },
+  candidate: { display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: "1px solid #1b2d52" },
+  rank: { width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center", background: "#152a5a", color: "#b9c5d6", fontWeight: 900 },
+  limitLabel: { color: "#93b4f5", fontWeight: 900, fontSize: 10, letterSpacing: 1.1 },
+  notice: { maxWidth: 1440, margin: "0 auto 18px", lineHeight: 1.6, background: "#10224a", border: "1px solid #1f3566", borderRadius: 10, padding: 12, color: "#8a9bb8", fontSize: 13 },
   formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8, marginTop: 14 },
-  input: { background: "#0c1922", color: "#f3f6fb", border: "1px solid #36505c", borderRadius: 8, padding: "10px 11px", minWidth: 0 },
-  footer: { maxWidth: 1440, margin: "28px auto 10px", paddingTop: 16, borderTop: "1px solid #304853", color: "#94a7c4", fontSize: 12, lineHeight: 1.5 },
+  input: { background: "#081129", color: "#f3f6fb", border: "1px solid #1f3566", borderRadius: 8, padding: "10px 11px", minWidth: 0 },
+  footer: { maxWidth: 1440, margin: "28px auto 10px", paddingTop: 16, borderTop: "1px solid #1b2d52", color: "#94a7c4", fontSize: 12, lineHeight: 1.5 },
 };
 
 export default App;
