@@ -1,7 +1,7 @@
 // Builds and caches the Strategy v2 report from free, keyless public APIs.
 // Refreshes in the background; requests always get the last good report (or a clear warming-up error).
-import { fetchCoinGeckoTop500, fetchKrakenDailyCloses, fetchKrakenUsdPairs, fetchPaprikaFirstSeen, type FetchLike, type MarketCoin } from "../strategyV2/feed.js";
-import { buildStrategyReport, tierFor, type StrategyReport } from "../strategyV2/report.js";
+import { fetchCoinGeckoTop500, fetchKrakenDailyCandles, fetchKrakenDailyCloses, fetchKrakenUsdPairs, fetchPaprikaFirstSeen, type FetchLike, type MarketCoin } from "../strategyV2/feed.js";
+import { buildStrategyReport, tierFor, type FeedStatus, type StrategyReport } from "../strategyV2/report.js";
 import { CMC_WATCHLIST } from "../strategyV2/watchlist.js";
 import { SMALL_CAP_RULES } from "../strategyV2/smallCapScreen.js";
 
@@ -41,9 +41,11 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
   }
   const btcPair = pairs.value.get("BTC") ?? "XXBTZUSD";
   await sleep(KRAKEN_SPACING_MS);
-  const btcDailyCloses = await fetchKrakenDailyCloses(fetcher, btcPair);
+  const btcCandles = await fetchKrakenDailyCandles(fetcher, btcPair);
+  const btcDailyCloses = btcCandles.map((c) => c.close);
   const coinDailyCloses = new Map<string, number[]>();
-  for (const coin of historyCandidates(market, pairs.value)) {
+  const wanted = historyCandidates(market, pairs.value);
+  for (const coin of wanted) {
     const cached = histories.get(coin.symbol);
     if (fresh(cached ?? null, SLOW_TTL_MS, now)) { coinDailyCloses.set(coin.symbol, cached!.value); continue; }
     await sleep(KRAKEN_SPACING_MS);
@@ -53,7 +55,16 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
       coinDailyCloses.set(coin.symbol, closes);
     } catch { /* missing history => screen rejects PRICE_HISTORY_INCOMPLETE */ }
   }
-  const value = buildStrategyReport({ now, btcDailyCloses, market, krakenPairs: pairs.value, firstSeen: ages.value, coinDailyCloses, watchlist: CMC_WATCHLIST });
+  const iso = (t: number) => new Date(t).toISOString();
+  const lastBtc = btcCandles[btcCandles.length - 1];
+  const feeds: FeedStatus[] = [
+    { name: "CoinGecko markets", ok: market.length >= 400, detail: `${market.length} coins ranked`, at: iso(now) },
+    { name: "Kraken BTC daily", ok: btcCandles.length >= 221, detail: `${btcCandles.length} daily closes`, at: lastBtc ? iso(lastBtc.time * 1000) : null },
+    { name: "Kraken pairs", ok: pairs.value.size > 100, detail: `${pairs.value.size} USD markets`, at: iso(pairs.at) },
+    { name: "Coin histories", ok: wanted.length === 0 || coinDailyCloses.size / wanted.length >= 0.8, detail: `${coinDailyCloses.size} of ${wanted.length} small caps`, at: iso(now) },
+    { name: "CoinPaprika ages", ok: ages.value.size > 0, detail: ages.value.size ? `${ages.value.size} coins dated` : "unavailable — age check fails closed", at: ages.at ? iso(ages.at) : null },
+  ];
+  const value = buildStrategyReport({ now, btcDailyCloses, btcDailyTimes: btcCandles.map((c) => c.time), market, krakenPairs: pairs.value, firstSeen: ages.value, coinDailyCloses, watchlist: CMC_WATCHLIST, feeds });
   report = { value, at: now };
   lastError = null;
   return value;

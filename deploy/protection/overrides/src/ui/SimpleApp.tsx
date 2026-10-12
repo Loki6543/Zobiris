@@ -23,14 +23,16 @@ const LEARNING_RULES = [
 
 import { PortfolioVisuals } from "./PortfolioVisuals";
 import { Portfolio3D } from "./Portfolio3D";
+import { EnginePage } from "./EnginePage";
 import { useTiltCards } from "./useTiltCards";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
+type View = "engine" | "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
 const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
+  engine: { title: "Zobiris Engine", description: "What the engine sees right now: Bitcoin regime, rotation, small-cap survival and your watchlist decisions." },
   strategy: { title: "Opportunities", description: "Bitcoin direction, top-100 rotation entries and small-cap bets for your watchlist." },
   portfolio: { title: "Portfolio", description: "Your holdings, allocation and trading decisions at a glance." },
   market: { title: "Market Today", description: "Verified Bitcoin market conditions, trend and technical analysis." },
@@ -296,7 +298,11 @@ export function App() {
     try { return window.sessionStorage.getItem("zobiris.operatorToken.v1") ?? ""; }
     catch { return ""; }
   });
-  const [view, setView] = useState<View>("portfolio");
+  const [view, setViewState] = useState<View>(() => {
+    try { const v = localStorage.getItem("zobiris.view.v1"); if (v && v in PAGE_HEADINGS) return v as View; } catch { /* storage blocked */ }
+    return "engine";
+  });
+  const setView = (next: View) => { setViewState(next); try { localStorage.setItem("zobiris.view.v1", next); } catch { /* storage blocked */ } };
   const [showAllRankings, setShowAllRankings] = useState(false);
   const [analysisSymbol, setAnalysisSymbol] = useState("BTC");
   const [snapshot, setSnapshot] = useState<any>(null);
@@ -867,6 +873,7 @@ export function App() {
           <strong>ZOBIRIS</strong>
         </div>
         {([
+          ["engine", "Engine"],
           ["portfolio", "Portfolio"],
           ["strategy", "Opportunities"],
           ["market", "Market Today"],
@@ -1056,6 +1063,7 @@ export function App() {
                   </main>
       ) : null}
 
+      {view === "engine" ? <EnginePage cashUsd={LIVE_CASH_USD} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, value: row.value }))} onOpen={setView} /> : null}
       {view === "strategy" ? <StrategyPage portfolioUsd={total} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, quantity: row.quantity, avgPriceUsd: row.avgPriceUsd ?? null, value: row.value }))} /> : null}
 
       {view === "outlook" ? <TimeOutlookPage watchlist={watchlist} holdingSymbols={portfolioRows.map((row) => row.symbol)} /> : null}
@@ -1362,6 +1370,7 @@ function DashboardIcon({name}: {name: string}) {
     lock: "M7 10V7a5 5 0 0 1 10 0v3M6 10h12v11H6ZM12 14v3",
     refresh: "M20 7a9 9 0 1 0 1 8M20 3v5h-5",
     strategy: "M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
+    engine: "M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
   };
   return <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.portfolio}/></svg>;
 }

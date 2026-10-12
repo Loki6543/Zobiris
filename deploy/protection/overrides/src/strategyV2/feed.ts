@@ -83,14 +83,19 @@ export function parseKrakenUsdPairs(raw: unknown): Map<string, string> {
   return out;
 }
 
-/** Completed daily closes, oldest first. Kraken's last row is the still-forming candle and is dropped. */
-export function parseKrakenDailyCloses(raw: unknown): number[] {
+/** Completed daily candles (unix seconds, close), oldest first. Kraken's last row is still forming and is dropped. */
+export function parseKrakenDailyCandles(raw: unknown): Array<{ time: number; close: number }> {
   const result = (raw as any)?.result;
   if (!result || typeof result !== "object") throw new Error("Kraken OHLC: missing result");
   const key = Object.keys(result).find((k) => k !== "last");
   const rows: unknown = key ? result[key] : null;
   if (!Array.isArray(rows) || rows.length < 2) throw new Error("Kraken OHLC: no candles");
-  return rows.slice(0, -1).map((r: any) => Number(r[4])).filter((c) => Number.isFinite(c) && c > 0);
+  return rows.slice(0, -1).map((r: any) => ({ time: Number(r[0]), close: Number(r[4]) })).filter((c) => Number.isFinite(c.time) && Number.isFinite(c.close) && c.close > 0);
+}
+
+/** Completed daily closes, oldest first. */
+export function parseKrakenDailyCloses(raw: unknown): number[] {
+  return parseKrakenDailyCandles(raw).map((c) => c.close);
 }
 
 export type FetchLike = (url: string, init?: { headers?: Record<string, string>; signal?: AbortSignal }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
@@ -108,4 +113,5 @@ export const fetchCoinGeckoTop500 = async (fetcher: FetchLike): Promise<MarketCo
 };
 export const fetchPaprikaFirstSeen = async (fetcher: FetchLike) => parsePaprikaFirstSeen(await getJson(fetcher, "https://api.coinpaprika.com/v1/tickers"));
 export const fetchKrakenUsdPairs = async (fetcher: FetchLike) => parseKrakenUsdPairs(await getJson(fetcher, "https://api.kraken.com/0/public/AssetPairs"));
+export const fetchKrakenDailyCandles = async (fetcher: FetchLike, pair: string) => parseKrakenDailyCandles(await getJson(fetcher, `https://api.kraken.com/0/public/OHLC?pair=${encodeURIComponent(pair)}&interval=1440`));
 export const fetchKrakenDailyCloses = async (fetcher: FetchLike, pair: string) => parseKrakenDailyCloses(await getJson(fetcher, `https://api.kraken.com/0/public/OHLC?pair=${encodeURIComponent(pair)}&interval=1440`));

@@ -122,6 +122,13 @@ describe("watchlist matching and report", () => {
     expect(by.TIA!.smallCap?.eligible).toBe(true);
     expect(by.ZZZ!.signal).toBe("Outside strategy (rank > 500)");
     expect(r.marketSmallCapCandidates.map((c) => c.symbol)).toEqual(["TIA"]);
+    expect(r.btcSeries).toHaveLength(365);
+    expect(r.btcSeries.at(-1)!.sma200).not.toBeNull();
+    expect(r.regimeComponents.reduce((s, c) => s + c.points, 0)).toBe(r.regime.score);
+    expect(r.rotationMap.map((p) => p.symbol)).toEqual(["DOT"]);
+    expect(r.screenFunnel[0]).toEqual({ stage: "Ranked 101–500", remaining: 1 });
+    expect(r.screenFunnel.at(-1)!.remaining).toBe(1);
+    expect(r.screenFunnel.every((s, i, a) => i === 0 || s.remaining <= a[i - 1]!.remaining)).toBe(true);
   });
   it("ships the owner's CoinMarketCap watchlist", () => {
     expect(CMC_WATCHLIST.length).toBe(79);

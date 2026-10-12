@@ -82,6 +82,7 @@ const rankedAssets = [
 
 beforeEach(() => {
   localStorage.clear();
+  localStorage.setItem("zobiris.view.v1", "portfolio"); // these tests start on Portfolio; new visitors land on the Engine
   sessionStorage.clear();
   sessionStorage.setItem("zobiris.operatorToken.v1", "test-refresh-token");
   globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
