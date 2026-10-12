@@ -64,6 +64,7 @@ const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.le
 export function summarizeLedger(rows: LedgerRow[], today: string): LedgerSummary {
   const decisions = rows.filter((r): r is DecisionRow => r.kind === "decision");
   const days = [...new Set(rows.map((r) => r.day))].sort();
+  const lastDay = days.at(-1) ?? today;
   // price[symbol][day] from every recorded row (this is the only price source: no look-ahead, no outside data)
   const price = new Map<string, Map<string, number>>();
   for (const r of decisions) if (r.priceUsd != null && r.priceUsd > 0) { if (!price.has(r.symbol)) price.set(r.symbol, new Map()); price.get(r.symbol)!.set(r.day, r.priceUsd); }
@@ -101,7 +102,8 @@ export function summarizeLedger(rows: LedgerRow[], today: string): LedgerSummary
         const key = `${h}d`, exitDay = addDays(entryDay, h);
         if (exitDay > today) { per[key]!.pending++; continue; }
         const exit = priceAt(r.symbol, exitDay);
-        if (exit == null) { per[key]!.lostCoverage++; continue; }
+        // Not recorded yet (the exit day or its 3-day slack is after the last recorded day) is pending, not lost.
+        if (exit == null) { if (addDays(exitDay, 3) > lastDay) per[key]!.pending++; else per[key]!.lostCoverage++; continue; }
         const net = ((exit * (1 - cost)) / (entry * (1 + cost)) - 1) * 100;
         (rets[key] ??= []).push(net);
         if (h === 30) ret30 = net;
@@ -117,5 +119,5 @@ export function summarizeLedger(rows: LedgerRow[], today: string): LedgerSummary
     return { group, events: ev.length, filled, horizons: per };
   });
   recent.sort((a, b) => b.day.localeCompare(a.day));
-  return { firstDay: days[0] ?? null, lastDay: days.at(-1) ?? null, days: days.length, groups: stats, recent: recent.filter((r) => r.group === "buy" || r.group === "bet").slice(0, 20) };
+  return { firstDay: days[0] ?? null, lastDay: days.length ? lastDay : null, days: days.length, groups: stats, recent: recent.filter((r) => r.group === "buy" || r.group === "bet").slice(0, 20) };
 }

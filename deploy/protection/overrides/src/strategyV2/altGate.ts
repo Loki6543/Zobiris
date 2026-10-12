@@ -31,7 +31,7 @@ export function dominanceTrend(market: MarketCoin[]): { now: number | null; chan
   if (!btc || top.length < 50) return { now: null, change30dPts: null };
   const total = top.reduce((s, c) => s + c.marketCapUsd!, 0);
   const now = (btc.marketCapUsd! / total) * 100;
-  const past = (c: MarketCoin) => (c.change30dPct == null ? c.marketCapUsd! : c.marketCapUsd! / (1 + c.change30dPct / 100));
+  const past = (c: MarketCoin) => (c.change30dPct == null || c.change30dPct <= -99 ? c.marketCapUsd! : c.marketCapUsd! / (1 + c.change30dPct / 100));
   if (btc.change30dPct == null) return { now, change30dPts: null };
   const then = (past(btc) / top.reduce((s, c) => s + past(c), 0)) * 100;
   return { now, change30dPts: now - then };

@@ -58,7 +58,7 @@ export function PortfolioOverview({ rows, cashUsd, freeCashUsd, reservedUsd, man
   const withCost = rows.filter((r) => r.avgPriceUsd && r.avgPriceUsd > 0);
   const cost = withCost.reduce((s, r) => s + r.avgPriceUsd! * r.quantity, 0);
   const pl = withCost.reduce((s, r) => s + r.value, 0) - cost;
-  const ch24 = rows.reduce((s, r) => { const c = quotes[r.symbol]?.change24hPct; return c == null ? s : s + r.value * (c / (100 + c)); }, 0);
+  const ch24 = rows.reduce((s, r) => { const c = quotes[r.symbol]?.change24hPct; return c == null || c <= -100 ? s : s + r.value * (c / (100 + c)); }, 0);
   const startVal = shown[0]?.[1], endVal = shown.at(-1)?.[1];
   const rangeChange = startVal && endVal ? ((endVal / startVal) - 1) * 100 : null;
   const spark30 = all.slice(-31).map((p) => p[1]);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FEE_PER_SIDE, slippageFor, summarizeLedger, type LedgerRow } from "../strategyV2/ledger";
@@ -39,6 +39,12 @@ describe("decision ledger scoring", () => {
     const bet = summarizeLedger(rows, day(10)).groups.find((g) => g.group === "bet")!;
     expect([bet.horizons["7d"]!.n, bet.horizons["7d"]!.lostCoverage]).toEqual([0, 1]);
   });
+  it("counts a horizon as pending, not lost, while its exit day is not recorded yet", () => {
+    const rows: LedgerRow[] = [];
+    for (let n = 0; n <= 6; n++) { rows.push(snap(n, 100)); rows.push(dec(n, "AAA", "bet", 10)); }
+    const bet = summarizeLedger(rows, day(7)).groups.find((g) => g.group === "bet")!; // day 7 not written yet
+    expect([bet.horizons["7d"]!.pending, bet.horizons["7d"]!.lostCoverage]).toEqual([1, 0]);
+  });
 });
 
 describe("ledger persistence", () => {
@@ -53,5 +59,18 @@ describe("ledger persistence", () => {
     expect(recordReport({ ...report, asOf: "2026-10-12T05:00:00Z" }, path)).toBe(false);
     expect(recordReport({ ...report, asOf: "2026-10-13T01:00:00Z" }, path)).toBe(true);
     expect(readFileSync(path, "utf8").trim().split("\n")).toHaveLength(4);
+  });
+  it("starts on a fresh line after a torn last line and writes the day's snapshot last", () => {
+    dir = mkdtempSync(join(tmpdir(), "ledger-"));
+    const path = join(dir, "d.jsonl");
+    writeFileSync(path, '{"kind":"snapshot","day":"2026-10-11"}\n{"kind":"decis'); // crash mid-write
+    const report: any = { asOf: "2026-10-12T01:00:00Z", regime: { state: "RISK_ON", score: 5, close: 1 }, altGate: null, marketSmallCapCandidates: [],
+      watchlist: [{ symbol: "BTC", name: "Bitcoin", rank: 1, tier: "TOP_100", priceUsd: 1, signal: "Benchmark", rotation: null, smallCap: null }] };
+    expect(recordReport(report, path)).toBe(true);
+    const lines = readFileSync(path, "utf8").trim().split("\n");
+    expect(lines).toHaveLength(4);
+    expect(JSON.parse(lines[3]!).kind).toBe("snapshot");
+    resetLedgerCache();
+    expect(recordReport(report, path)).toBe(false); // after a restart the day is still recorded once
   });
 });

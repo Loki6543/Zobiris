@@ -50,7 +50,7 @@ export const DAILY_EDGE = [
   { view: "portfolio", label: "Review your portfolio" },
 ] as const;
 const KEY = "zobiris.dailyEdge.v1";
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; }; // the viewer's local day, not UTC
 
 export function readDailyEdge(): string[] {
   try { const v = JSON.parse(localStorage.getItem(KEY) ?? "null"); return v?.day === today() && Array.isArray(v.done) ? v.done : []; } catch { return []; }

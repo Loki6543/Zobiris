@@ -105,7 +105,8 @@ export function decisionGroup(d: WatchlistDecision): DecisionGroup {
   if (d.smallCap?.eligible) return "bet";
   if (d.rotation?.status === "NEAR_ROTATION") return "watch";
   if (d.tier === "OUTSIDE_STRATEGY" || d.signal.startsWith("No free data")) return "outside";
-  if (d.smallCap?.rejections[0]?.startsWith("ALT_GATE_")) return "wait";
+  // Blocked only by the market gates (BTC regime / altcoin gate) = waiting, not filtered out on its own merits.
+  if (d.smallCap?.rejections.length && d.smallCap.rejections.every((r) => r.startsWith("ALT_GATE_") || r.startsWith("BTC_REGIME_"))) return "wait";
   if (d.smallCap || d.rotation?.status === "STRUCTURALLY_WEAK") return "filtered";
   return "wait";
 }
@@ -136,9 +137,12 @@ export function matchCoin(entry: WatchlistEntry, market: MarketCoin[]): { coin: 
 }
 
 export function smallCapInputFor(c: MarketCoin, inputs: ReportInputs, btc30: number | null) {
-  const closes = inputs.coinDailyCloses.get(c.symbol) ?? null;
+  // Closes, ages and Kraken listings are keyed by ticker. When a higher-ranked coin shares the ticker, that data is
+  // most likely the other coin's, so this one gets none (and fails closed) rather than borrowing its history.
+  const shadowed = inputs.market.some((m) => m !== c && m.symbol === c.symbol && (m.rank ?? 1e9) < (c.rank ?? 1e9));
+  const closes = shadowed ? null : inputs.coinDailyCloses.get(c.symbol) ?? null;
   const s50 = closes ? sma(closes, 50) : null;
-  const first = inputs.firstSeen.get(c.symbol);
+  const first = shadowed ? undefined : inputs.firstSeen.get(c.symbol);
   const ageDays = first ? Math.floor((inputs.now - Date.parse(first.firstDataAt)) / 86_400_000) : null;
   const supplyCap = Math.max(c.totalSupply ?? 0, c.maxSupply ?? 0);
   // Unlock proxy uses supply already minted (total): unmined emission (e.g. DASH) is not a vesting unlock.
@@ -146,13 +150,14 @@ export function smallCapInputFor(c: MarketCoin, inputs: ReportInputs, btc30: num
   return {
     symbol: c.symbol, cmcRank: c.rank, marketCapUsd: c.marketCapUsd, fullyDilutedValueUsd: c.fdvUsd ?? (supplyCap > 0 && c.priceUsd != null ? c.priceUsd * supplyCap : null),
     volume24hUsd: c.volume24hUsd, ageDays: ageDays != null && Number.isFinite(ageDays) ? ageDays : null,
-    krakenListed: inputs.krakenPairs.has(c.symbol), change30dPct: c.change30dPct, change90dPct: c.change200dPct,
+    krakenListed: !shadowed && inputs.krakenPairs.has(c.symbol), change30dPct: c.change30dPct, change90dPct: c.change200dPct,
     btcChange30dPct: btc30, drawdownFromAthPct: c.athChangePct,
     priceAboveSma50: closes && s50 != null ? closes[closes.length - 1]! > s50 : null,
     unlockShareNext60d: verifiedUnlockShare(c.symbol, inputs.now)?.share60d ?? null,
     unlockedSupplyShare: c.circulatingSupply != null && minted > 0 ? Math.min(1, c.circulatingSupply / minted) : null,
     priceUsd: c.priceUsd, change7dPct: c.change7dPct,
-    security: inputs.diligence?.get(c.geckoId)?.security ?? undefined,
+    // Once diligence ran, a coin without a scan (over the per-refresh cap, or the scan failed) fails closed like UNCHECKED.
+    security: inputs.diligence ? (inputs.diligence.get(c.geckoId)?.security ?? { status: "UNCHECKED", vetoes: [], warnings: ["NOT_SCANNED"] }) : undefined,
   };
 }
 
@@ -167,7 +172,7 @@ export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
   const btc = inputs.market.find((c) => c.geckoId === "bitcoin") ?? inputs.market.find((c) => c.symbol === "BTC") ?? null;
   const top100 = inputs.market.filter((c) => c.rank != null && c.rank <= 100);
   // 200d is the closest free horizon to the 90d breadth rule; label is kept honest in the UI.
-  const altGate = computeAltGate({ btcAbove200d: regime.close != null && regime.sma200 != null ? regime.close > regime.sma200 : null, market: inputs.market, stablecoins: inputs.stablecoins ?? null });
+  const altGate = computeAltGate({ btcAbove200d: Number.isFinite(regime.close) && Number.isFinite(regime.sma200) ? regime.close! > regime.sma200! : null, market: inputs.market, stablecoins: inputs.stablecoins ?? null });
   const gateReason = `ALT_GATE_${altGate.state}`;
   const breadth = rotationBreadth(top100.map((c) => ({ symbol: c.symbol, change90dPct: c.change200dPct })), btc?.change200dPct ?? null);
 
@@ -196,7 +201,7 @@ export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
     }
     const screenedCoin = screenSmallCap(smallCapInputFor(coin, inputs, btc?.change30dPct ?? null), regime);
     const smallCap = !altGate.allowAltEntries && screenedCoin.eligible ? { ...screenedCoin, eligible: false, convexityScore: 0, rejections: [gateReason] } : screenedCoin;
-    const firstRejection = smallCap.rejections.find((r) => r.startsWith("CONTRACT_")) ?? smallCap.rejections[0];
+    const firstRejection = smallCap.rejections.find((r) => r.startsWith("CONTRACT_RISK_")) ?? smallCap.rejections[0];
     const signal = smallCap.eligible ? `Small bet candidate · score ${smallCap.convexityScore}`
       : firstRejection?.startsWith("ALT_GATE_") ? "Wait — altcoin gate" : `Filtered: ${firstRejection?.toLowerCase().replaceAll("_", " ")}`;
     return { ...base, signal, rotation: null, smallCap, diligence: inputs.diligence?.get(coin.geckoId) ?? null };

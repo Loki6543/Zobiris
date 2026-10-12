@@ -10,11 +10,14 @@ import type { LedgerSummary } from "../strategyV2/ledger";
 
 export interface EngineHolding { symbol: string; value: number }
 
-const money = (n: number | null | undefined, digits = 2) => n == null || !Number.isFinite(n) ? "—" : n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: n < 1 ? 6 : digits });
+const money = (n: number | null | undefined, digits = 2) => n == null || !Number.isFinite(n) ? "—"
+  : n !== 0 && Math.abs(n) < 0.001 ? n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumSignificantDigits: 4 })
+  : n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: Math.abs(n) < 1 ? 6 : digits });
 const pct = (n: number | null | undefined, d = 1) => n == null || !Number.isFinite(n) ? "—" : (n > 0 ? "+" : "") + n.toFixed(d) + "%";
 const ago = (iso: string | null, now: number) => {
-  if (!iso) return "never";
-  const m = Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
+  const t = iso ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(t)) return iso ? "unknown" : "never";
+  const m = Math.max(0, Math.round((now - t) / 60_000));
   return m < 60 ? `${m}m ago` : m < 48 * 60 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
 };
 
@@ -28,12 +31,16 @@ function useJson<T>(url: string, everyMs: number) {
         const r = await fetch(url);
         const body = await r.json().catch(() => null);
         if (!r.ok) throw new Error(body?.error ?? `HTTP ${r.status}`);
+        if (body == null || typeof body !== "object") throw new Error("Unexpected response");
         if (live) { setData(body as T); setError(""); }
-      } catch (e) { if (live) setError(String(e instanceof Error ? e.message : e)); }
+        return true;
+      } catch (e) { if (live) setError(String(e instanceof Error ? e.message : e)); return false; }
     };
-    void load();
-    const t = setInterval(() => void load(), everyMs);
-    return () => { live = false; clearInterval(t); };
+    // Normal interval after success; retry within a minute after a failure (e.g. the first build after a restart).
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const next = (ok: boolean) => { if (live) t = setTimeout(async () => next(await load()), ok ? everyMs : Math.min(60_000, everyMs)); };
+    void load().then(next);
+    return () => { live = false; clearTimeout(t); };
   }, [url, everyMs]);
   return { data, error };
 }
