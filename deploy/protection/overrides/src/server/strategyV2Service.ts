@@ -124,6 +124,7 @@ export async function getStrategyReport(): Promise<StrategyReport> {
   const now = Date.now();
   if (!fresh(report, REPORT_TTL_MS, now) && !inflight) {
     inflight = refreshStrategyReport().catch((e) => { lastError = String(e instanceof Error ? e.message : e); throw e; }).finally(() => { inflight = null; });
+    inflight.catch(() => {}); // a failed background refresh must never become an unhandled rejection (Node exits on those)
   }
   if (report) return report.value;
   if (inflight) return inflight;

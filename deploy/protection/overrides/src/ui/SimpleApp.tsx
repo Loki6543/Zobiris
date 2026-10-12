@@ -919,7 +919,7 @@ export function App() {
 
       {view === "portfolio" ? (
         <main>
-          <PortfolioOverview rows={portfolioRows} cashUsd={LIVE_CASH_USD} freeCashUsd={freeCash} reservedUsd={reservedBuys} accountSynced={accountSynced} quotes={marketOverview?.quotes ?? {}} />
+          <PortfolioOverview rows={portfolioRows} cashUsd={LIVE_CASH_USD} freeCashUsd={freeCash} reservedUsd={reservedBuys} maneuverUsd={MANEUVER_CAPITAL_USD} accountSynced={accountSynced} quotes={marketOverview?.quotes ?? {}} />
           <section className="dashboard-panel" style={styles.card}>
             <div style={styles.sectionHead}>
               <div>

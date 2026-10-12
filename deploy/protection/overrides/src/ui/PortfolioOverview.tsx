@@ -40,7 +40,7 @@ function Kpi({ label, value, sub, subTone, spark }: { label: string; value: stri
   );
 }
 
-export function PortfolioOverview({ rows, cashUsd, freeCashUsd, reservedUsd, accountSynced, quotes }: { rows: OverviewRow[]; cashUsd: number; freeCashUsd: number; reservedUsd: number; accountSynced: boolean; quotes: Record<string, QuoteLite | undefined> }) {
+export function PortfolioOverview({ rows, cashUsd, freeCashUsd, reservedUsd, maneuverUsd, accountSynced, quotes }: { rows: OverviewRow[]; cashUsd: number; freeCashUsd: number; reservedUsd: number; maneuverUsd: number; accountSynced: boolean; quotes: Record<string, QuoteLite | undefined> }) {
   const [range, setRange] = useState<Range>("1M");
   const symbols = rows.filter((r) => r.value > 0).map((r) => r.symbol).sort().join(",");
   const { data: hist, error } = useApi<{ series: Record<string, Array<[number, number]>>; missing: string[] }>(accountSynced && symbols ? `/api/price-history?symbols=${encodeURIComponent(symbols)}` : null, 30 * 60_000);
@@ -49,7 +49,7 @@ export function PortfolioOverview({ rows, cashUsd, freeCashUsd, reservedUsd, acc
 
   if (!accountSynced) {
     return <section className="dashboard-metrics zs-kpis" aria-label="Portfolio overview">
-      <Kpi label="Total value" value="Private" sub="Unlock to view" /><Kpi label="Total invested" value="Private" /><Kpi label="Total profit / loss" value="Private" /><Kpi label="24h change" value="Private" />
+      <Kpi label="Total value" value="Private" sub="Private account is locked on the public view" /><Kpi label="Total invested" value="Private" /><Kpi label="Total profit / loss" value="Private" /><Kpi label="24h change" value="Private" /><Kpi label="Maneuver capital" value="Private" sub="Unlock to view capital limits" />
     </section>;
   }
 
@@ -72,7 +72,7 @@ export function PortfolioOverview({ rows, cashUsd, freeCashUsd, reservedUsd, acc
         <Kpi label="Total invested" value={fmtUsd(cost)} sub={`cost basis of ${withCost.length} of ${rows.length} positions`} />
         <Kpi label="Total profit / loss" value={(pl >= 0 ? "+" : "") + fmtUsd(pl)} sub={cost > 0 ? fmtPct((pl / cost) * 100) : undefined} subTone={toneOf(pl)} />
         <Kpi label="24h change" value={(ch24 >= 0 ? "+" : "") + fmtUsd(ch24)} sub={invested > 0 ? fmtPct((ch24 / (total - ch24)) * 100) : undefined} subTone={toneOf(ch24)} />
-        <Kpi label="Cash" value={fmtUsd(cashUsd)} sub={<><span>{fmtUsd(freeCashUsd)}</span> free · <span>{fmtUsd(reservedUsd)}</span> reserved for buys</>} />
+        <Kpi label="Cash" value={fmtUsd(cashUsd)} sub={<><span>{fmtUsd(freeCashUsd)}</span> free · <span>{fmtUsd(reservedUsd)}</span> reserved for buys<br />Maneuver capital {fmtUsd(maneuverUsd, 0)}</>} />
       </section>
       <section className="zs-two">
         <article className="dashboard-panel zs-panel">
