@@ -49,6 +49,8 @@ function OpeningCard({ c }: { c: OpeningCandidate }) {
         {c.risk ? <div><dt>Vol · CVaR95 · β</dt><dd>{pct0(c.risk.volPct)} · {pct0(c.risk.cvar95Pct)} · {c.risk.betaBtc?.toFixed(2) ?? "—"}</dd></div> : null}
         <div><dt>First tranche</dt><dd>{c.firstTranchePct}% of portfolio{c.krakenListed ? " · Kraken" : " · not on Kraken"}</dd></div>
       </dl>
+      {c.notice ? <p className="forge-reasons">{c.notice.exchange} {c.notice.kind.replace("_", " ").toLowerCase()} · {new Date(c.notice.at).toLocaleDateString()}</p> : null}
+      {c.leverage ? <p className="strategy-muted" style={{ margin: 0, fontSize: 12 }}>Perp funding {c.leverage.fundingAprPct}% APR · OI {fmtBig(c.leverage.openInterestUsd)}{c.leverage.flag ? ` · ${c.leverage.flag.replace("_", " ").toLowerCase()}: first tranche halved` : ""}</p> : null}
       {c.ai ? <p className="forge-ai"><b>Claude review · {c.ai.verdict.toLowerCase()} {c.ai.aiScore}</b> {c.ai.thesis}</p> : null}
       {c.reasons.length ? <p className="forge-reasons">{c.reasons.map((r) => r.replaceAll("_", " ").toLowerCase()).join(" · ")}</p> : null}
       <button type="button" className="forge-more" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide" : "Why this score"}</button>
@@ -146,6 +148,15 @@ export function ForgePage({ holdings, cashUsd, accountSynced }: { holdings: Forg
               <span>vs BTC {fmtPct(h30?.avgVsBtcPct, 1)}</span></li>;
           })}</ul> : <p className="strategy-muted">Recording starts with today's report; 7-day results appear after a week, 30-day after a month.</p>}
         </article>
+      </section>
+
+      <section className="dashboard-panel forge-panel" aria-label="Exchange alerts">
+        <div className="engine-panel-head"><h2>Exchange alerts</h2><span className="strategy-muted">Binance delistings & Monitoring Tags, Upbit delisting/caution, new listings · 30 days</span></div>
+        {(vf.exchangeAlerts ?? []).length ? <ul className="forge-stats">{vf.exchangeAlerts.map((a) => (
+          <li key={a.exchange + a.symbol + a.at}><strong>{a.symbol} <small>#{a.rank ?? "—"}</small></strong>
+            <span className={a.kind === "LISTING" ? "" : "is-loss"}>{a.exchange} · {a.kind.replace("_", " ").toLowerCase()}</span>
+            <span>{new Date(a.at).toLocaleDateString()}</span><small>{a.kind === "LISTING" ? "pop then reversal: no new entries for 3 days" : "hard veto: no entries"}</small></li>
+        ))}</ul> : <p className="strategy-muted">No delistings, Monitoring Tags or caution notices for tracked coins in the last 30 days.</p>}
       </section>
 
       <section className="engine-grid">
