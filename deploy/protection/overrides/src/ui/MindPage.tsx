@@ -2,6 +2,7 @@
 // where its attention is across the 1,000-coin universe, what is coming, what it got wrong, and where Claude disagrees.
 // Read-only: everything comes from /api/strategy-v2, /api/bitcoin and /api/ledger; nothing here places orders.
 import { useMemo, useState } from "react";
+import "./mind.css";
 import { fmtPct, fmtUsd, useApi } from "./charts";
 import type { StrategyReport } from "../strategyV2/report";
 import type { OpeningCandidate } from "../strategyV2/openings";
