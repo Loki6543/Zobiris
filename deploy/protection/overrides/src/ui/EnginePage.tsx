@@ -256,7 +256,7 @@ export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdi
   const share = (v: number) => (totalUsd > 0 ? v / totalUsd : 0);
   const sleeveCap = DEFAULT_BARBELL.sleevePct;
   const acct = health?.krakenAccount;
-  const feeds = [...report.feeds, ...(acct ? [{ name: "Kraken account", ok: acct.privateAccountSynced && !acct.lastError, detail: acct.privateAccountSynced ? `synced · ${acct.syncMode ?? "poll"}` : "locked / not synced", at: acct.capturedAt }] : [])];
+  const feeds = [...report.feeds, ...(acct ? [{ name: "Kraken account", ok: acct.privateAccountSynced && !acct.lastError, detail: acct.privateAccountSynced ? `synced · ${acct.syncMode ?? "poll"}` : /not configured/i.test(acct.lastError ?? "") ? "disconnected · no account link" : "locked / not synced", at: acct.capturedAt }] : [])];
 
   return (
     <main className="engine-page">
