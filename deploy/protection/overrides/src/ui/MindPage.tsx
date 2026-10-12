@@ -3,6 +3,7 @@
 // Read-only: everything comes from /api/strategy-v2, /api/bitcoin and /api/ledger; nothing here places orders.
 import { useMemo, useState } from "react";
 import "./mind.css";
+import "./neural.css";
 import { fmtPct, fmtUsd, useApi } from "./charts";
 import type { StrategyReport } from "../strategyV2/report";
 import type { OpeningCandidate } from "../strategyV2/openings";
@@ -27,6 +28,9 @@ function PostureRing({ posture, cashPct, hue }: { posture: string; cashPct: numb
   const arc = (from: number, to: number) => ({ strokeDasharray: `${((to - from) / 100) * C * sweep} ${C}`, strokeDashoffset: -((from / 100) * C * sweep) });
   return (
     <svg className="mind-ring" viewBox="0 0 140 140" role="img" aria-label={`${posture} posture, cash target ${cashPct.toFixed(0)}% of a 10 to 60% band`}>
+      <circle cx="70" cy="70" r="67" fill="none" stroke="#22d3ee" strokeOpacity=".28" strokeWidth=".8" />
+      <g className="mind-ring-orbit"><circle cx="70" cy="70" r="62" fill="none" stroke="#67e8f9" strokeOpacity=".4" strokeWidth="1" strokeDasharray="1 7" /></g>
+      <g className="mind-ring-orbit is-rev"><circle cx="70" cy="70" r="43" fill="none" stroke="#8b5cf6" strokeOpacity=".5" strokeWidth="1" strokeDasharray="14 9" /></g>
       <g transform="rotate(135 70 70)">
         <circle cx="70" cy="70" r={R} fill="none" stroke="#17264a" strokeWidth="9" strokeDasharray={`${C * sweep} ${C}`} />
         <circle cx="70" cy="70" r={R} fill="none" stroke="#2a3f6b" strokeWidth="9" style={arc(10, 60)} />
@@ -40,9 +44,14 @@ function PostureRing({ posture, cashPct, hue }: { posture: string; cashPct: numb
 
 function Radar({ dots, pick, onPick }: { dots: RadarDot[]; pick: string | null; onPick: (s: string | null) => void }) {
   const S = 300, c = S / 2, scale = 136;
+  // A faint web joins each strong opening to its nearest stronger neighbours: the "neural" read of where attention clusters.
+  const ranked = [...dots].filter((d) => !d.vetoed).sort((a, b) => b.score - a.score).slice(0, 14);
+  const webLinks = ranked.flatMap((a, i) => ranked.slice(0, i).map((b) => ({ a, b, d: Math.hypot(a.x - b.x, a.y - b.y) })).sort((x, y) => x.d - y.d).slice(0, 2));
   return (
-    <svg className="mind-radar" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Attention field: openings placed by score; vetoed coins on the rim">
-      {[0.33, 0.66, 1].map((r) => <circle key={r} cx={c} cy={c} r={r * scale} fill="none" stroke="#1b2d52" strokeDasharray={r === 1 ? "0" : "3 4"} />)}
+    <div className="mind-sphere"><svg className="mind-radar" viewBox={`0 0 ${S} ${S}`} role="img" aria-label="Attention field: openings placed by score; vetoed coins on the rim">
+      {[0.33, 0.66, 1].map((r) => <circle key={r} cx={c} cy={c} r={r * scale} fill="none" stroke={r === 1 ? "#22d3ee" : "#14485c"} strokeOpacity={r === 1 ? 0.55 : 1} strokeDasharray={r === 1 ? "0" : "3 4"} />)}
+      {[0.45, 0.75].map((k) => <ellipse key={k} className="mind-meridian" cx={c} cy={c} rx={scale * k} ry={scale} />)}
+      {webLinks.map((l, k) => <path key={k} className="mind-web" d={`M${c + l.a.x * scale} ${c + l.a.y * scale} Q${c + (l.a.x + l.b.x) * scale * 0.3} ${c + (l.a.y + l.b.y) * scale * 0.3} ${c + l.b.x * scale} ${c + l.b.y * scale}`} />)}
       {[-90, 30, 150].map((a) => <line key={a} x1={c} y1={c} x2={c + Math.cos((a * Math.PI) / 180) * scale} y2={c + Math.sin((a * Math.PI) / 180) * scale} stroke="#1b2d52" />)}
       <text x={c + 70} y={c - 118} className="mind-radar-label">101-200</text>
       <text x={c + 60} y={c + 125} className="mind-radar-label">201-500</text>
@@ -54,7 +63,7 @@ function Radar({ dots, pick, onPick }: { dots: RadarDot[]; pick: string | null; 
           {d.labelled || pick === d.symbol ? <text x={c + d.x * scale} y={c + d.y * scale + d.labelSide * (d.r * scale + 5) + (d.labelSide > 0 ? 7 : 0)} textAnchor="middle">{d.symbol}</text> : null}
         </g>
       ))}
-    </svg>
+    </svg></div>
   );
 }
 
@@ -141,7 +150,7 @@ export function MindPage({ holdings, cashUsd, accountSynced, onOpen }: { holding
           <div className="mind-field-side">
             {picked ? <OpeningCard c={picked} /> : <>
               <p className="strategy-muted">Tap a coin for the why. Size is market cap; colour is the verdict.</p>
-              <ol className="mind-top">{[...universe].sort((a, b) => b.score - a.score).slice(0, 8).map((c) => <li key={c.geckoId}><button type="button" onClick={() => setPick(c.symbol)}><strong>{c.symbol}</strong><small>#{c.rank} · {TIER_LABEL[c.tier]}</small><span className={`forge-verdict fv-${c.verdict.toLowerCase()}`}>{c.verdict}</span><b>{c.score.toFixed(0)}</b></button></li>)}</ol>
+              <ol className="mind-top">{[...universe].sort((a, b) => b.score - a.score).slice(0, 8).map((c) => <li key={c.geckoId}><button type="button" onClick={() => setPick(c.symbol)}><i className={`mind-top-bar${c.verdict === "AVOID" ? " is-avoid" : ""}`} style={{ width: `${Math.max(4, Math.min(100, c.score)) * 0.52}%` }} aria-hidden="true" /><strong>{c.symbol}</strong><small>#{c.rank} · {TIER_LABEL[c.tier]}</small><span className={`forge-verdict fv-${c.verdict.toLowerCase()}`}>{c.verdict}</span><b>{c.score.toFixed(0)}</b></button></li>)}</ol>
               <button type="button" className="forge-more" onClick={() => onOpen("forge")}>Open the full Valley Forge view</button>
             </>}
           </div>

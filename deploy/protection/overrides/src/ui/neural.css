@@ -1,0 +1,103 @@
+/* ZOBIRIS neural theme: near-black blue, cyan/teal neon, glass panels, glow only on live data.
+   Loaded after the base dashboard styles; the doubled root class beats their !important rules at equal specificity.
+   Colour only: no layout, data or behaviour changes. Motion respects prefers-reduced-motion; blur is desktop-only. */
+.zobiris-dashboard.zobiris-dashboard{
+  --zv-bg:#030912; --zv-panel:#071524; --zv-panel-2:#0a1c2e; --zv-border:#12384a; --zv-border-soft:#0d2a3a;
+  --zv-text:#e6f4f7; --zv-muted:#7fa3b0; --zv-dim:#5d7f8c;
+  --zv-blue:#0e7490; --zv-blue-2:#22d3ee; --zv-blue-soft:#22d3ee22;
+  --zv-green:#34d399; --zv-red:#fb7185; --zv-amber:#fbbf24;
+  --neon:#22d3ee; --neon-2:#2eeccf; --violet:#8b5cf6;
+  background:
+    radial-gradient(900px 520px at 80% -10%,#0b3f5266,transparent 62%),
+    radial-gradient(760px 640px at -8% 38%,#2b1b6a40,transparent 60%),
+    radial-gradient(circle,#22d3ee14 1px,transparent 1.2px) 0 0/26px 26px,
+    linear-gradient(#030912,#02060d) !important;
+}
+/* Glass panels */
+.zobiris-dashboard.zobiris-dashboard .dashboard-panel,
+.zobiris-dashboard.zobiris-dashboard .dashboard-metric,
+.zobiris-dashboard.zobiris-dashboard .allocation-panel,
+.zobiris-dashboard.zobiris-dashboard .holdings-panel,
+.zobiris-dashboard.zobiris-dashboard .daily-brief,
+.zobiris-dashboard.zobiris-dashboard .watch-card,
+.zobiris-dashboard.zobiris-dashboard section[aria-label="Profit protection"]{
+  background:linear-gradient(155deg,#0a2233d9,#06121fe6 72%) !important;
+  border:1px solid #14485c !important;
+  border-top-color:#22d3ee55 !important;
+  box-shadow:inset 0 1px 0 #22d3ee1f,0 14px 40px -26px #000,0 0 26px -16px #22d3ee66 !important;
+}
+@media (min-width:851px){
+  @supports (backdrop-filter:blur(1px)){
+    .zobiris-dashboard.zobiris-dashboard .dashboard-panel{backdrop-filter:blur(6px);}
+  }
+}
+.zobiris-dashboard.zobiris-dashboard .dashboard-panel h2,
+.zobiris-dashboard.zobiris-dashboard .visual-title h2{color:#eafcff !important;}
+.zobiris-dashboard.zobiris-dashboard .strategy-label{color:#67e8f9;text-transform:uppercase;letter-spacing:1.1px;font-size:10.5px;font-weight:700;}
+.zobiris-dashboard.zobiris-dashboard .strategy-muted{color:var(--zv-muted);}
+/* Sidebar and top bar */
+@media (min-width:1040px){
+  .zobiris-dashboard.zobiris-dashboard .dashboard-nav{background:linear-gradient(180deg,#05182a,#030c18) !important;border-right:1px solid #123d50 !important;box-shadow:inset -1px 0 0 #22d3ee14 !important;}
+  .zobiris-dashboard.zobiris-dashboard .dashboard-nav button{color:#8fb3c0 !important;}
+  .zobiris-dashboard.zobiris-dashboard .dashboard-nav button[aria-current="page"]{background:linear-gradient(90deg,#0e7490cc,#0891b2aa) !important;border-color:#22d3ee !important;color:#fff !important;box-shadow:0 0 20px #22d3ee55,inset 0 0 12px #22d3ee22 !important;}
+  .zobiris-dashboard.zobiris-dashboard .dashboard-nav button:not([aria-current]):hover{background:#0b2a3c !important;color:#eafcff !important;}
+}
+.zobiris-dashboard.zobiris-dashboard .dashboard-sidebar-brand svg{filter:drop-shadow(0 0 9px #22d3ee99) !important;}
+.zobiris-dashboard.zobiris-dashboard .dashboard-sidebar-brand svg path:last-child{stroke:#22d3ee !important;}
+.zobiris-dashboard.zobiris-dashboard .dashboard-topbar h1{text-shadow:0 0 22px #22d3ee55;}
+.zobiris-dashboard.zobiris-dashboard .dashboard-topbar p{color:#7fa3b0 !important;}
+.zobiris-dashboard.zobiris-dashboard .topbar-currency,
+.zobiris-dashboard.zobiris-dashboard .topbar-icon-button{border-color:#14485c !important;background:#071a29 !important;}
+.zobiris-dashboard.zobiris-dashboard table th{color:#7fa3b0 !important;}
+.zobiris-dashboard.zobiris-dashboard td,.zobiris-dashboard.zobiris-dashboard .dashboard-panel td{border-bottom-color:#0d2a3a !important;}
+.zobiris-dashboard.zobiris-dashboard tbody tr:hover > td,.zobiris-dashboard.zobiris-dashboard .dashboard-panel tbody tr:hover td{background:#22d3ee10 !important;}
+.zobiris-dashboard.zobiris-dashboard .watch-table th:first-child,.zobiris-dashboard.zobiris-dashboard .watch-table td:first-child{background:#071524 !important;}
+/* Chips, tabs and toggles */
+.zobiris-dashboard.zobiris-dashboard .forge-tabs button{background:#08202f;border-color:#14485c;color:#bfe9f2;}
+.zobiris-dashboard.zobiris-dashboard .forge-tabs button[aria-selected=true]{background:#0e7490;border-color:#22d3ee;color:#fff;box-shadow:0 0 14px #22d3ee44;}
+.zobiris-dashboard.zobiris-dashboard .forge-card,.zobiris-dashboard.zobiris-dashboard .forge-signals li{background:#08202fb3;border-color:#14485c;}
+.zobiris-dashboard.zobiris-dashboard .forge-card.verdict-consider{border-color:#34d39988;box-shadow:0 0 18px -10px #34d399;}
+.zobiris-dashboard.zobiris-dashboard .forge-mixbar{background:#061723;}
+/* Mind page: aurora ring, neural web in the hero, glowing beliefs and a luminous attention sphere */
+.zobiris-dashboard .mind-hero{position:relative;overflow:hidden;background:linear-gradient(155deg,#0a2a3dd9,#061320ec 70%) !important;border-color:color-mix(in srgb,var(--mind-hue,#2eeccf) 45%,#14485c) !important;
+  box-shadow:inset 0 1px 0 #22d3ee33,0 0 40px -18px var(--mind-hue,#2eeccf) !important;}
+.zobiris-dashboard .mind-hero::before{content:"";position:absolute;left:-40px;top:-30px;width:520px;height:420px;pointer-events:none;opacity:.5;
+  background:radial-gradient(circle at 24% 42%,#22d3ee33,transparent 55%),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='420' viewBox='0 0 520 420' fill='none' stroke='%2322d3ee' stroke-width='.7' stroke-opacity='.35'%3E%3Cpath d='M40 300 120 220 210 250 290 150 380 190 470 90M120 220 150 120 290 150M210 250 260 340 380 300 380 190M40 300 90 380 260 340M150 120 230 60 330 70 290 150M380 300 470 260 470 90'/%3E%3Cg fill='%2322d3ee' fill-opacity='.7' stroke='none'%3E%3Ccircle cx='40' cy='300' r='2.5'/%3E%3Ccircle cx='120' cy='220' r='3'/%3E%3Ccircle cx='210' cy='250' r='2.5'/%3E%3Ccircle cx='290' cy='150' r='3.5'/%3E%3Ccircle cx='380' cy='190' r='2.5'/%3E%3Ccircle cx='470' cy='90' r='3'/%3E%3Ccircle cx='150' cy='120' r='2.5'/%3E%3Ccircle cx='260' cy='340' r='3'/%3E%3Ccircle cx='380' cy='300' r='2.5'/%3E%3Ccircle cx='90' cy='380' r='2'/%3E%3Ccircle cx='230' cy='60' r='2.5'/%3E%3Ccircle cx='330' cy='70' r='2'/%3E%3Ccircle cx='470' cy='260' r='2.5'/%3E%3C/g%3E%3C/svg%3E") no-repeat;}
+.zobiris-dashboard .mind-hero>*{position:relative;z-index:1;}
+.zobiris-dashboard .mind-hero h1{text-shadow:0 0 24px color-mix(in srgb,var(--mind-hue,#2eeccf) 55%,transparent);}
+.zobiris-dashboard .mind-ring-live{filter:drop-shadow(0 0 7px var(--mind-hue,#2eeccf)) drop-shadow(0 0 16px color-mix(in srgb,var(--mind-hue,#2eeccf) 60%,transparent));}
+.zobiris-dashboard .mind-ring-orbit{transform-origin:70px 70px;animation:mind-spin 48s linear infinite;}
+.zobiris-dashboard .mind-ring-orbit.is-rev{animation-duration:80s;animation-direction:reverse;}
+@keyframes mind-spin{to{transform:rotate(360deg);}}
+.zobiris-dashboard .mind-signals li,.zobiris-dashboard .mind-triggers li{background:#06182588;border-color:#14485c;}
+.zobiris-dashboard .mind-triggers li{border-left-color:#22d3ee;}
+.zobiris-dashboard .mind-triggers li.is-near{border-color:#fbbf24;box-shadow:0 0 14px #fbbf2444;}
+.zobiris-dashboard .mind-belief{background:linear-gradient(160deg,#0b2a3c99,#061622cc);border-color:#14485c;box-shadow:inset 0 1px 0 #22d3ee22;}
+.zobiris-dashboard .mind-belief b{text-shadow:0 0 18px currentColor;}
+.zobiris-dashboard .mind-belief.is-up{border-color:#34d39966;}
+.zobiris-dashboard .mind-belief.is-down{border-color:#fb718566;}
+.zobiris-dashboard .mind-belief.is-up b{color:#34d399;}
+.zobiris-dashboard .mind-belief.is-down b{color:#fb7185;}
+.zobiris-dashboard .mind-sphere{position:relative;width:100%;max-width:470px;margin:0 auto;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,#0e5a7a55 0%,#0a2c4466 45%,#060f1ccc 70%,transparent 71%),radial-gradient(circle,#8b5cf622,transparent 70%);
+  box-shadow:0 0 46px -12px #22d3ee88,inset 0 0 40px #22d3ee22;}
+.zobiris-dashboard .mind-sphere .mind-radar{position:absolute;inset:0;max-width:none;}
+.zobiris-dashboard .mind-web{fill:none;stroke:#22d3ee;stroke-opacity:.22;stroke-width:.8;}
+.zobiris-dashboard .mind-meridian{fill:none;stroke:#67e8f9;stroke-opacity:.16;stroke-width:.8;}
+.zobiris-dashboard .mind-dot circle{fill:#1d4e6e;fill-opacity:.85;stroke:#67e8f9;}
+.zobiris-dashboard .mind-dot.is-watch circle{fill:#0891b2;stroke:#a5f3fc;filter:drop-shadow(0 0 4px #22d3ee);}
+.zobiris-dashboard .mind-dot.is-consider circle{fill:#34d399;stroke:#a7f3d0;filter:drop-shadow(0 0 7px #34d399);}
+.zobiris-dashboard .mind-dot.is-avoid circle{fill:#3b1226;stroke:#fb7185;filter:drop-shadow(0 0 5px #fb718588);}
+.zobiris-dashboard .mind-dot .mind-dot-ripple{stroke:#fbbf24;filter:none !important;}
+.zobiris-dashboard .mind-radar-label{fill:#5fa5b8;}
+.zobiris-dashboard .mind-top button{position:relative;overflow:hidden;background:#071a28cc;border-color:#14485c;}
+.zobiris-dashboard .mind-top button>*{position:relative;z-index:1;}
+.zobiris-dashboard .mind-top .mind-top-bar{position:absolute;z-index:0;left:44%;top:0;bottom:0;border-radius:0 6px 6px 0;background:linear-gradient(90deg,#22d3ee00,#22d3ee55 55%,#34d399aa);box-shadow:0 0 14px #22d3ee66;}
+.zobiris-dashboard .mind-top .mind-top-bar.is-avoid{background:linear-gradient(90deg,#fb718500,#fb718555 55%,#fb7185aa);box-shadow:0 0 14px #fb718566;}
+.zobiris-dashboard .mind-flow-bars{background:#061723;box-shadow:inset 0 0 0 1px #0d2a3a;}
+.zobiris-dashboard .mind-flow-bars b{box-shadow:0 0 12px -2px currentColor;}
+.zobiris-dashboard .mind-badge{color:#67e8f9;border-color:#22d3ee88;box-shadow:0 0 12px #22d3ee33;}
+@media (max-width:760px){.zobiris-dashboard .mind-hero::before{opacity:.28;}}
+@media (prefers-reduced-motion:reduce){.zobiris-dashboard .mind-ring-orbit{animation:none;}}
+@media (forced-colors:active){.zobiris-dashboard .mind-hero::before,.zobiris-dashboard .mind-top .mind-top-bar{display:none;}}
