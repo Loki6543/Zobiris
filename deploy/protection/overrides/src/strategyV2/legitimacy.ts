@@ -5,9 +5,11 @@
 //   GitHub with commits in the last 12 weeks 15 (repo listed but idle 6)
 //   Age >= 1 year 10 (>= 6 months 5)
 //   Contract: PASS or native coin 15, WARN 8, unsupported/unchecked 0, FAIL caps the score at 10
-//   Top-10 wallets <= 25% 10 (<= 40% 5)
+//   Top-10 wallets <= 25% 10 (<= 40% 5) (Bubblemaps clustered top-10 when a holder map exists, else GoPlus raw top-10)
+//   Bubblemaps decentralization score >= 60 5
 //   Liquidity: DEX pools >= $1M or Kraken-listed or 24h volume >= $5M 10 (>= $250k 5)
 // Deductions: CoinGecko public notice (hack, migration, delisting) -25 · LP tokens mostly unlocked -10 · sentiment < 30% -5
+//   Bundled supply >= 25% -15 · fresh-wallet supply >= 20% -10 (Bubblemaps holder map, optional paid feed)
 import type { Diligence } from "./diligence";
 
 export interface LegitimacyInput { diligence: Diligence | null | undefined; ageDays: number | null; krakenListed: boolean; volume24hUsd: number | null; now?: number }
@@ -36,10 +38,18 @@ export function legitimacyScore(i: LegitimacyInput): Legitimacy {
   else if (s.status === "WARN") add("Contract checks: warnings only", 8);
   if (s.status === "FAIL") red.push(...s.vetoes.map((v) => `CONTRACT_${v}`));
   if (s.status === "UNCHECKED") red.push("CONTRACT_UNCHECKED");
-  if (s.top10HolderPct != null) {
-    if (s.top10HolderPct <= 25) add("Top-10 wallets hold 25% or less", 10);
-    else if (s.top10HolderPct <= 40) add("Top-10 wallets hold 40% or less", 5);
+  const hm = d.holders ?? null;
+  const top10 = hm?.top10AdjustedPct ?? s.top10HolderPct;
+  const top10Src = hm?.top10AdjustedPct != null ? " (clustered, exchanges excluded)" : "";
+  if (top10 != null) {
+    if (top10 <= 25) add(`Top-10 wallets hold 25% or less${top10Src}`, 10);
+    else if (top10 <= 40) add(`Top-10 wallets hold 40% or less${top10Src}`, 5);
     else red.push("CONCENTRATED_HOLDERS");
+  }
+  if (hm) {
+    if (hm.score != null && hm.score >= 60) add(`Bubblemaps decentralization score ${hm.score.toFixed(0)}`, 5);
+    if (hm.flags.includes("BUNDLED_SUPPLY")) { add(`Bundled supply ${hm.bundlesPct?.toFixed(0)}% (wallet clusters)`, -15); red.push("BUNDLED_SUPPLY"); }
+    if (hm.flags.includes("FRESH_WALLET_SUPPLY")) { add(`Fresh wallets hold ${hm.freshWalletsPct?.toFixed(0)}% of supply`, -10); red.push("FRESH_WALLET_SUPPLY"); }
   }
   const liq = s.dexLiquidityUsd ?? 0, vol = i.volume24hUsd ?? 0;
   if (liq >= 1e6 || i.krakenListed || vol >= 5e6) add(i.krakenListed ? "Kraken-listed" : liq >= 1e6 ? "DEX liquidity over $1M" : "24h volume over $5M", 10);

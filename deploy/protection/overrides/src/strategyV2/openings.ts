@@ -19,6 +19,7 @@ import { riskProfile, halfRecoveryUpsidePct, type RiskProfile } from "./riskMetr
 import { firstTranchePct, sleeveForRank, type TierOfRank } from "./valleyForge";
 import type { AiWatchItem } from "./aiWatchlist";
 import type { ExchangeNotice } from "./exchangeNotices";
+import type { HolderMap } from "./bubblemaps";
 import { verifiedUnlockShare } from "./unlockOverrides";
 
 export type OpeningTier = Exclude<TierOfRank, "top100">;
@@ -42,6 +43,8 @@ export interface OpeningCandidate {
   ai: AiWatchItem | null;
   /** Latest exchange notice (Binance/Upbit) in the last 30 days. */
   notice?: ExchangeNotice | null;
+  /** Bubblemaps holder clusters when the optional feed is configured. */
+  holders?: HolderMap | null;
 }
 
 export interface OpeningsInput {
@@ -189,7 +192,7 @@ export function scoreOpenings(i: OpeningsInput): OpeningCandidate[] {
         geckoId: c.geckoId, symbol: c.symbol, name: c.name, rank: c.rank!, tier, priceUsd: c.priceUsd!, marketCapUsd: c.marketCapUsd!, volume24hUsd: c.volume24hUsd!,
         change24hPct: c.change24hPct, change7dPct: c.change7dPct, change30dPct: c.change30dPct, athChangePct: c.athChangePct,
         score, factors, volume: vol, legitimacy: legit, risk: riskProfile(closes, i.btcCloses), upsideHalfAthPct: halfRecoveryUpsidePct(c.athChangePct),
-        labels, verdict, reasons, firstTranchePct: firstTranchePct(tier, c.symbol), krakenListed, ai, notice,
+        labels, verdict, reasons, firstTranchePct: firstTranchePct(tier, c.symbol), krakenListed, ai, notice, holders: dil?.holders ?? null,
       });
     });
   }

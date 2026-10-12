@@ -2,10 +2,27 @@
 // Only called for the few coins that already pass the cheap hygiene screen, spaced to respect free rate limits.
 import { evaluateEvmSecurity, evaluateSolanaSecurity, goPlusPath, parseCoinDetail, parseGithubParticipation, type Diligence } from "../strategyV2/diligence.js";
 import type { FetchLike } from "../strategyV2/feed.js";
+import { bubblemapsChain, bubblemapsMetricsUrl, parseHolderMap, type HolderMap } from "../strategyV2/bubblemaps.js";
 
 const TTL_MS = 24 * 3_600_000;
 const FAIL_TTL_MS = 30 * 60_000; // retry failed checks after 30 minutes
 const MAX_PER_REFRESH = 20;
+/** Bubblemaps holder maps (paid, 25 credits each): at most this many new tokens per refresh keeps a 100k-credit plan under ~30k/month. */
+const MAX_HOLDER_MAPS_PER_REFRESH = 8;
+let holderMapsThisRefresh = 0;
+export const holderMapsConfigured = () => Boolean(process.env.BUBBLEMAPS_API_KEY);
+
+/** Bubblemaps token metrics for one contract; null when the feed is not configured, the chain is not covered, or the call fails. */
+async function fetchHolderMap(fetcher: FetchLike, platform: string, contract: string): Promise<HolderMap | null> {
+  const key = process.env.BUBBLEMAPS_API_KEY, chain = bubblemapsChain(platform);
+  if (!key || !chain || holderMapsThisRefresh >= MAX_HOLDER_MAPS_PER_REFRESH) return null;
+  holderMapsThisRefresh++;
+  try {
+    const res = await fetcher(bubblemapsMetricsUrl(chain, contract), { headers: { Accept: "application/json", "X-ApiKey": key }, signal: AbortSignal.timeout(20_000) });
+    if (!res.ok) return null;
+    return parseHolderMap(await res.json(), chain, contract);
+  } catch { return null; }
+}
 const cache = new Map<string, { value: Diligence; at: number; ttl: number }>();
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -41,13 +58,15 @@ export async function checkCoin(geckoId: string, fetcher: FetchLike, now = Date.
       try { const gh = await getJson(fetcher, `https://api.github.com/repos/${m[1]}/${m[2]}/stats/participation`); commits12w = parseGithubParticipation(gh.body); } catch { /* optional */ }
     }
   }
-  return { geckoId, security, commits12w, repo, checkedAt, profile: detail.profile };
+  const holders = detail.assetPlatformId && detail.contract ? await fetchHolderMap(fetcher, detail.assetPlatformId, detail.contract) : null;
+  return { geckoId, security, commits12w, repo, checkedAt, profile: detail.profile, contract: detail.contract, holders };
 }
 
 /** Diligence for the given CoinGecko ids, using the cache and fetching at most MAX_PER_REFRESH new ones. */
 export async function getDiligence(geckoIds: string[], fetcher: FetchLike = fetch as unknown as FetchLike, now = Date.now()): Promise<Map<string, Diligence>> {
   const out = new Map<string, Diligence>();
   let fetched = 0;
+  holderMapsThisRefresh = 0;
   for (const id of [...new Set(geckoIds)]) {
     const hit = cache.get(id);
     if (hit && now - hit.at < hit.ttl) { out.set(id, hit.value); continue; }
