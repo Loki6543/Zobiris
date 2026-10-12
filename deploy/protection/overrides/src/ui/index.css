@@ -1361,3 +1361,24 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
   .zobiris-dashboard .forge-shocks li{grid-template-columns:minmax(48px,auto) minmax(0,1fr) 44px 52px;}
   .zobiris-dashboard .forge-shocks li small{display:none;}
 }
+
+/* Bitcoin homepage */
+.zobiris-dashboard .btc-page{display:grid;gap:14px;min-width:0;}
+.zobiris-dashboard .btc-page>*{min-width:0;}
+.zobiris-dashboard .btc-page .is-gain{color:var(--zv-green);}
+.zobiris-dashboard .btc-page .is-loss{color:var(--zv-red);}
+.zobiris-dashboard .btc-panel{margin:0 !important;display:grid;gap:12px;min-width:0;}
+.zobiris-dashboard .btc-tf-why{color:var(--zv-dim);font-size:11px;}
+.zobiris-dashboard .btc-toggles{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:#c7d3ea;}
+.zobiris-dashboard .btc-toggles label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;}
+.zobiris-dashboard .btc-toggles i{width:12px;height:3px;border-radius:2px;display:inline-block;}
+.zobiris-dashboard .btc-toggles small{color:var(--zv-dim);}
+.zobiris-dashboard .btc-chart svg{display:block;width:100%;touch-action:pan-y;}
+.zobiris-dashboard .btc-readout{font-size:12px;color:#c7d3ea;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+.zobiris-dashboard .btc-fc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+.zobiris-dashboard .btc-fc>div{border:1px solid var(--zv-border);border-radius:12px;padding:12px;display:grid;gap:4px;min-width:0;}
+.zobiris-dashboard .btc-fc b{font-size:24px;}
+.zobiris-dashboard .btc-fc .is-up b{color:var(--zv-green);}
+.zobiris-dashboard .btc-fc .is-down b{color:var(--zv-red);}
+.zobiris-dashboard .btc-fc small{color:var(--zv-muted);overflow-wrap:anywhere;}
+@media(max-width:640px){.zobiris-dashboard .btc-fc{grid-template-columns:minmax(0,1fr);}.zobiris-dashboard .btc-tf-why{display:none;}}

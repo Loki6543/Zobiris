@@ -19,6 +19,7 @@ import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readL
 import { marketBrief } from './marketBrief.js';
 import { getStrategyReport, startStrategyV2Timer } from './strategyV2Service.js';
 import { getMarketOverview, getPriceHistory } from './marketOverviewService.js';
+import { getBitcoinReport, getCandles, TIMEFRAMES } from './btcService.js';
 import { ledgerStatus } from './ledgerService.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
@@ -877,6 +878,16 @@ const API: ApiRouter = {
   },
   "GET /api/strategy-v2": async (_req, res) => {
     try { jsonResponse(res, 200, await getStrategyReport()); }
+    catch (e) { errorResponse(res, 503, e); }
+  },
+  "GET /api/bitcoin": async (_req, res) => {
+    try { jsonResponse(res, 200, await getBitcoinReport()); }
+    catch (e) { errorResponse(res, 503, e); }
+  },
+  "GET /api/bitcoin/candles": async (req, res) => {
+    const tf = new URL(req.url ?? "/", "http://localhost").searchParams.get("tf") ?? "1d";
+    if (!(tf in TIMEFRAMES)) return jsonResponse(res, 400, { error: "tf must be 1h, 4h, 1d or 1w" });
+    try { const c = await getCandles(tf as keyof typeof TIMEFRAMES); jsonResponse(res, 200, { tf, candles: c.map((x) => ({ t: x.time, o: x.open, h: x.high, l: x.low, c: x.close, v: x.volume })) }); }
     catch (e) { errorResponse(res, 503, e); }
   },
   "GET /api/ledger": (_req, res) => {

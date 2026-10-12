@@ -23,6 +23,7 @@ const LEARNING_RULES = [
 import { Portfolio3D } from "./Portfolio3D";
 import { EnginePage } from "./EnginePage";
 import { ForgePage } from "./ForgePage";
+import { BitcoinPage } from "./BitcoinPage";
 import { DashboardPage } from "./DashboardPage";
 import { CoinSearch, DailyEdge, TopbarTicker, markDailyEdge, readDailyEdge } from "./DashboardChrome";
 import { CMC_WATCHLIST } from "../strategyV2/watchlist";
@@ -36,9 +37,10 @@ import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "dashboard" | "engine" | "forge" | "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
+type View = "bitcoin" | "dashboard" | "engine" | "forge" | "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
 const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
   dashboard: { title: "Dashboard", description: "Market mood, your watchlist decisions and today's engine signals." },
+  bitcoin: { title: "Bitcoin", description: "Full Bitcoin chart, the daily 1/3/7-day forecast, what drives it, and how past forecasts actually scored." },
   forge: { title: "Valley Forge", description: "Elastic allocation by market phase, openings outside the top 100, volume shocks, the daily Claude review and stablecoin yield." },
   engine: { title: "Zobiris Engine", description: "What the engine sees right now: Bitcoin regime, rotation, small-cap survival and your watchlist decisions." },
   strategy: { title: "Opportunities", description: "Bitcoin direction, top-100 rotation entries and small-cap bets for your watchlist." },
@@ -308,7 +310,7 @@ export function App() {
   });
   const [view, setViewState] = useState<View>(() => {
     try { const v = localStorage.getItem("zobiris.view.v1"); if (v && v in PAGE_HEADINGS) return v as View; } catch { /* storage blocked */ }
-    return "dashboard";
+    return "bitcoin";
   });
   const [edgeDone, setEdgeDone] = useState<string[]>(() => { markDailyEdge(view); return readDailyEdge(); });
   const setView = (next: View) => {
@@ -897,6 +899,7 @@ export function App() {
           <strong>ZOBIRIS</strong>
         </div>
         {([
+          ["bitcoin", "Bitcoin"],
           ["dashboard", "Dashboard"],
           ["engine", "Engine"],
           ["forge", "Valley Forge"],
@@ -1087,6 +1090,7 @@ export function App() {
       ) : null}
 
       {view === "dashboard" ? <DashboardPage onOpen={setView} onAnalyze={(symbol) => { setAnalysisSymbol(symbol); setView("compare"); }} /> : null}
+      {view === "bitcoin" ? <BitcoinPage /> : null}
       {view === "forge" ? <ForgePage cashUsd={LIVE_CASH_USD} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, value: row.value }))} /> : null}
       {view === "engine" ? <EnginePage cashUsd={LIVE_CASH_USD} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, value: row.value }))} onOpen={setView} /> : null}
       {view === "strategy" ? <StrategyPage portfolioUsd={total} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, quantity: row.quantity, avgPriceUsd: row.avgPriceUsd ?? null, value: row.value }))} /> : null}
@@ -1396,6 +1400,7 @@ function DashboardIcon({name}: {name: string}) {
     refresh: "M20 7a9 9 0 1 0 1 8M20 3v5h-5",
     strategy: "M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
     dashboard: "M4 13h6V4H4ZM14 20h6v-9h-6ZM14 4h6v4h-6ZM4 20h6v-4H4Z",
+    bitcoin: "M9 4v16M13 4v3M13 17v3M7 7h7a3 3 0 0 1 0 6H7M7 13h8a3 3 0 0 1 0 6H7",
     forge: "M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6ZM9 12l2 2 4-4",
     engine: "M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
   };
