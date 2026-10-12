@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { StrategyReport, WatchlistDecision } from "../strategyV2/report";
 import { signalGroup } from "./EnginePage";
+import { ALT_GATE_LABEL } from "../strategyV2/altGate";
 import { RangeTabs, Sparkline, fmtBig, fmtPct, fmtUsd, toneOf, useApi } from "./charts";
 import type { MarketOverview, MarketQuote } from "./MarketToday";
 
@@ -153,6 +154,7 @@ export function DashboardPage({ onOpen, onAnalyze }: { onOpen: Open; onAnalyze: 
           <div className="db-chips">
             <span className={`db-chip ${g.state === "RISK_ON" ? "is-gain" : g.state === "RISK_OFF" ? "is-loss" : ""}`}>{sentiment}</span>
             {level ? <span className="db-chip">BTC above {fmtUsd(level, 0)}</span> : null}
+            {report.altGate ? <span className={`db-chip ${report.altGate.allowAltEntries ? "is-gain" : "is-warn"}`} title={report.altGate.checks.map((c) => `${c.label}: ${c.detail}`).join("\n")}>{ALT_GATE_LABEL[report.altGate.state]}</span> : null}
             {fng.at(-1) ? <span className="db-chip">Market mood: {fng.at(-1)!.label}</span> : null}
             <button type="button" className="db-chip is-link" onClick={() => onOpen("strategy")}>{opp} opportunit{opp === 1 ? "y" : "ies"} →</button>
           </div>

@@ -1244,3 +1244,20 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 @media(min-width:901px){.zobiris-dashboard .dashboard-topbar-heading{min-width:240px;flex:1 1 240px;}}
 .zobiris-dashboard .dashboard-topbar-right{flex-wrap:wrap;justify-content:flex-end;}
 @media(max-width:1500px){.zobiris-dashboard .db-ticker{display:none;}}
+.zobiris-dashboard .engine-gate{display:grid;gap:6px;padding:10px 12px;border-radius:10px;border:1px solid #1f3a75;background:rgba(10,22,50,.55);}
+.zobiris-dashboard .engine-gate h3{margin:0;font-size:13px;color:#cbd6ec;}
+.zobiris-dashboard .engine-gate ul{list-style:none;margin:0;padding:0;display:grid;gap:5px;font-size:12px;}
+.zobiris-dashboard .engine-gate li{display:flex;justify-content:space-between;gap:10px;color:#cbd6ec;}
+.zobiris-dashboard .engine-gate li span::before{content:"●";margin-right:6px;}
+.zobiris-dashboard .engine-gate li.is-on span::before{color:var(--zv-green);} .zobiris-dashboard .engine-gate li.is-off span::before{color:var(--zv-red);} .zobiris-dashboard .engine-gate li.is-unknown span::before{color:#64748b;}
+.zobiris-dashboard .engine-gate small{color:#8ea0c4;text-align:right;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .db-chip.is-warn{border-color:#b45309;color:#fcd34d;}
+.zobiris-dashboard .strategy-sec{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid #24418a;color:#cbd6ec;}
+.zobiris-dashboard .strategy-sec.is-pass{border-color:#15803d;color:#4ade80;}
+.zobiris-dashboard .strategy-sec.is-warn{border-color:#b45309;color:#fbbf24;}
+.zobiris-dashboard .strategy-sec.is-fail,.zobiris-dashboard .strategy-sec.is-unchecked{border-color:#9f1239;color:#f87171;}
+.zobiris-dashboard .engine-ledger-scroll{overflow-x:auto;}
+.zobiris-dashboard .engine-ledger{width:100%;border-collapse:collapse;font-size:13px;min-width:620px;}
+.zobiris-dashboard .engine-ledger th{text-align:left;color:#8ea0c4;font-weight:500;font-size:12px;padding:6px 8px;border-bottom:1px solid #1d3570;}
+.zobiris-dashboard .engine-ledger td{padding:8px;border-bottom:1px solid #132650;color:#cbd6ec;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .engine-ledger small{color:#7d8db0;}

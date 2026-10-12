@@ -6,6 +6,8 @@ import { planBarbell, type BarbellPlan, type SpeculativePosition } from "./barbe
 import type { MarketCoin } from "./feed";
 import type { WatchlistEntry } from "./watchlist";
 import { verifiedUnlockShare } from "./unlockOverrides";
+import { computeAltGate, type AltGate } from "./altGate";
+import type { Diligence } from "./diligence";
 
 export type Tier = "TOP_100" | "RANK_101_500" | "OUTSIDE_STRATEGY";
 
@@ -24,6 +26,8 @@ export interface WatchlistDecision {
   rotation: RotationResult | null;
   smallCap: SmallCapScreenResult | null;
   matchNote: string | null;
+  /** Contract + developer diligence for small caps that reached that stage. */
+  diligence?: Diligence | null;
 }
 
 export interface StrategyReport {
@@ -33,7 +37,7 @@ export interface StrategyReport {
   barbell: BarbellPlan | null;
   watchlist: WatchlistDecision[];
   /** Best-ranked eligible rank 101-500 coins from the whole market, not just the watchlist. */
-  marketSmallCapCandidates: Array<{ symbol: string; name: string; rank: number | null; convexityScore: number; notes: string[] }>;
+  marketSmallCapCandidates: Array<{ symbol: string; name: string; rank: number | null; priceUsd: number | null; convexityScore: number; notes: string[] }>;
   sources: string[];
   /** Last 365 completed BTC days with 50D/200D averages (null until enough history). */
   btcSeries: Array<{ t: string; close: number; sma50: number | null; sma200: number | null }>;
@@ -44,6 +48,8 @@ export interface StrategyReport {
   /** How many rank 101-500 coins survive each screen stage, in order. */
   screenFunnel: Array<{ stage: string; remaining: number }>;
   feeds: FeedStatus[];
+  /** Second gate for altcoin entries: dominance trend, stablecoin flow, 30-day breadth. */
+  altGate: AltGate;
 }
 
 export interface FeedStatus { name: string; ok: boolean; detail: string; at: string | null }
@@ -62,6 +68,10 @@ export interface ReportInputs {
   /** Unix seconds for each BTC close (same length as btcDailyCloses). */
   btcDailyTimes?: number[];
   feeds?: FeedStatus[];
+  /** DefiLlama total USD stablecoin supply and its 30-day change. */
+  stablecoins?: { supplyUsd: number; change30dPct: number | null } | null;
+  /** CoinGecko id -> diligence. Coins absent from the map get no contract finding. */
+  diligence?: Map<string, Diligence>;
 }
 
 const REGIME_VOTES: Array<[string, string, string, number]> = [
@@ -78,12 +88,26 @@ const FUNNEL: Array<[string, (r: string) => boolean]> = [
   ["Low dilution and unlocks", (r) => r === "FDV_UNKNOWN" || r === "HEAVY_FUTURE_DILUTION" || r.startsWith("UNLOCK_") || r === "LARGE_UNLOCK_WITHIN_60D"],
   ["Survived 180+ days", (r) => r === "TOO_NEW_UNPROVEN_SURVIVAL"],
   ["Price history and trend", (r) => r === "PRICE_HISTORY_INCOMPLETE"],
+  ["Contract checks", (r) => r.startsWith("CONTRACT_")],
   ["BTC regime allows bets", (r) => r.startsWith("BTC_REGIME_")],
 ];
 
 function rollingSma(xs: number[], n: number): Array<number | null> {
   let sum = 0;
   return xs.map((x, i) => { sum += x; if (i >= n) sum -= xs[i - n]!; return i >= n - 1 ? sum / n : null; });
+}
+
+export type DecisionGroup = "buy" | "bet" | "watch" | "wait" | "filtered" | "outside";
+
+/** One coarse bucket per decision, shared by the UI and the decision ledger. */
+export function decisionGroup(d: WatchlistDecision): DecisionGroup {
+  if (d.rotation?.status === "QUALIFIED") return "buy";
+  if (d.smallCap?.eligible) return "bet";
+  if (d.rotation?.status === "NEAR_ROTATION") return "watch";
+  if (d.tier === "OUTSIDE_STRATEGY" || d.signal.startsWith("No free data")) return "outside";
+  if (d.smallCap?.rejections[0]?.startsWith("ALT_GATE_")) return "wait";
+  if (d.smallCap || d.rotation?.status === "STRUCTURALLY_WEAK") return "filtered";
+  return "wait";
 }
 
 const sma = (xs: number[], n: number) => (xs.length >= n ? xs.slice(-n).reduce((a, b) => a + b, 0) / n : null);
@@ -128,13 +152,14 @@ export function smallCapInputFor(c: MarketCoin, inputs: ReportInputs, btc30: num
     unlockShareNext60d: verifiedUnlockShare(c.symbol, inputs.now)?.share60d ?? null,
     unlockedSupplyShare: c.circulatingSupply != null && minted > 0 ? Math.min(1, c.circulatingSupply / minted) : null,
     priceUsd: c.priceUsd, change7dPct: c.change7dPct,
+    security: inputs.diligence?.get(c.geckoId)?.security ?? undefined,
   };
 }
 
 const ROTATION_LABEL: Record<string, string> = {
   QUALIFIED: "Buy zone — pullback limit", NEAR_ROTATION: "Watch — recovery forming", TOO_EARLY: "Wait — still lagging",
   EXTENDED: "Wait — don't chase", NOT_LAGGING: "Hold / no entry edge", STRUCTURALLY_WEAK: "Avoid — value trap risk",
-  REGIME_BLOCKED: "Wait — BTC regime", DATA_INSUFFICIENT: "Data missing",
+  REGIME_BLOCKED: "Wait — BTC regime", DATA_INSUFFICIENT: "Data missing", ALT_GATE_BLOCKED: "Wait — altcoin gate",
 };
 
 export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
@@ -142,6 +167,8 @@ export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
   const btc = inputs.market.find((c) => c.geckoId === "bitcoin") ?? inputs.market.find((c) => c.symbol === "BTC") ?? null;
   const top100 = inputs.market.filter((c) => c.rank != null && c.rank <= 100);
   // 200d is the closest free horizon to the 90d breadth rule; label is kept honest in the UI.
+  const altGate = computeAltGate({ btcAbove200d: regime.close != null && regime.sma200 != null ? regime.close > regime.sma200 : null, market: inputs.market, stablecoins: inputs.stablecoins ?? null });
+  const gateReason = `ALT_GATE_${altGate.state}`;
   const breadth = rotationBreadth(top100.map((c) => ({ symbol: c.symbol, change90dPct: c.change200dPct })), btc?.change200dPct ?? null);
 
   const watchlist = inputs.watchlist.map((entry): WatchlistDecision => {
@@ -161,20 +188,27 @@ export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
         symbol: coin.symbol, rank, priceUsd: coin.priceUsd, change7dPct: coin.change7dPct, change30dPct: coin.change30dPct, change200dPct: coin.change200dPct,
         btcChange7dPct: btc?.change7dPct ?? null, btcChange30dPct: btc?.change30dPct ?? null, btcChange200dPct: btc?.change200dPct ?? null,
       }, regime);
+      // The altcoin gate can only demote an entry; it never creates one.
+      if (!altGate.allowAltEntries && (rotation.status === "QUALIFIED" || rotation.status === "NEAR_ROTATION")) {
+        return { ...base, signal: ROTATION_LABEL.ALT_GATE_BLOCKED!, rotation: { ...rotation, status: "REGIME_BLOCKED", limitPriceUsd: null, pullbackPct: null, reasons: [...rotation.reasons, gateReason] }, smallCap: null };
+      }
       return { ...base, signal: ROTATION_LABEL[rotation.status] ?? rotation.status, rotation, smallCap: null };
     }
-    const smallCap = screenSmallCap(smallCapInputFor(coin, inputs, btc?.change30dPct ?? null), regime);
-    const signal = smallCap.eligible ? `Small bet candidate · score ${smallCap.convexityScore}` : `Filtered: ${smallCap.rejections[0]?.toLowerCase().replaceAll("_", " ")}`;
-    return { ...base, signal, rotation: null, smallCap };
+    const screenedCoin = screenSmallCap(smallCapInputFor(coin, inputs, btc?.change30dPct ?? null), regime);
+    const smallCap = !altGate.allowAltEntries && screenedCoin.eligible ? { ...screenedCoin, eligible: false, convexityScore: 0, rejections: [gateReason] } : screenedCoin;
+    const firstRejection = smallCap.rejections.find((r) => r.startsWith("CONTRACT_")) ?? smallCap.rejections[0];
+    const signal = smallCap.eligible ? `Small bet candidate · score ${smallCap.convexityScore}`
+      : firstRejection?.startsWith("ALT_GATE_") ? "Wait — altcoin gate" : `Filtered: ${firstRejection?.toLowerCase().replaceAll("_", " ")}`;
+    return { ...base, signal, rotation: null, smallCap, diligence: inputs.diligence?.get(coin.geckoId) ?? null };
   });
 
   const marketSmallCapCandidates = inputs.market
     .filter((c) => tierFor(c.rank) === "RANK_101_500")
     .map((c) => ({ c, r: screenSmallCap(smallCapInputFor(c, inputs, btc?.change30dPct ?? null), regime) }))
-    .filter(({ r }) => r.eligible)
+    .filter(({ r }) => r.eligible && altGate.allowAltEntries)
     .sort((a, b) => b.r.convexityScore - a.r.convexityScore)
     .slice(0, 15)
-    .map(({ c, r }) => ({ symbol: c.symbol, name: c.name, rank: c.rank, convexityScore: r.convexityScore, notes: r.notes }));
+    .map(({ c, r }) => ({ symbol: c.symbol, name: c.name, rank: c.rank, priceUsd: c.priceUsd, convexityScore: r.convexityScore, notes: r.notes }));
 
   const s50 = rollingSma(inputs.btcDailyCloses, 50), s200 = rollingSma(inputs.btcDailyCloses, 200);
   const times = inputs.btcDailyTimes?.length === inputs.btcDailyCloses.length ? inputs.btcDailyTimes : null;
@@ -192,9 +226,10 @@ export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
     return [{ symbol: c.symbol, name: c.name, rank: c.rank, rel30: c.change30dPct - btc.change30dPct, rel200: c.change200dPct - btc.change200dPct, marketCapUsd: c.marketCapUsd, onWatchlist: watchSymbols.has(c.symbol) }];
   });
   const screened = inputs.market.filter((c) => tierFor(c.rank) === "RANK_101_500").map((c) => screenSmallCap(smallCapInputFor(c, inputs, btc?.change30dPct ?? null), regime).rejections);
-  const screenFunnel = [{ stage: "Ranked 101–500", remaining: screened.length }, ...FUNNEL.map(([stage], k) => ({
+  const funnelStages = [{ stage: "Ranked 101–500", remaining: screened.length }, ...FUNNEL.map(([stage], k) => ({
     stage, remaining: screened.filter((rej) => !rej.some((r) => FUNNEL.slice(0, k + 1).some(([, hit]) => hit(r)))).length,
   }))];
+  const screenFunnel = [...funnelStages, { stage: "Altcoin gate open", remaining: altGate.allowAltEntries ? funnelStages.at(-1)!.remaining : 0 }];
 
   const barbell = inputs.portfolioUsd != null && inputs.portfolioUsd > 0
     ? planBarbell(inputs.portfolioUsd, inputs.speculativePositions ?? [], regime.exposureMultiplier)
@@ -203,6 +238,6 @@ export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
   return {
     asOf: new Date(inputs.now).toISOString(), regime, breadth, barbell, watchlist, marketSmallCapCandidates,
     sources: ["CoinGecko /coins/markets (keyless)", "CoinPaprika /v1/tickers (keyless)", "Kraken public AssetPairs + daily OHLC"],
-    btcSeries, regimeComponents, rotationMap, screenFunnel, feeds: inputs.feeds ?? [],
+    btcSeries, regimeComponents, rotationMap, screenFunnel, feeds: inputs.feeds ?? [], altGate,
   };
 }

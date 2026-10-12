@@ -35,6 +35,8 @@ export interface SmallCapInput {
   /** For stablecoin / pegged-asset detection. */
   priceUsd?: number | null;
   change7dPct?: number | null;
+  /** Contract diligence (GoPlus). undefined = not run for this coin; the screen then adds no contract finding. */
+  security?: { status: "PASS" | "WARN" | "FAIL" | "NATIVE" | "UNSUPPORTED_CHAIN" | "UNCHECKED"; vetoes: string[]; warnings: string[] } | null;
 }
 
 export interface SmallCapScreenResult {
@@ -88,6 +90,14 @@ export function screenSmallCap(a: SmallCapInput, regime: Pick<BtcRegime, "allowS
   else notes.push("UNLOCK_SCHEDULE_VERIFIED");
   if (!finite(a.ageDays) || a.ageDays < r.minAgeDays) rejections.push("TOO_NEW_UNPROVEN_SURVIVAL");
   if (!finite(a.drawdownFromAthPct) || !finite(a.change30dPct) || !finite(a.change90dPct) || a.priceAboveSma50 == null) rejections.push("PRICE_HISTORY_INCOMPLETE");
+
+  if (a.security) {
+    if (a.security.status === "FAIL") rejections.push(...a.security.vetoes.map((v) => `CONTRACT_RISK_${v}`));
+    else if (a.security.status === "UNCHECKED") rejections.push("CONTRACT_CHECK_UNAVAILABLE"); // fail closed until the scan succeeds
+    else if (a.security.status === "WARN") notes.push(...a.security.warnings.map((w) => `CONTRACT_${w}`));
+    else if (a.security.status === "UNSUPPORTED_CHAIN") notes.push("CONTRACT_NOT_SCANNABLE_ON_THIS_CHAIN");
+    else if (a.security.status === "PASS") notes.push("CONTRACT_CHECKS_PASSED");
+  }
 
   if (rejections.length) return { symbol: a.symbol, eligible: false, convexityScore: 0, rejections, notes };
 

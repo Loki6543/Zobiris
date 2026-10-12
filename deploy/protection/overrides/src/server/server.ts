@@ -19,6 +19,7 @@ import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readL
 import { marketBrief } from './marketBrief.js';
 import { getStrategyReport, startStrategyV2Timer } from './strategyV2Service.js';
 import { getMarketOverview, getPriceHistory } from './marketOverviewService.js';
+import { ledgerStatus } from './ledgerService.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
 import { accountCapital, accountProvenance, accountMappings, buildAccountDependency, getAccountView, refreshAccountContextFromKraken, startAccountContextSync } from "./accountContext.js";
@@ -876,6 +877,10 @@ const API: ApiRouter = {
   },
   "GET /api/strategy-v2": async (_req, res) => {
     try { jsonResponse(res, 200, await getStrategyReport()); }
+    catch (e) { errorResponse(res, 503, e); }
+  },
+  "GET /api/ledger": (_req, res) => {
+    try { const st = ledgerStatus(); jsonResponse(res, 200, { rows: st.rows, error: st.error, summary: st.summary }); }
     catch (e) { errorResponse(res, 503, e); }
   },
   "GET /api/market-overview": async (req, res) => {

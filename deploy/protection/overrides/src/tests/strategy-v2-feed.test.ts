@@ -135,3 +135,19 @@ describe("watchlist matching and report", () => {
     expect(new Set(CMC_WATCHLIST.map((w) => w.symbol + w.name)).size).toBe(79);
   });
 });
+
+describe("strategy service resilience", () => {
+  it("never leaves a failed background refresh as an unhandled rejection", async () => {
+    const { getStrategyReport } = await import("../server/strategyV2Service");
+    const unhandled: unknown[] = [];
+    const onUnhandled = (e: unknown) => unhandled.push(e);
+    process.on("unhandledRejection", onUnhandled);
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async () => { throw new Error("network down"); }) as typeof fetch;
+    try {
+      await getStrategyReport().catch(() => {});
+      await new Promise((r) => setTimeout(r, 20));
+      expect(unhandled).toEqual([]);
+    } finally { globalThis.fetch = realFetch; process.off("unhandledRejection", onUnhandled); }
+  });
+});
