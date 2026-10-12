@@ -50,7 +50,6 @@ function OpeningCard({ c }: { c: OpeningCandidate }) {
         <div><dt>First tranche</dt><dd>{c.firstTranchePct}% of portfolio{c.krakenListed ? " · Kraken" : " · not on Kraken"}</dd></div>
       </dl>
       {c.notice ? <p className="forge-reasons">{c.notice.exchange} {c.notice.kind.replace("_", " ").toLowerCase()} · {new Date(c.notice.at).toLocaleDateString()}</p> : null}
-      {c.leverage ? <p className="strategy-muted" style={{ margin: 0, fontSize: 12 }}>Perp funding {c.leverage.fundingAprPct}% APR · OI {fmtBig(c.leverage.openInterestUsd)}{c.leverage.flag ? ` · ${c.leverage.flag.replace("_", " ").toLowerCase()}: first tranche halved` : ""}</p> : null}
       {c.ai ? <p className="forge-ai"><b>Claude review · {c.ai.verdict.toLowerCase()} {c.ai.aiScore}</b> {c.ai.thesis}</p> : null}
       {c.reasons.length ? <p className="forge-reasons">{c.reasons.map((r) => r.replaceAll("_", " ").toLowerCase()).join(" · ")}</p> : null}
       <button type="button" className="forge-more" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Hide" : "Why this score"}</button>

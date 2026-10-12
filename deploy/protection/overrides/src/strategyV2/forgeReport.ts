@@ -9,7 +9,6 @@ import { scoreOpenings, type OpeningCandidate } from "./openings";
 import type { StablePool } from "./stableYield";
 import type { AiWatchItem } from "./aiWatchlist";
 import { noticesBySymbol, type ExchangeNotice } from "./exchangeNotices";
-import type { PerpState } from "./leverage";
 
 export interface ForgeInputs {
   fearGreed: number | null;
@@ -23,7 +22,6 @@ export interface ForgeInputs {
   stablePools: StablePool[];
   aiWatchlist: { generatedAt: string | null; items: AiWatchItem[] };
   notices?: ExchangeNotice[];
-  perps?: Map<string, PerpState>;
 }
 
 export interface ForgeReport {
@@ -51,7 +49,7 @@ export function buildForge(args: {
     now: args.now, market: all, btc7dPct: btc?.change7dPct ?? null, btc30dPct: btc?.change30dPct ?? null, btcCloses: args.btcCloses,
     closesBySymbol: args.closesBySymbol, volumeHistory: f.volumeHistory, trending: f.trending, aiCategory: f.aiCategory, diligence: args.diligence,
     firstSeen: args.firstSeen, krakenPairs: args.krakenPairs, aiWatchlist: f.aiWatchlist.items, allowNewBuys: posture.allowNewBuys,
-    notices: noticesBySymbol(f.notices ?? [], args.now), perps: f.perps,
+    notices: noticesBySymbol(f.notices ?? [], args.now)
   });
   const top = (tier: string, n: number) => scored.filter((c) => c.tier === tier).slice(0, n);
   const openings = [...top("rank101_200", 15), ...top("rank201_500", 15), ...top("speculative", 15)];
