@@ -134,7 +134,7 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
   const aiList = await sideFeed<AiWatchlist>("aiWatchlist", HOUR_MS, now, async () => parseAiWatchlist(await fetchJson(fetcher, AI_WATCHLIST_URL)));
   const BN = (cat: number) => `https://www.binance.com/bapi/composite/v1/public/cms/article/list/query?type=1&catalogId=${cat}&pageNo=1&pageSize=30`;
   const binance = await sideFeed<ExchangeNotice[]>("binanceNotices", 15 * 60_000, now, async () => [48, 161, 49].reduce<Promise<ExchangeNotice[]>>(async (acc, cat) => [...(await acc), ...parseBinanceNotices(await fetchJson(fetcher, BN(cat)))], Promise.resolve([])));
-  const upbit = await sideFeed<ExchangeNotice[]>("upbitNotices", 15 * 60_000, now, async () => parseUpbitNotices(await fetchJson(fetcher, "https://api-manager.upbit.com/api/v1/notices?page=1&per_page=30&thread_name=general")));
+  const upbit = await sideFeed<ExchangeNotice[]>("upbitNotices", 15 * 60_000, now, async () => parseUpbitNotices(await fetchJson(fetcher, "https://api-manager.upbit.com/api/v1/announcements?os=web&page=1&per_page=40&category=all")));
   const perps = await sideFeed("hyperliquid", 15 * 60_000, now, async () => {
     const r = await fetcher("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ type: "metaAndAssetCtxs" }), signal: AbortSignal.timeout(20_000) });
     if (!r.ok) throw new Error(`Hyperliquid HTTP ${r.status}`);
@@ -152,7 +152,7 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
   feeds.push(
     { name: "Speculative universe (501-1000)", ok: (spec?.value.length ?? 0) >= 300, detail: spec ? `${spec.value.length} coins` : "unavailable", at: spec ? iso(spec.at) : null },
     { name: "Mindshare (CoinGecko trending)", ok: Boolean(trending?.value.size), detail: trending ? `${trending.value.size} trending coins` : "unavailable", at: trending ? iso(trending.at) : null },
-    { name: "Exchange notices (Binance + Upbit)", ok: Boolean(binance && upbit), detail: `${binance?.value.length ?? "—"} Binance · ${upbit?.value.length ?? "—"} Upbit relevant notices`, at: binance ? iso(binance.at) : null },
+    { name: "Exchange notices (Binance + Upbit)", ok: Boolean(binance && upbit), detail: `Binance ${binance ? binance.value.length + " notices" : "unavailable (region-blocked?)"} · Upbit ${upbit ? upbit.value.length + " notices" : "unavailable"}`, at: binance ? iso(binance.at) : null },
     { name: "Leverage (Hyperliquid)", ok: Boolean(perps?.value.size), detail: perps ? `${perps.value.size} perps` : "unavailable", at: perps ? iso(perps.at) : null },
     { name: "Fear & Greed", ok: fng?.value != null, detail: fng?.value != null ? String(fng.value) : "unavailable", at: fng ? iso(fng.at) : null },
     { name: "Stablecoin yields (DefiLlama)", ok: Boolean(pools?.value.length), detail: pools ? `${pools.value.length} pools pass the filters` : "unavailable", at: pools ? iso(pools.at) : null },

@@ -18,6 +18,10 @@ describe("exchange notices", () => {
     const b = parseBinanceNotices({ data: { catalogs: [{ articles: [{ title: "Binance Will Delist AKRO, BLZ on 2026-10-20", releaseDate: now - 86_400_000 }, { title: "Binance Will List Foo (FOO)", releaseDate: now - 3_600_000 }] }] } });
     const u = parseUpbitNotices({ data: { list: [{ title: "[거래] 아크로폴리스(AKRO) 거래지원 종료 안내", created_at: "2026-10-11T10:00:00+09:00" }, { title: "[주의] 블루젤리(BLZ) 유의 종목 지정 해제", created_at: "2026-10-11T10:00:00+09:00" }] } });
     expect(u.map((n) => [n.kind, n.symbols])).toEqual([["DELIST", ["AKRO"]]]);
+    // current endpoint (api/v1/announcements): data.notices with English titles and listed_at
+    const en = parseUpbitNotices({ data: { notices: [{ title: "Market Support for Reserve Rights(RSR) (KRW, USDT Market)", listed_at: "2026-10-12T13:54:09+09:00" }, { title: "End of Trading Support for Foo(FOO)", listed_at: "2026-10-12T10:00:00+09:00" }, { title: "Temporary Suspension of FIL Deposits and Withdrawals", listed_at: "2026-10-12T11:00:00+09:00" }] } });
+    expect(en.map((n) => [n.kind, n.symbols])).toEqual([["LISTING", ["RSR"]], ["DELIST", ["FOO"]]]);
+    expect(classifyBinanceTitle("Binance Alpha Will Remove SUP, CUDIS (2026-10-09)")).toBeNull();
     const by = noticesBySymbol([...b, ...u], now);
     expect([by.get("AKRO")?.kind, by.get("FOO")?.kind, by.get("BLZ")?.kind]).toEqual(["DELIST", "LISTING", "DELIST"]);
   });

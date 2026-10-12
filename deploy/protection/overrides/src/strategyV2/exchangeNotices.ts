@@ -45,7 +45,9 @@ export function parseUpbitNotices(raw: unknown): ExchangeNotice[] {
   for (const n of list) {
     const title = clean(n?.title), at = Date.parse(String(n?.created_at ?? n?.listed_at ?? ""));
     if (!Number.isFinite(at)) continue;
-    const kind: NoticeKind | null = /거래지원 종료|delist/i.test(title) ? "DELIST" : /유의\s*종목|투자유의|caution/i.test(title) ? (/해제/.test(title) ? null : "CAUTION") : /신규 거래지원|디지털 자산 추가|new listing/i.test(title) ? "LISTING" : null;
+    const kind: NoticeKind | null = /거래지원 종료|(end|termination) of (trading|market) support|delist/i.test(title) ? "DELIST"
+      : /유의\s*종목|투자유의|caution|investment warning/i.test(title) ? (/해제|release|lift/i.test(title) ? null : "CAUTION")
+      : /신규 거래지원|디지털 자산 추가|market support for|new listing/i.test(title) ? "LISTING" : null;
     if (!kind) continue;
     const symbols = tickersIn(title);
     if (symbols.length) out.push({ kind, exchange: "Upbit", symbols, title, at: new Date(at).toISOString() });
