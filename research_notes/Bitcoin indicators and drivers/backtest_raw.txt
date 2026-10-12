@@ -1,0 +1,11 @@
+Period 520 days after 200-day warmup; BTC buy&hold -20.2% maxDD -53.1%; fees+slippage 0.36%/trade
+Rule                                           total%  Sharpe  maxDD%  trades
+Price > 50D SMA                                   1.2   0.16   -29.2    35
+Price > 200D SMA                                 12.6   0.47   -21.1     9
+20/50 SMA cross                                   1.0   0.16   -33.7    15
+Donchian 20D breakout (exit 10D low)            -26.3  -0.78   -39.9    20
+RSI 14 >50                                      -10.7  -0.17   -33.9    72
+MACD > signal                                   -19.4  -0.43   -29.0    46
+SuperTrend (10,3)                               -11.4  -0.23   -37.4    15
+Bollinger mean-revert (buy <lower, exit >mid)   -21.9  -0.54   -39.9    18
+Bollinger breakout (buy >upper, exit <mid)      -29.7  -1.29   -38.2    24
