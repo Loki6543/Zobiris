@@ -850,3 +850,40 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
   .zobiris-dashboard .strategy-pill{white-space:normal;}
   .zobiris-dashboard .strategy-candidates li{flex-wrap:wrap;}
 }
+
+/* Portfolio in 3D (CSS 3D transforms) */
+.zobiris-dashboard .p3d{position:relative;overflow:hidden;background:radial-gradient(120% 90% at 50% 10%,#16306b 0%,#0b1630 55%,#070f22 100%) !important;}
+.zobiris-dashboard .p3d-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;position:relative;z-index:2;}
+.zobiris-dashboard .p3d-head h2{margin:0 0 4px;}
+.zobiris-dashboard .p3d-total{font-size:24px;color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 18px rgba(96,165,250,.55);}
+.zobiris-dashboard .p3d-stage{height:380px;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none;}
+.zobiris-dashboard .p3d-stage:active{cursor:grabbing;}
+.zobiris-dashboard .p3d-stage svg{width:100%;height:100%;display:block;overflow:visible;}
+.zobiris-dashboard .p3d-grid{stroke:rgba(147,180,245,.13);stroke-width:1;fill:none;}
+.zobiris-dashboard .p3d-bar{cursor:pointer;}
+.zobiris-dashboard .p3d-bar polygon{stroke:rgba(255,255,255,.14);stroke-width:.8;stroke-linejoin:round;}
+.zobiris-dashboard .p3d-bar .p3d-glow{stroke:none;opacity:.55;}
+.zobiris-dashboard .p3d-bar .p3d-top{stroke:rgba(255,255,255,.45);}
+.zobiris-dashboard .p3d-bar.is-cash polygon{fill-opacity:.62;}
+.zobiris-dashboard .p3d-bar.is-selected .p3d-top{stroke:#fff;stroke-width:2;}
+.zobiris-dashboard .p3d-bar.is-selected .p3d-glow{opacity:1;}
+.zobiris-dashboard .p3d-text{fill:#fff;font:700 12px Inter,system-ui,sans-serif;text-anchor:middle;paint-order:stroke;stroke:#050b1a;stroke-width:3px;pointer-events:none;}
+.zobiris-dashboard .p3d-legend{display:flex;flex-wrap:wrap;gap:6px;position:relative;z-index:2;}
+.zobiris-dashboard .p3d-legend button{border:1px solid #24418a;background:#10224a;color:#cbd6ec;border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer;}
+.zobiris-dashboard .p3d-legend button.is-gain{border-color:#15803d;}
+.zobiris-dashboard .p3d-legend button.is-loss{border-color:#9f1239;}
+.zobiris-dashboard .p3d-legend button[aria-pressed="true"]{background:#2563eb !important;color:#fff !important;border-color:#60a5fa !important;box-shadow:0 0 14px rgba(37,99,235,.6);}
+.zobiris-dashboard .p3d-detail{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:12px;position:relative;z-index:2;}
+.zobiris-dashboard .p3d-detail>div{display:grid;gap:3px;padding:10px 12px;border:1px solid #24418a;border-radius:12px;background:rgba(16,34,74,.7);}
+.zobiris-dashboard .p3d-detail strong{color:#fff;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .p3d .is-gain{color:var(--zv-green);}
+.zobiris-dashboard .p3d .is-loss{color:var(--zv-red);}
+@media(max-width:640px){.zobiris-dashboard .p3d-stage{height:250px;margin:-6px -8px 0;}}
+
+/* Tilting depth cards (mouse/pen only; see useTiltCards) */
+.zobiris-dashboard .dashboard-metric,.zobiris-dashboard .strategy-kpis>article,.zobiris-dashboard .p3d-detail>div{
+  position:relative;transform:perspective(800px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .35s ease,box-shadow .35s ease;
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 24px -14px rgba(0,0,0,.8);will-change:transform;}
+.zobiris-dashboard .is-tilting{transition:transform .06s linear,box-shadow .2s ease;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 22px 40px -18px rgba(37,99,235,.55) !important;}
+.zobiris-dashboard .is-tilting::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.12),transparent 55%);}
+@media (prefers-reduced-motion:reduce){.zobiris-dashboard .dashboard-metric,.zobiris-dashboard .strategy-kpis>article,.zobiris-dashboard .p3d-detail>div{transform:none;transition:none;}}

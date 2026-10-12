@@ -4,7 +4,7 @@ import {entryReference,validateEntry,type EntryRules} from '../shared/entryPlan'
 import { WatchlistPage } from './WatchlistPage';
 import { StrategyPage } from './StrategyPage';
 import { MarketBrief } from './MarketBrief';
-import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   MANEUVER_CAPITAL_USD,
   PROBE_MAX_USD,
@@ -22,6 +22,8 @@ const LEARNING_RULES = [
 ];
 
 import { PortfolioVisuals } from "./PortfolioVisuals";
+import { Portfolio3D } from "./Portfolio3D";
+import { useTiltCards } from "./useTiltCards";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
@@ -488,6 +490,8 @@ export function App() {
     return { ...holding, livePrice, value, upl, action: displayedAction, asset, priceAvailable, longTermProtected };
   }), [assetMap, snapshotFresh, nowMs, account, instrumentRules]);
 
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  useTiltCards(dashboardRef, ".dashboard-metric, .strategy-kpis > article, .p3d-detail > div");
   const invested = portfolioRows.reduce((sum, row) => sum + row.value, 0);
   const total = LIVE_CASH_USD + invested;
   const reservedBuys = LIVE_OPEN_ORDERS.filter((order) => order.side === "BUY").reduce((sum, order) => sum + order.amountUsd, 0);
@@ -808,7 +812,7 @@ export function App() {
   }
 
   return (
-    <div className="zobiris-dashboard" style={styles.page}>
+    <div ref={dashboardRef} className="zobiris-dashboard" style={styles.page}>
       <header className="dashboard-topbar" style={styles.header}>
         <div className="dashboard-topbar-heading">
           <div className="dashboard-mobile-brand" aria-label="ZOBIRIS CORE"><span className="brand-mark" aria-hidden="true">Z</span><strong>ZOBIRIS</strong></div>
@@ -892,6 +896,7 @@ export function App() {
             <Metric label="Maneuver capital" value={accountSynced ? money(MANEUVER_CAPITAL_USD) : "Private"} note={accountSynced ? "Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD) : "Unlock to view capital limits"} />
           </section>
 
+          <Portfolio3D rows={portfolioRows} cash={LIVE_CASH_USD} accountSynced={accountSynced} />
           <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
           <ProfitProtection operatorToken={operatorToken} />
           <section className="dashboard-panel" style={styles.card}>
