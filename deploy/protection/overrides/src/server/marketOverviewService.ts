@@ -1,6 +1,6 @@
 // Public market data for the Portfolio, Market Today and Watchlist pages. Free, keyless sources only:
 //   CoinGecko markets (shared with Strategy v2) + /global, alternative.me Fear & Greed, Kraken daily OHLC.
-import { fetchCoinGeckoGlobal, fetchFearGreed, fetchCoinGeckoTop500, fetchKrakenDailyCandles, type Candle, type FetchLike, type MarketCoin } from "../strategyV2/feed.js";
+import { fetchCoinGeckoGlobal, fetchCoinGeckoSectors, fetchFearGreed, fetchCoinGeckoTop500, fetchKrakenDailyCandles, type Candle, type FetchLike, type MarketCoin } from "../strategyV2/feed.js";
 import { technicalRead } from "../strategyV2/indicators.js";
 import { getKrakenPairs, getLatestBtcCandles, getLatestMarket, krakenSlot } from "./strategyV2Service.js";
 
@@ -13,6 +13,7 @@ interface Cached<T> { value: T; at: number }
 let globalStats: Cached<Awaited<ReturnType<typeof fetchCoinGeckoGlobal>>> | null = null;
 let fearGreed: Cached<Awaited<ReturnType<typeof fetchFearGreed>>> | null = null;
 let ownMarket: Cached<MarketCoin[]> | null = null;
+let sectors: Cached<Awaited<ReturnType<typeof fetchCoinGeckoSectors>>> | null = null;
 const coinCandles = new Map<string, Cached<Candle[]>>();
 const inflight = new Map<string, Promise<Candle[] | null>>();
 const fresh = <T>(c: Cached<T> | null | undefined, ttl: number, now = Date.now()): c is Cached<T> => Boolean(c && now - c.at < ttl);
@@ -65,6 +66,7 @@ export async function getMarketOverview(symbolsRaw: string | null, fetcher: Fetc
 
   if (!fresh(globalStats, FAST_TTL_MS)) { try { globalStats = { value: await fetchCoinGeckoGlobal(fetcher), at: Date.now() }; } catch { /* keep last */ } }
   if (!fresh(fearGreed, FAST_TTL_MS)) { try { fearGreed = { value: await fetchFearGreed(fetcher), at: Date.now() }; } catch { /* keep last */ } }
+  if (!fresh(sectors, FAST_TTL_MS)) { try { sectors = { value: await fetchCoinGeckoSectors(fetcher), at: Date.now() }; } catch { /* keep last */ } }
   const btc = (await candlesFor("BTC", fetcher)) ?? [];
   const closes = btc.map((c) => c.close);
   return {
@@ -72,8 +74,9 @@ export async function getMarketOverview(symbolsRaw: string | null, fetcher: Fetc
     quotes,
     global: globalStats?.value ?? null,
     fearGreed: fearGreed?.value ?? [],
+    sectors: sectors?.value ?? [],
     btc: { candles: btc.slice(-365).map((c) => ({ t: c.time, o: c.open, h: c.high, l: c.low, c: c.close, v: c.volume })), technicals: technicalRead(closes) },
-    sources: ["CoinGecko /coins/markets + /global", "alternative.me Fear & Greed", "Kraken public daily OHLC"],
+    sources: ["CoinGecko /coins/markets + /global + /coins/categories", "alternative.me Fear & Greed", "Kraken public daily OHLC"],
   };
 }
 

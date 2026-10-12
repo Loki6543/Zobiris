@@ -22,6 +22,9 @@ const LEARNING_RULES = [
 
 import { Portfolio3D } from "./Portfolio3D";
 import { EnginePage } from "./EnginePage";
+import { DashboardPage } from "./DashboardPage";
+import { CoinSearch, DailyEdge, TopbarTicker, markDailyEdge, readDailyEdge } from "./DashboardChrome";
+import { CMC_WATCHLIST } from "../strategyV2/watchlist";
 import { PortfolioOverview } from "./PortfolioOverview";
 import { MarketToday, type MarketOverview } from "./MarketToday";
 import { WatchlistInsights } from "./WatchlistInsights";
@@ -32,8 +35,9 @@ import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "engine" | "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
+type View = "dashboard" | "engine" | "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
 const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
+  dashboard: { title: "Dashboard", description: "Market mood, your watchlist decisions and today's engine signals." },
   engine: { title: "Zobiris Engine", description: "What the engine sees right now: Bitcoin regime, rotation, small-cap survival and your watchlist decisions." },
   strategy: { title: "Opportunities", description: "Bitcoin direction, top-100 rotation entries and small-cap bets for your watchlist." },
   portfolio: { title: "Portfolio", description: "Your holdings, allocation and trading decisions at a glance." },
@@ -302,9 +306,14 @@ export function App() {
   });
   const [view, setViewState] = useState<View>(() => {
     try { const v = localStorage.getItem("zobiris.view.v1"); if (v && v in PAGE_HEADINGS) return v as View; } catch { /* storage blocked */ }
-    return "engine";
+    return "dashboard";
   });
-  const setView = (next: View) => { setViewState(next); try { localStorage.setItem("zobiris.view.v1", next); } catch { /* storage blocked */ } };
+  const [edgeDone, setEdgeDone] = useState<string[]>(() => { markDailyEdge(view); return readDailyEdge(); });
+  const setView = (next: View) => {
+    setViewState(next);
+    try { localStorage.setItem("zobiris.view.v1", next); } catch { /* storage blocked */ }
+    markDailyEdge(next); setEdgeDone(readDailyEdge());
+  };
   const [showAllRankings, setShowAllRankings] = useState(false);
   const [analysisSymbol, setAnalysisSymbol] = useState("BTC");
   const [snapshot, setSnapshot] = useState<any>(null);
@@ -819,6 +828,12 @@ export function App() {
     setRecordOpen(false);
   }
 
+  const searchCoins = useMemo(() => {
+    const seen = new Map<string, string>();
+    CMC_WATCHLIST.forEach((w) => seen.set(w.symbol, w.name));
+    [...portfolioRows, ...watchlistRankings].forEach((r) => { if (!seen.has(r.symbol)) seen.set(r.symbol, r.symbol); });
+    return [...seen].map(([symbol, name]) => ({ symbol, name }));
+  }, [portfolioRows, watchlistRankings]);
   const overviewSymbols = useMemo(() => [...new Set([...portfolioRows.map((r) => r.symbol), ...watchlistRankings.map((r) => r.symbol)])].sort().join(","), [portfolioRows, watchlistRankings]);
   const { data: marketOverviewRaw } = useApi<MarketOverview>(`/api/market-overview?symbols=${encodeURIComponent(overviewSymbols)}`, 5 * 60_000);
   const marketOverview = marketOverviewRaw && typeof marketOverviewRaw.quotes === "object" && marketOverviewRaw.quotes && marketOverviewRaw.btc ? marketOverviewRaw : null;
@@ -831,6 +846,8 @@ export function App() {
           <p>{PAGE_HEADINGS[view].description}</p>
         </div>
         <div className="dashboard-topbar-right">
+          <CoinSearch coins={searchCoins} onPick={(symbol) => { setAnalysisSymbol(symbol); setView("compare"); }} />
+          <TopbarTicker quotes={marketOverview?.quotes ?? {}} />
           <span className="dashboard-asof" title={snapshotFresh ? "Market data current" : "Market data needs refresh"}>
             <span className={snapshotFresh ? "sidebar-market-dot" : "sidebar-market-dot is-stale"} aria-hidden="true"></span>
             {Number.isFinite(snapshotMs) ? utcStamp(snapshotMs) : "Time unavailable"}
@@ -878,6 +895,7 @@ export function App() {
           <strong>ZOBIRIS</strong>
         </div>
         {([
+          ["dashboard", "Dashboard"],
           ["engine", "Engine"],
           ["portfolio", "Portfolio"],
           ["strategy", "Opportunities"],
@@ -891,6 +909,7 @@ export function App() {
             <DashboardIcon name={key} />{label}
           </button>
         ))}
+        <DailyEdge done={edgeDone} onOpen={(v) => setView(v as View)} />
         <div className="dashboard-sidebar-bottom"><span className={snapshotFresh ? "sidebar-market-dot" : "sidebar-market-dot is-stale"} aria-hidden="true"></span>{snapshotFresh ? "Market data current" : "Market data needs refresh"}</div>
       </nav>
 
@@ -1064,6 +1083,7 @@ export function App() {
                   </main>
       ) : null}
 
+      {view === "dashboard" ? <DashboardPage onOpen={setView} onAnalyze={(symbol) => { setAnalysisSymbol(symbol); setView("compare"); }} /> : null}
       {view === "engine" ? <EnginePage cashUsd={LIVE_CASH_USD} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, value: row.value }))} onOpen={setView} /> : null}
       {view === "strategy" ? <StrategyPage portfolioUsd={total} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, quantity: row.quantity, avgPriceUsd: row.avgPriceUsd ?? null, value: row.value }))} /> : null}
 
@@ -1371,6 +1391,7 @@ function DashboardIcon({name}: {name: string}) {
     lock: "M7 10V7a5 5 0 0 1 10 0v3M6 10h12v11H6ZM12 14v3",
     refresh: "M20 7a9 9 0 1 0 1 8M20 3v5h-5",
     strategy: "M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
+    dashboard: "M4 13h6V4H4ZM14 20h6v-9h-6ZM14 4h6v4h-6ZM4 20h6v-4H4Z",
     engine: "M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
   };
   return <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.portfolio}/></svg>;

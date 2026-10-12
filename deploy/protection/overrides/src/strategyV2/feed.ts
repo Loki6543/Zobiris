@@ -146,4 +146,24 @@ export function parseFearGreed(raw: unknown): Array<{ time: number; value: numbe
 }
 
 export const fetchCoinGeckoGlobal = async (fetcher: FetchLike) => parseCoinGeckoGlobal(await getJson(fetcher, "https://api.coingecko.com/api/v3/global"));
-export const fetchFearGreed = async (fetcher: FetchLike) => parseFearGreed(await getJson(fetcher, "https://api.alternative.me/fng/?limit=30"));
+export const fetchFearGreed = async (fetcher: FetchLike) => parseFearGreed(await getJson(fetcher, "https://api.alternative.me/fng/?limit=90"));
+
+/** Sectors shown on the dashboard: CoinGecko category id -> short label. */
+export const DASHBOARD_SECTORS: Array<[string, string]> = [
+  ["artificial-intelligence", "AI"], ["depin", "DePIN"], ["layer-1", "Layer 1"], ["layer-2", "Layer 2"],
+  ["decentralized-finance-defi", "DeFi"], ["meme-token", "Memecoins"], ["gaming", "Gaming"], ["real-world-assets-rwa", "RWA"],
+];
+
+/** CoinGecko /coins/categories, reduced to the dashboard sectors. A >25% daily move in a sector's total
+ *  market cap almost always means CoinGecko changed which coins are in it, so that figure is marked unreliable. */
+export function parseCoinGeckoSectors(raw: unknown): Array<{ id: string; label: string; marketCapUsd: number | null; change24hPct: number | null; reliable: boolean }> {
+  if (!Array.isArray(raw)) throw new Error("CoinGecko categories: expected an array");
+  const byId = new Map((raw as any[]).filter((c) => c && typeof c.id === "string").map((c) => [c.id as string, c]));
+  return DASHBOARD_SECTORS.flatMap(([id, label]) => {
+    const c = byId.get(id);
+    if (!c) return [];
+    const ch = num(c.market_cap_change_24h);
+    return [{ id, label, marketCapUsd: num(c.market_cap), change24hPct: ch, reliable: ch != null && Math.abs(ch) <= 25 }];
+  });
+}
+export const fetchCoinGeckoSectors = async (fetcher: FetchLike) => parseCoinGeckoSectors(await getJson(fetcher, "https://api.coingecko.com/api/v3/coins/categories"));
