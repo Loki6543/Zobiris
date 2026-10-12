@@ -5,6 +5,7 @@ import { screenSmallCap, type SmallCapScreenResult } from "./smallCapScreen";
 import { planBarbell, type BarbellPlan, type SpeculativePosition } from "./barbell";
 import type { MarketCoin } from "./feed";
 import type { WatchlistEntry } from "./watchlist";
+import { verifiedUnlockShare } from "./unlockOverrides";
 
 export type Tier = "TOP_100" | "RANK_101_500" | "OUTSIDE_STRATEGY";
 
@@ -88,7 +89,7 @@ export function smallCapInputFor(c: MarketCoin, inputs: ReportInputs, btc30: num
     krakenListed: inputs.krakenPairs.has(c.symbol), change30dPct: c.change30dPct, change90dPct: c.change200dPct,
     btcChange30dPct: btc30, drawdownFromAthPct: c.athChangePct,
     priceAboveSma50: closes && s50 != null ? closes[closes.length - 1]! > s50 : null,
-    unlockShareNext60d: null,
+    unlockShareNext60d: verifiedUnlockShare(c.symbol, inputs.now)?.share60d ?? null,
     unlockedSupplyShare: c.circulatingSupply != null && minted > 0 ? Math.min(1, c.circulatingSupply / minted) : null,
     priceUsd: c.priceUsd, change7dPct: c.change7dPct,
   };

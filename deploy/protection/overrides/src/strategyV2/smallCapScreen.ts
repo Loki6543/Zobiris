@@ -85,6 +85,7 @@ export function screenSmallCap(a: SmallCapInput, regime: Pick<BtcRegime, "allowS
     else if (a.unlockedSupplyShare < r.minUnlockedSupplyShareProxy) rejections.push("UNLOCK_RISK_TOO_MUCH_SUPPLY_LOCKED");
     else notes.push("UNLOCK_RISK_FROM_SUPPLY_PROXY");
   } else if (a.unlockShareNext60d > r.maxUnlockShare60d) rejections.push("LARGE_UNLOCK_WITHIN_60D");
+  else notes.push("UNLOCK_SCHEDULE_VERIFIED");
   if (!finite(a.ageDays) || a.ageDays < r.minAgeDays) rejections.push("TOO_NEW_UNPROVEN_SURVIVAL");
   if (!finite(a.drawdownFromAthPct) || !finite(a.change30dPct) || !finite(a.change90dPct) || a.priceAboveSma50 == null) rejections.push("PRICE_HISTORY_INCOMPLETE");
 

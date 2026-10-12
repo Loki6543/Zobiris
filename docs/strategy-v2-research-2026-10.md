@@ -95,6 +95,8 @@ Example with the current ~$930 portfolio: the sleeve is about $93 and each bet a
 
 **Unlock schedules:** DefiLlama's emissions API is paid (HTTP 402), and Tokenomist is paid. The free proxy is **circulating ÷ minted (total) supply ≥ 75%**. If at least three quarters of the minted supply already circulates, a 60-day unlock cannot exceed about 5–8% of float. Together with market cap/FDV ≥ 0.4, this rejects the heavy-unlock names. Unmined emission (e.g. DASH) is not treated as an unlock.
 
+**Verified unlocks (`strategyV2/unlockOverrides.ts`):** for watchlist candidates, unlock schedules were checked by hand on 12 Oct 2026 against Tokenomist, Blockworks, Kresmion and project docs. Next-60-day new supply: TIA about 1.7%, PENGU about 1.6% (CoinGecko's PENGU circulating supply is stale; on-chain team and company releases are about 520M a month), CHZ about 1.2% (protocol inflation only), and 0% for APE, BONK and COMP (fully vested). A fresh entry replaces the supply proxy. After 45 days it expires, and the screen falls back to the proxy until the entry is re-checked.
+
 **Matching CMC symbols to CoinGecko:** exact ticker first. A ticker held by a different coin whose rank is more than 150 places away is refused (e.g. UNT). Duplicate tickers are resolved by name, then by nearest rank. Coins outside CoinGecko's top 500 show "No free data", and coins ranked above 500 show "Outside strategy".
 
 Set `ZOBIRIS_STRATEGY_V2_FEED=0` to turn the background feed off.

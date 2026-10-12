@@ -5,6 +5,7 @@ import { buildStrategyReport, matchCoin, tierFor } from "../strategyV2/report";
 import { screenSmallCap } from "../strategyV2/smallCapScreen";
 import { historyCandidates } from "../server/strategyV2Service";
 import { CMC_WATCHLIST } from "../strategyV2/watchlist";
+import { verifiedUnlockShare } from "../strategyV2/unlockOverrides";
 
 const coin = (o: Partial<MarketCoin> & { symbol: string; rank: number }): MarketCoin => ({
   geckoId: o.symbol.toLowerCase(), name: o.symbol, priceUsd: 2, marketCapUsd: 300e6, fdvUsd: 330e6, volume24hUsd: 15e6,
@@ -69,6 +70,14 @@ describe("small-cap free-data proxies", () => {
     expect(screenSmallCap({ ...input, unlockedSupplyShare: 0.9 }, regimeOn).notes).toContain("UNLOCK_RISK_FROM_SUPPLY_PROXY");
     expect(screenSmallCap({ ...input, unlockedSupplyShare: 0.5 }, regimeOn).rejections).toContain("UNLOCK_RISK_TOO_MUCH_SUPPLY_LOCKED");
     expect(screenSmallCap(input, regimeOn).rejections).toContain("UNLOCK_SCHEDULE_UNKNOWN");
+  });
+  it("prefers a fresh verified unlock schedule and expires stale ones", () => {
+    const now = Date.parse("2026-10-20T00:00:00Z");
+    expect(verifiedUnlockShare("tia", now)?.share60d).toBe(0.017);
+    expect(verifiedUnlockShare("TIA", Date.parse("2027-01-15T00:00:00Z"))).toBeNull();
+    expect(verifiedUnlockShare("NOPE", now)).toBeNull();
+    expect(screenSmallCap({ ...input, unlockShareNext60d: 0.017 }, regimeOn).notes).toContain("UNLOCK_SCHEDULE_VERIFIED");
+    expect(screenSmallCap({ ...input, unlockShareNext60d: 0.09 }, regimeOn).rejections).toContain("LARGE_UNLOCK_WITHIN_60D");
   });
   it("rejects stablecoins", () => {
     const r = screenSmallCap({ ...input, unlockedSupplyShare: 1, priceUsd: 1.0, change7dPct: 0.1, change30dPct: 0.2 }, regimeOn);
