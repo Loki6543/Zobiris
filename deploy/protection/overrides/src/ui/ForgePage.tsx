@@ -26,7 +26,7 @@ function MixBar({ mix, label }: { mix: Mix; label: string }) {
   );
 }
 
-function OpeningCard({ c }: { c: OpeningCandidate }) {
+export function OpeningCard({ c }: { c: OpeningCandidate }) {
   const [open, setOpen] = useState(false);
   return (
     <article className={`forge-card verdict-${c.verdict.toLowerCase()}`}>
@@ -56,6 +56,7 @@ function OpeningCard({ c }: { c: OpeningCandidate }) {
       {open ? <div className="forge-why">
         {c.legitimacy.points.length ? <ul>{c.legitimacy.points.map((p) => <li key={p.label}><span>{p.label}</span><b className={p.points >= 0 ? "is-gain" : "is-loss"}>{p.points > 0 ? "+" : ""}{p.points}</b></li>)}</ul> : null}
         {c.legitimacy.redFlags.length ? <p>Red flags: {c.legitimacy.redFlags.map((r) => r.replaceAll("_", " ").toLowerCase()).join(", ")}</p> : null}
+        {c.holders ? <p className="forge-holders">Holder map: top-10 clusters {c.holders.top10AdjustedPct?.toFixed(0) ?? "—"}% · bundles {c.holders.bundlesPct?.toFixed(0) ?? "—"}% · fresh wallets {c.holders.freshWalletsPct?.toFixed(0) ?? "—"}% · on exchanges {c.holders.cexPct?.toFixed(0) ?? "—"}% · Nakamoto {c.holders.nakamoto ?? "—"} · score {c.holders.score?.toFixed(0) ?? "—"}/100 · <a href={c.holders.url} target="_blank" rel="noopener noreferrer">open on Bubblemaps</a></p> : null}
         {c.ai?.redFlags.length ? <p>Claude red flags: {c.ai.redFlags.join("; ")}</p> : null}
         {c.ai?.sources.length ? <p>Sources: {c.ai.sources.map((s, k) => <a key={s} href={s} target="_blank" rel="noopener noreferrer">[{k + 1}]</a>)}</p> : null}
       </div> : null}

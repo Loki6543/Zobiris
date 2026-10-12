@@ -5,6 +5,8 @@
 // Contract red flags veto a small bet; softer findings are shown as warnings. Native coins (own chain) have no
 // token contract to check and are marked NATIVE.
 
+import type { HolderMap } from "./bubblemaps";
+
 /** Public project profile from CoinGecko, used for the legitimacy score. */
 export interface CoinProfile {
   whitepaper: string | null; homepage: string | null; twitter: string | null; telegram: string | null; discord: string | null;
@@ -119,4 +121,4 @@ export function parseGithubParticipation(raw: unknown): number | null {
   return Array.isArray(all) && all.length >= 12 ? all.slice(-12).reduce((s: number, v: unknown) => s + (Number(v) || 0), 0) : null;
 }
 
-export interface Diligence { geckoId: string; security: SecurityResult; commits12w: number | null; repo: string | null; checkedAt: string; profile?: CoinProfile | null }
+export interface Diligence { geckoId: string; security: SecurityResult; commits12w: number | null; repo: string | null; checkedAt: string; profile?: CoinProfile | null; contract?: string | null; holders?: HolderMap | null }

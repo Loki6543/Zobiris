@@ -3,7 +3,7 @@
 import { fetchCoinGeckoTop500, fetchKrakenDailyCandles, fetchKrakenDailyCloses, fetchKrakenUsdPairs, fetchPaprikaFirstSeen, type Candle, type FetchLike, type MarketCoin } from "../strategyV2/feed.js";
 import { buildStrategyReport, smallCapInputFor, tierFor, type FeedStatus, type ReportInputs, type StrategyReport } from "../strategyV2/report.js";
 import { screenSmallCap } from "../strategyV2/smallCapScreen.js";
-import { getDiligence } from "./diligenceService.js";
+import { getDiligence, holderMapsConfigured } from "./diligenceService.js";
 import { ledgerStatus, recordReport } from "./ledgerService.js";
 import { CMC_WATCHLIST } from "../strategyV2/watchlist.js";
 import { SMALL_CAP_RULES } from "../strategyV2/smallCapScreen.js";
@@ -172,6 +172,9 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
   feeds.push({ name: "Legitimacy scans", ok: legit >= openingIds.length, detail: `${legit} of ${openingIds.length} openings scanned (24h cache, 20 per refresh)`, at: iso(now) });
   feeds.push({ name: "Contract scans", ok: scanned.every((d) => d.security.status !== "UNCHECKED") && scanned.length >= forDiligence.length,
     detail: `${scanned.length} of ${forDiligence.length} candidates · ${scanned.filter((d) => d.security.status === "FAIL").length} failed`, at: iso(now) });
+  const mapped = [...diligence.values()].filter((d) => d.holders).length;
+  feeds.push({ name: "Bubblemaps holder maps", ok: holderMapsConfigured() ? mapped > 0 || diligence.size === 0 : true,
+    detail: holderMapsConfigured() ? `${mapped} of ${diligence.size} scanned coins mapped` : "not configured (optional paid feed) — GoPlus top-10 used", at: iso(now) });
   const value = buildStrategyReport({ ...inputs, diligence });
   report = { value, at: now };
   // The ledger keeps one report per UTC day, so it waits for a report whose key feeds are healthy; after 12:00 UTC it
