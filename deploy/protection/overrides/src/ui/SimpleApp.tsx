@@ -4,10 +4,9 @@ import {entryReference,validateEntry,type EntryRules} from '../shared/entryPlan'
 import { WatchlistPage } from './WatchlistPage';
 import { StrategyPage } from './StrategyPage';
 import { MarketBrief } from './MarketBrief';
-import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   MANEUVER_CAPITAL_USD,
-  PROBE_MAX_USD,
   PROBE_TYPICAL_USD,
   type HoldingSeed,
   type OrderSeed,
@@ -21,14 +20,25 @@ const LEARNING_RULES = [
   { title: "Limit-order discipline gets extra weight", detail: "New-position ideas default to reviewed limits rather than implied market orders." },
 ];
 
-import { PortfolioVisuals } from "./PortfolioVisuals";
+import { Portfolio3D } from "./Portfolio3D";
+import { EnginePage } from "./EnginePage";
+import { DashboardPage } from "./DashboardPage";
+import { CoinSearch, DailyEdge, TopbarTicker, markDailyEdge, readDailyEdge } from "./DashboardChrome";
+import { CMC_WATCHLIST } from "../strategyV2/watchlist";
+import { PortfolioOverview } from "./PortfolioOverview";
+import { MarketToday, type MarketOverview } from "./MarketToday";
+import { WatchlistInsights } from "./WatchlistInsights";
+import { Sparkline, useApi } from "./charts";
+import { useTiltCards } from "./useTiltCards";
 import { ProfitProtection } from "./ProfitProtection";
 import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
+type View = "dashboard" | "engine" | "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
 const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
+  dashboard: { title: "Dashboard", description: "Market mood, your watchlist decisions and today's engine signals." },
+  engine: { title: "Zobiris Engine", description: "What the engine sees right now: Bitcoin regime, rotation, small-cap survival and your watchlist decisions." },
   strategy: { title: "Opportunities", description: "Bitcoin direction, top-100 rotation entries and small-cap bets for your watchlist." },
   portfolio: { title: "Portfolio", description: "Your holdings, allocation and trading decisions at a glance." },
   market: { title: "Market Today", description: "Verified Bitcoin market conditions, trend and technical analysis." },
@@ -294,7 +304,16 @@ export function App() {
     try { return window.sessionStorage.getItem("zobiris.operatorToken.v1") ?? ""; }
     catch { return ""; }
   });
-  const [view, setView] = useState<View>("portfolio");
+  const [view, setViewState] = useState<View>(() => {
+    try { const v = localStorage.getItem("zobiris.view.v1"); if (v && v in PAGE_HEADINGS) return v as View; } catch { /* storage blocked */ }
+    return "dashboard";
+  });
+  const [edgeDone, setEdgeDone] = useState<string[]>(() => { markDailyEdge(view); return readDailyEdge(); });
+  const setView = (next: View) => {
+    setViewState(next);
+    try { localStorage.setItem("zobiris.view.v1", next); } catch { /* storage blocked */ }
+    markDailyEdge(next); setEdgeDone(readDailyEdge());
+  };
   const [showAllRankings, setShowAllRankings] = useState(false);
   const [analysisSymbol, setAnalysisSymbol] = useState("BTC");
   const [snapshot, setSnapshot] = useState<any>(null);
@@ -488,6 +507,8 @@ export function App() {
     return { ...holding, livePrice, value, upl, action: displayedAction, asset, priceAvailable, longTermProtected };
   }), [assetMap, snapshotFresh, nowMs, account, instrumentRules]);
 
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  useTiltCards(dashboardRef, ".dashboard-metric, .strategy-kpis > article, .p3d-detail > div");
   const invested = portfolioRows.reduce((sum, row) => sum + row.value, 0);
   const total = LIVE_CASH_USD + invested;
   const reservedBuys = LIVE_OPEN_ORDERS.filter((order) => order.side === "BUY").reduce((sum, order) => sum + order.amountUsd, 0);
@@ -807,8 +828,17 @@ export function App() {
     setRecordOpen(false);
   }
 
+  const searchCoins = useMemo(() => {
+    const seen = new Map<string, string>();
+    CMC_WATCHLIST.forEach((w) => seen.set(w.symbol, w.name));
+    [...portfolioRows, ...watchlistRankings].forEach((r) => { if (!seen.has(r.symbol)) seen.set(r.symbol, r.symbol); });
+    return [...seen].map(([symbol, name]) => ({ symbol, name }));
+  }, [portfolioRows, watchlistRankings]);
+  const overviewSymbols = useMemo(() => [...new Set([...portfolioRows.map((r) => r.symbol), ...watchlistRankings.map((r) => r.symbol)])].sort().join(","), [portfolioRows, watchlistRankings]);
+  const { data: marketOverviewRaw } = useApi<MarketOverview>(`/api/market-overview?symbols=${encodeURIComponent(overviewSymbols)}`, 5 * 60_000);
+  const marketOverview = marketOverviewRaw && typeof marketOverviewRaw.quotes === "object" && marketOverviewRaw.quotes && marketOverviewRaw.btc ? marketOverviewRaw : null;
   return (
-    <div className="zobiris-dashboard" style={styles.page}>
+    <div ref={dashboardRef} className="zobiris-dashboard" style={styles.page}>
       <header className="dashboard-topbar" style={styles.header}>
         <div className="dashboard-topbar-heading">
           <div className="dashboard-mobile-brand" aria-label="ZOBIRIS CORE"><span className="brand-mark" aria-hidden="true">Z</span><strong>ZOBIRIS</strong></div>
@@ -816,6 +846,8 @@ export function App() {
           <p>{PAGE_HEADINGS[view].description}</p>
         </div>
         <div className="dashboard-topbar-right">
+          <CoinSearch coins={searchCoins} onPick={(symbol) => { setAnalysisSymbol(symbol); setView("compare"); }} />
+          <TopbarTicker quotes={marketOverview?.quotes ?? {}} />
           <span className="dashboard-asof" title={snapshotFresh ? "Market data current" : "Market data needs refresh"}>
             <span className={snapshotFresh ? "sidebar-market-dot" : "sidebar-market-dot is-stale"} aria-hidden="true"></span>
             {Number.isFinite(snapshotMs) ? utcStamp(snapshotMs) : "Time unavailable"}
@@ -863,6 +895,8 @@ export function App() {
           <strong>ZOBIRIS</strong>
         </div>
         {([
+          ["dashboard", "Dashboard"],
+          ["engine", "Engine"],
           ["portfolio", "Portfolio"],
           ["strategy", "Opportunities"],
           ["market", "Market Today"],
@@ -875,6 +909,7 @@ export function App() {
             <DashboardIcon name={key} />{label}
           </button>
         ))}
+        <DailyEdge done={edgeDone} onOpen={(v) => setView(v as View)} />
         <div className="dashboard-sidebar-bottom"><span className={snapshotFresh ? "sidebar-market-dot" : "sidebar-market-dot is-stale"} aria-hidden="true"></span>{snapshotFresh ? "Market data current" : "Market data needs refresh"}</div>
       </nav>
 
@@ -884,16 +919,7 @@ export function App() {
 
       {view === "portfolio" ? (
         <main>
-          <section className="dashboard-metrics" aria-label="Portfolio overview" style={styles.metrics}>
-            <Metric label="Portfolio" value={accountSynced ? money(total) : "Private"} />
-            <Metric label="Cash" value={accountSynced?money(LIVE_CASH_USD):"Private"} note={accountSynced&&total>0?Math.round(LIVE_CASH_USD / total * 100) + "% of authenticated portfolio":"Private account is locked on the public view"} />
-            <Metric label="Reserved buys" value={accountSynced ? money(reservedBuys) : "Private"} />
-            <Metric label="Free cash" value={accountSynced ? money(freeCash) : "Private"} />
-            <Metric label="Maneuver capital" value={accountSynced ? money(MANEUVER_CAPITAL_USD) : "Private"} note={accountSynced ? "Typical probe " + money(PROBE_TYPICAL_USD) + " · max probe " + money(PROBE_MAX_USD) : "Unlock to view capital limits"} />
-          </section>
-
-          <PortfolioVisuals rows={portfolioRows} cash={LIVE_CASH_USD} reserved={reservedBuys} accountSynced={accountSynced} />
-          <ProfitProtection operatorToken={operatorToken} />
+          <PortfolioOverview rows={portfolioRows} cashUsd={LIVE_CASH_USD} freeCashUsd={freeCash} reservedUsd={reservedBuys} accountSynced={accountSynced} quotes={marketOverview?.quotes ?? {}} />
           <section className="dashboard-panel" style={styles.card}>
             <div style={styles.sectionHead}>
               <div>
@@ -904,7 +930,7 @@ export function App() {
             <div style={styles.tableWrap}>
               <table style={styles.table}>
                 <thead>
-                  <tr><th>Asset</th><th>Amount</th><th>Avg. Price</th><th>Current Price</th><th>Value</th><th>P/L</th><th>P/L %</th><th>Signal</th></tr>
+                  <tr><th>Asset</th><th>Amount</th><th>Avg. Price</th><th>Current Price</th><th>Value</th><th>P/L</th><th>P/L %</th><th>24h</th><th>7d</th><th>Signal</th></tr>
                 </thead>
                 <tbody>
                   {portfolioRows.map((row) => (
@@ -928,11 +954,13 @@ export function App() {
                         <td>{money(row.value)}</td>
                         <td style={row.avgPriceUsd ? (row.upl >= 0 ? styles.good : styles.bad) : undefined}>{row.avgPriceUsd ? (row.value - row.avgPriceUsd * row.quantity >= 0 ? "+" : "−") + money(Math.abs(row.value - row.avgPriceUsd * row.quantity)) : "—"}</td>
                         <td style={row.upl >= 0 ? styles.good : styles.bad}>{pct(row.upl)}</td>
+                        <td className={marketOverview?.quotes[row.symbol]?.change24hPct == null ? undefined : marketOverview.quotes[row.symbol]!.change24hPct! >= 0 ? "is-gain" : "is-loss"}>{marketOverview?.quotes[row.symbol]?.change24hPct == null ? "—" : pct(marketOverview.quotes[row.symbol]!.change24hPct!)}</td>
+                        <td>{marketOverview?.quotes[row.symbol]?.sparkline7d.length ? <Sparkline values={marketOverview.quotes[row.symbol]!.sparkline7d} width={72} height={24} /> : "—"}</td>
                         <td><span style={actionStyle(row.action)}>{row.action}</span></td>
                       </tr>
                       {expandedSymbol === row.symbol ? (
                         <tr>
-                          <td colSpan={8} style={styles.analysisCell}>
+                          <td colSpan={10} style={styles.analysisCell}>
                             <OrderPlanPanel
                               row={row}
                               regime={regime}
@@ -953,6 +981,8 @@ export function App() {
             </div>
             {!portfolioRows.length && <div className="dashboard-empty"><strong>{accountSynced ? "No positions to display" : "Private account"}</strong>{accountSynced ? "Your synchronized positions will appear here." : "Unlock your portfolio above to view your current positions."}</div>}
           </section>
+          <Portfolio3D rows={portfolioRows} cash={LIVE_CASH_USD} accountSynced={accountSynced} />
+          <ProfitProtection operatorToken={operatorToken} />
 
           <section className="dashboard-columns" style={styles.twoCol}>
             <div className="dashboard-panel" style={styles.card}>
@@ -983,9 +1013,11 @@ export function App() {
       ) : null}
 
       {view === "watchlist" ? <WatchlistPage research={researchEvidence.data?.assets??[]} refreshSummary={lastRefreshEvaluation} rows={watchlistRankings} now={nowMs} snapshotFresh={snapshotFresh} onAnalyze={symbol=>{setAnalysisSymbol(symbol);setView("compare");}} /> : null}
+      {view === "watchlist" ? <WatchlistInsights asOf={marketOverview?.asOf ?? null} quotes={marketOverview ? watchlistRankings.map((r) => marketOverview.quotes[r.symbol]).filter((q): q is NonNullable<typeof q> => Boolean(q)) : []} /> : null}
 
       {view === "market" ? (
         <main>
+          <MarketToday data={marketOverview} />
           <MarketBrief refreshKey={snapshotMs} />
           <section className="dashboard-panel" style={styles.heroCard}>
             <div style={styles.eyebrow}>TODAY</div>
@@ -1051,6 +1083,8 @@ export function App() {
                   </main>
       ) : null}
 
+      {view === "dashboard" ? <DashboardPage onOpen={setView} onAnalyze={(symbol) => { setAnalysisSymbol(symbol); setView("compare"); }} /> : null}
+      {view === "engine" ? <EnginePage cashUsd={LIVE_CASH_USD} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, value: row.value }))} onOpen={setView} /> : null}
       {view === "strategy" ? <StrategyPage portfolioUsd={total} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, quantity: row.quantity, avgPriceUsd: row.avgPriceUsd ?? null, value: row.value }))} /> : null}
 
       {view === "outlook" ? <TimeOutlookPage watchlist={watchlist} holdingSymbols={portfolioRows.map((row) => row.symbol)} /> : null}
@@ -1357,6 +1391,8 @@ function DashboardIcon({name}: {name: string}) {
     lock: "M7 10V7a5 5 0 0 1 10 0v3M6 10h12v11H6ZM12 14v3",
     refresh: "M20 7a9 9 0 1 0 1 8M20 3v5h-5",
     strategy: "M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
+    dashboard: "M4 13h6V4H4ZM14 20h6v-9h-6ZM14 4h6v4h-6ZM4 20h6v-4H4Z",
+    engine: "M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
   };
   return <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.portfolio}/></svg>;
 }

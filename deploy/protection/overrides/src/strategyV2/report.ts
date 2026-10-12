@@ -35,7 +35,18 @@ export interface StrategyReport {
   /** Best-ranked eligible rank 101-500 coins from the whole market, not just the watchlist. */
   marketSmallCapCandidates: Array<{ symbol: string; name: string; rank: number | null; convexityScore: number; notes: string[] }>;
   sources: string[];
+  /** Last 365 completed BTC days with 50D/200D averages (null until enough history). */
+  btcSeries: Array<{ t: string; close: number; sma50: number | null; sma200: number | null }>;
+  /** The four trend votes behind the regime score. */
+  regimeComponents: Array<{ label: string; points: number }>;
+  /** Top-100 coins placed by relative strength vs BTC (rotation map). */
+  rotationMap: Array<{ symbol: string; name: string; rank: number; rel30: number; rel200: number; marketCapUsd: number; onWatchlist: boolean }>;
+  /** How many rank 101-500 coins survive each screen stage, in order. */
+  screenFunnel: Array<{ stage: string; remaining: number }>;
+  feeds: FeedStatus[];
 }
+
+export interface FeedStatus { name: string; ok: boolean; detail: string; at: string | null }
 
 export interface ReportInputs {
   now: number;
@@ -48,6 +59,31 @@ export interface ReportInputs {
   watchlist: WatchlistEntry[];
   portfolioUsd?: number | null;
   speculativePositions?: SpeculativePosition[];
+  /** Unix seconds for each BTC close (same length as btcDailyCloses). */
+  btcDailyTimes?: number[];
+  feeds?: FeedStatus[];
+}
+
+const REGIME_VOTES: Array<[string, string, string, number]> = [
+  ["PRICE_ABOVE_200D", "PRICE_BELOW_200D", "Price vs 200-day", 2],
+  ["50D_ABOVE_200D", "50D_BELOW_200D", "50-day vs 200-day", 1],
+  ["200D_RISING", "200D_FALLING", "200-day slope", 1],
+  ["PRICE_ABOVE_20W", "PRICE_BELOW_20W", "Price vs 20-week", 1],
+];
+
+const FUNNEL: Array<[string, (r: string) => boolean]> = [
+  ["Not a stablecoin", (r) => r === "STABLECOIN_OR_PEGGED_ASSET"],
+  ["Tradable on Kraken", (r) => r === "NOT_TRADABLE_ON_KRAKEN"],
+  ["Liquid, believable volume", (r) => ["VOLUME_TOO_LOW_OR_UNKNOWN", "MARKET_CAP_UNKNOWN", "ILLIQUID_TURNOVER", "SUSPICIOUS_TURNOVER_POSSIBLE_WASH_OR_PUMP"].includes(r)],
+  ["Low dilution and unlocks", (r) => r === "FDV_UNKNOWN" || r === "HEAVY_FUTURE_DILUTION" || r.startsWith("UNLOCK_") || r === "LARGE_UNLOCK_WITHIN_60D"],
+  ["Survived 180+ days", (r) => r === "TOO_NEW_UNPROVEN_SURVIVAL"],
+  ["Price history and trend", (r) => r === "PRICE_HISTORY_INCOMPLETE"],
+  ["BTC regime allows bets", (r) => r.startsWith("BTC_REGIME_")],
+];
+
+function rollingSma(xs: number[], n: number): Array<number | null> {
+  let sum = 0;
+  return xs.map((x, i) => { sum += x; if (i >= n) sum -= xs[i - n]!; return i >= n - 1 ? sum / n : null; });
 }
 
 const sma = (xs: number[], n: number) => (xs.length >= n ? xs.slice(-n).reduce((a, b) => a + b, 0) / n : null);
@@ -140,6 +176,26 @@ export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
     .slice(0, 15)
     .map(({ c, r }) => ({ symbol: c.symbol, name: c.name, rank: c.rank, convexityScore: r.convexityScore, notes: r.notes }));
 
+  const s50 = rollingSma(inputs.btcDailyCloses, 50), s200 = rollingSma(inputs.btcDailyCloses, 200);
+  const times = inputs.btcDailyTimes?.length === inputs.btcDailyCloses.length ? inputs.btcDailyTimes : null;
+  const startIdx = Math.max(0, inputs.btcDailyCloses.length - 365);
+  const btcSeries = inputs.btcDailyCloses.slice(startIdx).map((close, k) => {
+    const i = startIdx + k;
+    const t = times ? new Date(times[i]! * 1000) : new Date(inputs.now - (inputs.btcDailyCloses.length - i) * 86_400_000);
+    return { t: t.toISOString().slice(0, 10), close, sma50: s50[i] ?? null, sma200: s200[i] ?? null };
+  });
+  const regimeComponents = REGIME_VOTES.map(([up, down, label, w]) => ({ label, points: regime.reasons.includes(up) ? w : regime.reasons.includes(down) ? -w : 0 }));
+  const watchSymbols = new Set(inputs.watchlist.map((w) => w.symbol.toUpperCase()));
+  const rotationMap = top100.flatMap((c) => {
+    if (!btc || c.symbol === "BTC" || c.change30dPct == null || c.change200dPct == null || btc.change30dPct == null || btc.change200dPct == null || !c.marketCapUsd || c.rank == null) return [];
+    if (c.priceUsd != null && c.priceUsd > 0.9 && c.priceUsd < 1.2 && Math.abs(c.change30dPct) < 3) return []; // stablecoins carry no rotation signal
+    return [{ symbol: c.symbol, name: c.name, rank: c.rank, rel30: c.change30dPct - btc.change30dPct, rel200: c.change200dPct - btc.change200dPct, marketCapUsd: c.marketCapUsd, onWatchlist: watchSymbols.has(c.symbol) }];
+  });
+  const screened = inputs.market.filter((c) => tierFor(c.rank) === "RANK_101_500").map((c) => screenSmallCap(smallCapInputFor(c, inputs, btc?.change30dPct ?? null), regime).rejections);
+  const screenFunnel = [{ stage: "Ranked 101–500", remaining: screened.length }, ...FUNNEL.map(([stage], k) => ({
+    stage, remaining: screened.filter((rej) => !rej.some((r) => FUNNEL.slice(0, k + 1).some(([, hit]) => hit(r)))).length,
+  }))];
+
   const barbell = inputs.portfolioUsd != null && inputs.portfolioUsd > 0
     ? planBarbell(inputs.portfolioUsd, inputs.speculativePositions ?? [], regime.exposureMultiplier)
     : null;
@@ -147,5 +203,6 @@ export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
   return {
     asOf: new Date(inputs.now).toISOString(), regime, breadth, barbell, watchlist, marketSmallCapCandidates,
     sources: ["CoinGecko /coins/markets (keyless)", "CoinPaprika /v1/tickers (keyless)", "Kraken public AssetPairs + daily OHLC"],
+    btcSeries, regimeComponents, rotationMap, screenFunnel, feeds: inputs.feeds ?? [],
   };
 }

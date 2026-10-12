@@ -10,7 +10,7 @@ import { verifiedUnlockShare } from "../strategyV2/unlockOverrides";
 const coin = (o: Partial<MarketCoin> & { symbol: string; rank: number }): MarketCoin => ({
   geckoId: o.symbol.toLowerCase(), name: o.symbol, priceUsd: 2, marketCapUsd: 300e6, fdvUsd: 330e6, volume24hUsd: 15e6,
   circulatingSupply: 150e6, totalSupply: 165e6, maxSupply: null, athChangePct: -85, change24hPct: 1, change7dPct: 4,
-  change30dPct: 6, change200dPct: -30, change1yPct: -50, lastUpdated: null, ...o,
+  change30dPct: 6, change200dPct: -30, change1yPct: -50, lastUpdated: null, sparkline7d: [], ...o,
 });
 const regimeOn = { allowTop100Rotation: true, allowSmallCapBets: true, state: "RISK_ON" as const, realizedVolAnnualPct: 40 };
 
@@ -122,6 +122,13 @@ describe("watchlist matching and report", () => {
     expect(by.TIA!.smallCap?.eligible).toBe(true);
     expect(by.ZZZ!.signal).toBe("Outside strategy (rank > 500)");
     expect(r.marketSmallCapCandidates.map((c) => c.symbol)).toEqual(["TIA"]);
+    expect(r.btcSeries).toHaveLength(365);
+    expect(r.btcSeries.at(-1)!.sma200).not.toBeNull();
+    expect(r.regimeComponents.reduce((s, c) => s + c.points, 0)).toBe(r.regime.score);
+    expect(r.rotationMap.map((p) => p.symbol)).toEqual(["DOT"]);
+    expect(r.screenFunnel[0]).toEqual({ stage: "Ranked 101–500", remaining: 1 });
+    expect(r.screenFunnel.at(-1)!.remaining).toBe(1);
+    expect(r.screenFunnel.every((s, i, a) => i === 0 || s.remaining <= a[i - 1]!.remaining)).toBe(true);
   });
   it("ships the owner's CoinMarketCap watchlist", () => {
     expect(CMC_WATCHLIST.length).toBe(79);
