@@ -1,9 +1,13 @@
 // Builds and caches the Strategy v2 report from free, keyless public APIs.
 // Refreshes in the background; requests always get the last good report (or a clear warming-up error).
 import { fetchCoinGeckoTop500, fetchKrakenDailyCandles, fetchKrakenDailyCloses, fetchKrakenUsdPairs, fetchPaprikaFirstSeen, type Candle, type FetchLike, type MarketCoin } from "../strategyV2/feed.js";
-import { buildStrategyReport, tierFor, type FeedStatus, type StrategyReport } from "../strategyV2/report.js";
+import { buildStrategyReport, smallCapInputFor, tierFor, type FeedStatus, type ReportInputs, type StrategyReport } from "../strategyV2/report.js";
+import { screenSmallCap } from "../strategyV2/smallCapScreen.js";
+import { getDiligence } from "./diligenceService.js";
+import { ledgerStatus, recordReport } from "./ledgerService.js";
 import { CMC_WATCHLIST } from "../strategyV2/watchlist.js";
 import { SMALL_CAP_RULES } from "../strategyV2/smallCapScreen.js";
+import { parseStablecoinSupply } from "../strategyV2/altGate.js";
 
 const REPORT_TTL_MS = 15 * 60_000;
 const SLOW_TTL_MS = 6 * 3_600_000; // AssetPairs, CoinPaprika ages, per-coin daily closes
@@ -15,6 +19,7 @@ let report: Cached<StrategyReport> | null = null;
 let lastError: string | null = null;
 let inflight: Promise<StrategyReport> | null = null;
 let pairs: Cached<Map<string, string>> | null = null;
+let stables: Cached<{ supplyUsd: number; change30dPct: number | null }> | null = null;
 let ages: Cached<Map<string, { firstDataAt: string; rank: number; name: string }>> | null = null;
 const histories = new Map<string, Cached<number[]>>();
 
@@ -55,6 +60,13 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
     try { ages = { value: await fetchPaprikaFirstSeen(fetcher), at: now }; }
     catch { ages = ages ?? { value: new Map(), at: 0 }; } // age unknown => screen fails closed on age
   }
+  if (!fresh(stables, SLOW_TTL_MS, now)) {
+    try {
+      const r = await fetcher("https://stablecoins.llama.fi/stablecoincharts/all", { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(20_000) });
+      if (!r.ok) throw new Error(`DefiLlama HTTP ${r.status}`);
+      stables = { value: parseStablecoinSupply(await r.json()), at: now };
+    } catch { /* unknown stablecoin flow never blocks; keep last value */ }
+  }
   const btcPair = pairs.value.get("BTC") ?? "XXBTZUSD";
   await krakenSlot();
   const btcCandles = await fetchKrakenDailyCandles(fetcher, btcPair);
@@ -80,10 +92,29 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
     { name: "Kraken BTC daily", ok: btcCandles.length >= 221, detail: `${btcCandles.length} daily closes`, at: lastBtc ? iso(lastBtc.time * 1000) : null },
     { name: "Kraken pairs", ok: pairs.value.size > 100, detail: `${pairs.value.size} USD markets`, at: iso(pairs.at) },
     { name: "Coin histories", ok: wanted.length === 0 || coinDailyCloses.size / wanted.length >= 0.8, detail: `${coinDailyCloses.size} of ${wanted.length} small caps`, at: iso(now) },
+    { name: "DefiLlama stablecoins", ok: Boolean(stables), detail: stables ? `$${(stables.value.supplyUsd / 1e9).toFixed(0)}B supply` : "unavailable — gate check skipped", at: stables ? iso(stables.at) : null },
     { name: "CoinPaprika ages", ok: ages.value.size > 0, detail: ages.value.size ? `${ages.value.size} coins dated` : "unavailable — age check fails closed", at: ages.at ? iso(ages.at) : null },
   ];
-  const value = buildStrategyReport({ now, btcDailyCloses, btcDailyTimes: btcCandles.map((c) => c.time), market, krakenPairs: pairs.value, firstSeen: ages.value, coinDailyCloses, watchlist: CMC_WATCHLIST, feeds });
+  const inputs: ReportInputs = { now, btcDailyCloses, btcDailyTimes: btcCandles.map((c) => c.time), market, krakenPairs: pairs.value, firstSeen: ages.value, coinDailyCloses, watchlist: CMC_WATCHLIST, feeds, stablecoins: stables?.value ?? null };
+  // Pass 1 decides which small caps reach diligence: those whose only blockers (if any) are the market gates.
+  const firstPass = buildStrategyReport(inputs);
+  const btc30 = market.find((c) => c.symbol === "BTC")?.change30dPct ?? null;
+  const gatesOnly = (r: string) => r.startsWith("BTC_REGIME_") || r.startsWith("ALT_GATE_");
+  const forDiligence = market.filter((c) => tierFor(c.rank) === "RANK_101_500")
+    .filter((c) => screenSmallCap(smallCapInputFor(c, inputs, btc30), firstPass.regime).rejections.every(gatesOnly))
+    .map((c) => c.geckoId);
+  let diligence = new Map<string, import("../strategyV2/diligence.js").Diligence>();
+  try { diligence = await getDiligence(forDiligence, fetcher, now); } catch { /* scans unavailable: contract tokens fail closed */ }
+  const scanned = [...diligence.values()];
+  feeds.push({ name: "Contract scans", ok: scanned.every((d) => d.security.status !== "UNCHECKED") && scanned.length >= forDiligence.length,
+    detail: `${scanned.length} of ${forDiligence.length} candidates · ${scanned.filter((d) => d.security.status === "FAIL").length} failed`, at: iso(now) });
+  const value = buildStrategyReport({ ...inputs, diligence });
   report = { value, at: now };
+  if (process.env.ZOBIRIS_LEDGER !== "0") {
+    recordReport(value);
+    const st = ledgerStatus();
+    value.feeds.push({ name: "Decision ledger", ok: !st.error, detail: st.error ? `not writable: ${st.error}` : `${st.summary.days} day${st.summary.days === 1 ? "" : "s"} recorded`, at: st.summary.lastDay ? `${st.summary.lastDay}T00:00:00.000Z` : null });
+  }
   lastError = null;
   return value;
 }

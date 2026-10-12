@@ -3,8 +3,10 @@
 //   /api/health       Kraken private account sync state
 //   props             your synchronized holdings (for the barbell check)
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import type { StrategyReport, WatchlistDecision } from "../strategyV2/report";
+import { decisionGroup, type StrategyReport, type WatchlistDecision } from "../strategyV2/report";
 import { DEFAULT_BARBELL } from "../strategyV2/barbell";
+import { ALT_GATE_LABEL } from "../strategyV2/altGate";
+import type { LedgerSummary } from "../strategyV2/ledger";
 
 export interface EngineHolding { symbol: string; value: number }
 
@@ -191,13 +193,34 @@ const GROUPS = [
   { key: "filtered", label: "Filtered or avoid", cls: "is-avoid" },
   { key: "outside", label: "Outside strategy / no data", cls: "is-outside" },
 ] as const;
-export function signalGroup(d: WatchlistDecision): (typeof GROUPS)[number]["key"] {
-  if (d.rotation?.status === "QUALIFIED") return "buy";
-  if (d.smallCap?.eligible) return "bet";
-  if (d.rotation?.status === "NEAR_ROTATION") return "watch";
-  if (d.tier === "OUTSIDE_STRATEGY" || d.signal.startsWith("No free data")) return "outside";
-  if (d.smallCap || d.rotation?.status === "STRUCTURALLY_WEAK") return "filtered";
-  return "wait";
+export const signalGroup = decisionGroup;
+
+/* ---------- Forward paper test ---------- */
+const GROUP_LABEL: Record<string, string> = { buy: "Buy zones (filled limits)", bet: "Small-bet candidates", watch: "Watch", wait: "Wait / hold", filtered: "Filtered / avoid" };
+function LedgerPanel() {
+  const { data, error } = useJson<{ rows: number; error: string | null; summary: LedgerSummary }>("/api/ledger", 30 * 60_000);
+  if (!data) return <p className="strategy-muted">{error ? `Ledger unavailable: ${error}` : "Loading the decision ledger…"}</p>;
+  const s = data.summary;
+  const cell = (g: LedgerSummary["groups"][number], h: string) => {
+    const x = g.horizons[h]!;
+    if (!x.n) return <td className="strategy-muted">{x.pending ? `${x.pending} pending` : "—"}</td>;
+    return <td><strong className={x.avgNetPct! >= 0 ? "is-gain" : "is-loss"}>{pct(x.avgNetPct)}</strong><small> n={x.n}{x.lostCoverage ? ` · ${x.lostCoverage} lost` : ""}</small></td>;
+  };
+  return (
+    <>
+      <p className="strategy-muted">{s.firstDay ? <>Recording since {s.firstDay} · {s.days} day{s.days === 1 ? "" : "s"} · {data.rows} rows. </> : "Recording starts with the first report. "}
+        Net of 0.26% fees and tiered slippage per side · each signal counted once, on its first day · results appear 7 days after a signal.</p>
+      {data.error ? <p className="engine-warn">Ledger not writable: {data.error}</p> : null}
+      <div className="engine-ledger-scroll"><table className="engine-ledger">
+        <thead><tr><th>Signal group</th><th>Signals</th><th>7 days</th><th>30 days</th><th>90 days</th><th>30d vs BTC</th><th>30d hit rate</th></tr></thead>
+        <tbody>{s.groups.map((g) => (
+          <tr key={g.group}><td>{GROUP_LABEL[g.group] ?? g.group}</td><td>{g.events}{g.group === "buy" && g.events ? <small> · {g.filled} filled</small> : null}</td>
+            {cell(g, "7d")}{cell(g, "30d")}{cell(g, "90d")}
+            <td>{g.horizons["30d"]!.avgVsBtcPct == null ? "—" : <span className={g.horizons["30d"]!.avgVsBtcPct! >= 0 ? "is-gain" : "is-loss"}>{pct(g.horizons["30d"]!.avgVsBtcPct)}</span>}</td>
+            <td>{g.horizons["30d"]!.hitRate == null ? "—" : Math.round(g.horizons["30d"]!.hitRate! * 100) + "%"}</td></tr>))}</tbody>
+      </table></div>
+    </>
+  );
 }
 
 /* ---------- Page ---------- */
@@ -265,6 +288,10 @@ export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdi
               </div>
             ))}
           </div>
+          {report.altGate ? <div className="engine-gate">
+            <h3>Altcoin gate · <span className={report.altGate.allowAltEntries ? "is-gain" : "is-loss"}>{ALT_GATE_LABEL[report.altGate.state]}</span></h3>
+            <ul>{report.altGate.checks.map((c) => <li key={c.label} className={c.ok == null ? "is-unknown" : c.ok ? "is-on" : "is-off"}><span>{c.label}</span><small>{c.detail}</small></li>)}</ul>
+          </div> : null}
           <ul className="strategy-rules">
             <li className={g.allowTop100Rotation ? "is-on" : "is-off"}>Top-100 rotation {g.allowTop100Rotation ? (g.state === "NEUTRAL" ? "at half size" : "allowed") : "paused"}</li>
             <li className={g.allowSmallCapBets ? "is-on" : "is-off"}>Small-cap bets {g.allowSmallCapBets ? "allowed" : "paused until RISK ON"}</li>
@@ -291,6 +318,11 @@ export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdi
           </ol>
           <p className="strategy-muted">About 40% of coins eventually delist, so the screen removes likely failures first. Only the survivors are ranked.</p>
         </article>
+      </section>
+
+      <section className="dashboard-panel engine-panel" aria-label="Forward paper test">
+        <div className="engine-panel-head"><h2>Forward test · paper results</h2><span className="strategy-muted">decision ledger</span></div>
+        <LedgerPanel />
       </section>
 
       <section className="engine-grid">

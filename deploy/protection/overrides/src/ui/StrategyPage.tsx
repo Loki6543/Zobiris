@@ -7,6 +7,7 @@ export interface StrategyHolding { symbol: string; quantity: number; avgPriceUsd
 const money = (n: number | null | undefined) => n == null || !Number.isFinite(n) ? "—" : n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: n < 1 ? 6 : 2 });
 const pct = (n: number | null | undefined) => n == null || !Number.isFinite(n) ? "—" : (n > 0 ? "+" : "") + n.toFixed(1) + "%";
 const tone = (n: number | null | undefined) => n == null ? undefined : n >= 0 ? "is-gain" : "is-loss";
+const SEC_LABEL = { PASS: "Passed", WARN: "Warning", FAIL: "Failed", NATIVE: "Native coin", UNSUPPORTED_CHAIN: "Not scannable", UNCHECKED: "Pending" } as const;
 const TIER_LABEL = { TOP_100: "Top 100", RANK_101_500: "101–500", OUTSIDE_STRATEGY: "500+" } as const;
 type Filter = "ALL" | keyof typeof TIER_LABEL;
 
@@ -95,7 +96,7 @@ export function StrategyPage({ portfolioUsd, holdings, accountSynced }: { portfo
         </div>
         <div className="strategy-scroll">
           <table className="strategy-table">
-            <thead><tr><th>Asset</th><th>Rank</th><th>Price</th><th>7d</th><th>30d</th><th>From ATH</th><th>Kraken</th><th>Signal</th><th>Entry limit</th></tr></thead>
+            <thead><tr><th>Asset</th><th>Rank</th><th>Price</th><th>7d</th><th>30d</th><th>From ATH</th><th>Kraken</th><th>Contract</th><th>Signal</th><th>Entry limit</th></tr></thead>
             <tbody>{rows.map((d) => (
               <tr key={d.symbol + d.name}>
                 <td className="strategy-asset"><span className="asset-identity"><span className="asset-monogram" data-symbol={d.symbol} aria-hidden="true">{d.symbol.slice(0, 1)}</span><span><strong>{d.symbol}</strong><small className="strategy-muted"> {d.name}</small></span></span></td>
@@ -105,6 +106,7 @@ export function StrategyPage({ portfolioUsd, holdings, accountSynced }: { portfo
                 <td data-label="30d" className={tone(d.change30dPct)}>{pct(d.change30dPct)}</td>
                 <td data-label="From ATH">{pct(d.athChangePct)}</td>
                 <td data-label="Kraken">{d.krakenListed ? "Yes" : "—"}</td>
+                <td data-label="Contract">{d.diligence ? <span className={`strategy-sec is-${d.diligence.security.status.toLowerCase()}`} title={[...d.diligence.security.vetoes, ...d.diligence.security.warnings].map((x) => x.replaceAll("_", " ").toLowerCase()).join(", ") + (d.diligence.commits12w != null ? ` · ${d.diligence.commits12w} commits in 12 weeks (listed repo)` : "")}>{SEC_LABEL[d.diligence.security.status]}</span> : "—"}</td>
                 <td className="strategy-signal" data-label="Signal"><span className={signalClass(d)} title={[...(d.rotation?.reasons ?? []), ...(d.smallCap?.rejections ?? []), ...(d.smallCap?.notes ?? []), d.matchNote ?? ""].filter(Boolean).join(", ")}>{d.signal}</span></td>
                 <td data-label="Entry limit">{d.rotation?.limitPriceUsd ? <>{money(d.rotation.limitPriceUsd)} <small className="strategy-muted">−{d.rotation.pullbackPct?.toFixed(0)}%</small></> : "—"}</td>
               </tr>))}</tbody>
