@@ -41,7 +41,7 @@ export async function checkCoin(geckoId: string, fetcher: FetchLike, now = Date.
       try { const gh = await getJson(fetcher, `https://api.github.com/repos/${m[1]}/${m[2]}/stats/participation`); commits12w = parseGithubParticipation(gh.body); } catch { /* optional */ }
     }
   }
-  return { geckoId, security, commits12w, repo, checkedAt };
+  return { geckoId, security, commits12w, repo, checkedAt, profile: detail.profile };
 }
 
 /** Diligence for the given CoinGecko ids, using the cache and fetching at most MAX_PER_REFRESH new ones. */

@@ -8,6 +8,27 @@ import { ledgerStatus, recordReport } from "./ledgerService.js";
 import { CMC_WATCHLIST } from "../strategyV2/watchlist.js";
 import { SMALL_CAP_RULES } from "../strategyV2/smallCapScreen.js";
 import { parseStablecoinSupply } from "../strategyV2/altGate.js";
+import { fetchCoinGeckoCategoryIds, fetchCoinGeckoRanks501to1000, fetchCoinGeckoTrending, fetchFearGreed, fetchJson } from "../strategyV2/feed.js";
+import { parseStablePools, type StablePool } from "../strategyV2/stableYield.js";
+import { parseAiWatchlist, type AiWatchlist } from "../strategyV2/aiWatchlist.js";
+import { scoreOpenings, shortlistForDiligence } from "../strategyV2/openings.js";
+import { recordMarketDay, volumeHistory, marketHistoryStatus } from "./marketHistoryService.js";
+import { recentRegimes } from "./ledgerService.js";
+
+const HOUR_MS = 3_600_000;
+/** Where the daily Claude review publishes its watchlist (a data-only branch, so it never triggers a deploy). */
+export const AI_WATCHLIST_URL = process.env.ZOBIRIS_AI_WATCHLIST_URL ?? "https://raw.githubusercontent.com/Loki6543/Zobiris/ai-watchlist/ai-watchlist.json";
+
+/** Side feeds for the Valley Forge section: each keeps its last good value and retries after its TTL. */
+const side = new Map<string, Cached<unknown>>();
+async function sideFeed<T>(key: string, ttlMs: number, now: number, load: () => Promise<T>): Promise<Cached<T> | null> {
+  const hit = side.get(key) as Cached<T> | undefined;
+  if (hit && now - hit.at < ttlMs) return hit;
+  const failedAt = side.get(`${key}:failed`)?.at ?? 0;
+  if (now - failedAt < Math.min(ttlMs, 30 * 60_000)) return hit ?? null; // back off after a failure
+  try { const value = await load(); const c = { value, at: now }; side.set(key, c); return c; }
+  catch { side.set(`${key}:failed`, { value: null, at: now }); return hit ?? null; }
+}
 
 const REPORT_TTL_MS = 15 * 60_000;
 const SLOW_TTL_MS = 6 * 3_600_000; // AssetPairs, CoinPaprika ages, per-coin daily closes
@@ -102,7 +123,31 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
     { name: "DefiLlama stablecoins", ok: Boolean(stableNow), detail: stableNow ? `$${(stableNow.supplyUsd / 1e9).toFixed(0)}B supply` : stables ? "stale over 48h — gate check skipped" : "unavailable — gate check skipped", at: stables ? iso(stables.at) : null },
     { name: "CoinPaprika ages", ok: ages.value.size > 0, detail: ages.value.size ? `${ages.value.size} coins dated` : "unavailable — age check fails closed", at: ages.at ? iso(ages.at) : null },
   ];
-  const inputs: ReportInputs = { now, btcDailyCloses, btcDailyTimes: btcCandles.map((c) => c.time), market, krakenPairs: pairs.value, firstSeen: ages.value, coinDailyCloses, watchlist: CMC_WATCHLIST, feeds, stablecoins: stableNow };
+  // Valley Forge side feeds (all keyless; each failure leaves the section working with less data).
+  const spec = await sideFeed("spec", HOUR_MS, now, () => fetchCoinGeckoRanks501to1000(fetcher));
+  const trending = await sideFeed("trending", HOUR_MS, now, () => fetchCoinGeckoTrending(fetcher));
+  const aiCat = await sideFeed("aiCategory", 6 * HOUR_MS, now, () => fetchCoinGeckoCategoryIds(fetcher, "artificial-intelligence"));
+  const fng = await sideFeed("fng", HOUR_MS, now, async () => (await fetchFearGreed(fetcher)).at(-1)?.value ?? null); // oldest first: the last row is today
+  const pools = await sideFeed<StablePool[]>("yields", 6 * HOUR_MS, now, async () => parseStablePools(await fetchJson(fetcher, "https://yields.llama.fi/pools")));
+  const aiList = await sideFeed<AiWatchlist>("aiWatchlist", HOUR_MS, now, async () => parseAiWatchlist(await fetchJson(fetcher, AI_WATCHLIST_URL)));
+  const allCoins = [...market, ...(spec?.value ?? []).filter((c) => (c.rank ?? 0) > 500)];
+  if (process.env.ZOBIRIS_LEDGER !== "0") recordMarketDay(allCoins, now);
+  const hist = marketHistoryStatus();
+  const today = iso(now).slice(0, 10);
+  const forge = {
+    fearGreed: fng?.value ?? null, recentRegimes: recentRegimes(30), coreFeedsOk: market.length >= 400 && btcCandles.length >= 221,
+    specMarket: spec?.value ?? [], volumeHistory: volumeHistory(today), trending: trending?.value ?? new Map<string, number>(), aiCategory: aiCat?.value ?? new Set<string>(),
+    stablePools: pools?.value ?? [], aiWatchlist: { generatedAt: aiList?.value.generatedAt ?? null, items: aiList?.value.items ?? [] },
+  };
+  feeds.push(
+    { name: "Speculative universe (501-1000)", ok: (spec?.value.length ?? 0) >= 300, detail: spec ? `${spec.value.length} coins` : "unavailable", at: spec ? iso(spec.at) : null },
+    { name: "Mindshare (CoinGecko trending)", ok: Boolean(trending?.value.size), detail: trending ? `${trending.value.size} trending coins` : "unavailable", at: trending ? iso(trending.at) : null },
+    { name: "Fear & Greed", ok: fng?.value != null, detail: fng?.value != null ? String(fng.value) : "unavailable", at: fng ? iso(fng.at) : null },
+    { name: "Stablecoin yields (DefiLlama)", ok: Boolean(pools?.value.length), detail: pools ? `${pools.value.length} pools pass the filters` : "unavailable", at: pools ? iso(pools.at) : null },
+    { name: "Volume history", ok: hist.days >= 7, detail: hist.error ? `not writable: ${hist.error}` : `${hist.days} day${hist.days === 1 ? "" : "s"} recorded${hist.days < 7 ? " (cross-section until 7)" : ""}`, at: hist.lastDay ? `${hist.lastDay}T00:00:00.000Z` : null },
+    { name: "AI review (daily Claude)", ok: Boolean(aiList && now - Date.parse(aiList.value.generatedAt) < 48 * HOUR_MS), detail: aiList ? `${aiList.value.items.length} coins reviewed` : "not published yet", at: aiList ? aiList.value.generatedAt : null },
+  );
+  const inputs: ReportInputs = { now, btcDailyCloses, btcDailyTimes: btcCandles.map((c) => c.time), market, krakenPairs: pairs.value, firstSeen: ages.value, coinDailyCloses, watchlist: CMC_WATCHLIST, feeds, stablecoins: stableNow, forge };
   // Pass 1 decides which small caps reach diligence: those whose only blockers (if any) are the market gates.
   const firstPass = buildStrategyReport(inputs);
   const btc30 = market.find((c) => c.symbol === "BTC")?.change30dPct ?? null;
@@ -110,9 +155,16 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
   const forDiligence = market.filter((c) => tierFor(c.rank) === "RANK_101_500")
     .filter((c) => screenSmallCap(smallCapInputFor(c, inputs, btc30), firstPass.regime).rejections.every(gatesOnly))
     .map((c) => c.geckoId);
+  // Openings worth a legitimacy scan (pre-scored without legitimacy); small-cap screen candidates go first in the queue.
+  const preOpenings = scoreOpenings({ now, market: allCoins, btc7dPct: market.find((c) => c.symbol === "BTC")?.change7dPct ?? null, btc30dPct: btc30, btcCloses: btcDailyCloses,
+    closesBySymbol: coinDailyCloses, volumeHistory: forge.volumeHistory, trending: forge.trending, aiCategory: forge.aiCategory, diligence: new Map(), firstSeen: ages.value,
+    krakenPairs: pairs.value, aiWatchlist: forge.aiWatchlist.items, allowNewBuys: true });
+  const openingIds = shortlistForDiligence(preOpenings).filter((id) => !forDiligence.includes(id));
   let diligence = new Map<string, import("../strategyV2/diligence.js").Diligence>();
-  try { diligence = await getDiligence(forDiligence, fetcher, now); } catch { /* scans unavailable: contract tokens fail closed */ }
-  const scanned = [...diligence.values()];
+  try { diligence = await getDiligence([...forDiligence, ...openingIds], fetcher, now); } catch { /* scans unavailable: contract tokens fail closed */ }
+  const scanned = forDiligence.map((id) => diligence.get(id)).filter((d): d is NonNullable<typeof d> => Boolean(d));
+  const legit = openingIds.filter((id) => diligence.has(id)).length;
+  feeds.push({ name: "Legitimacy scans", ok: legit >= openingIds.length, detail: `${legit} of ${openingIds.length} openings scanned (24h cache, 20 per refresh)`, at: iso(now) });
   feeds.push({ name: "Contract scans", ok: scanned.every((d) => d.security.status !== "UNCHECKED") && scanned.length >= forDiligence.length,
     detail: `${scanned.length} of ${forDiligence.length} candidates · ${scanned.filter((d) => d.security.status === "FAIL").length} failed`, at: iso(now) });
   const value = buildStrategyReport({ ...inputs, diligence });

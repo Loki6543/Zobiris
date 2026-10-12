@@ -14,7 +14,9 @@ import { decisionGroup, type DecisionGroup, type StrategyReport } from "./report
 
 export interface SnapshotRow { kind: "snapshot"; day: string; at: string; regime: string; score: number; altGate: string; dominancePct: number | null; stablecoinChange30dPct: number | null; breadth30dPositive: number | null; btcPriceUsd: number | null }
 export interface DecisionRow { kind: "decision"; day: string; symbol: string; name: string; rank: number | null; source: "watchlist" | "market"; group: DecisionGroup; signal: string; priceUsd: number | null; limitPriceUsd: number | null; convexityScore: number | null }
-export type LedgerRow = SnapshotRow | DecisionRow;
+/** One opening per day (rank 101+): its volume-shock class, opening score and verdict, for the forward test by class. */
+export interface SignalRow { kind: "signal"; day: string; symbol: string; geckoId: string; rank: number | null; tier: string; volumeClass: string; score: number; verdict: string; priceUsd: number | null }
+export type LedgerRow = SnapshotRow | DecisionRow | SignalRow;
 
 export const FEE_PER_SIDE = 0.0026;
 export const HORIZONS = [7, 30, 90] as const;
@@ -46,6 +48,13 @@ export function rowsForReport(report: StrategyReport): LedgerRow[] {
     rows.push({ kind: "decision", day, symbol: d.symbol, name: d.name, rank: d.rank, source: "watchlist", group: decisionGroup(d), signal: d.signal,
       priceUsd: d.priceUsd, limitPriceUsd: d.rotation?.limitPriceUsd ?? null, convexityScore: d.smallCap?.eligible ? d.smallCap.convexityScore : null });
   }
+  const openings = report.valleyForge?.openings ?? [];
+  const logged = new Set<string>();
+  for (const o of openings) {
+    if (logged.has(o.symbol) || o.priceUsd == null) continue;
+    logged.add(o.symbol);
+    rows.push({ kind: "signal", day, symbol: o.symbol, geckoId: o.geckoId, rank: o.rank, tier: o.tier, volumeClass: o.volume.class, score: o.score, verdict: o.verdict, priceUsd: o.priceUsd });
+  }
   for (const c of report.marketSmallCapCandidates) {
     if (seen.has(c.symbol)) continue;
     seen.add(c.symbol);
@@ -68,6 +77,7 @@ export function summarizeLedger(rows: LedgerRow[], today: string): LedgerSummary
   // price[symbol][day] from every recorded row (this is the only price source: no look-ahead, no outside data)
   const price = new Map<string, Map<string, number>>();
   for (const r of decisions) if (r.priceUsd != null && r.priceUsd > 0) { if (!price.has(r.symbol)) price.set(r.symbol, new Map()); price.get(r.symbol)!.set(r.day, r.priceUsd); }
+  for (const r of rows) if (r.kind === "signal" && r.priceUsd != null && r.priceUsd > 0) { if (!price.has(r.symbol)) price.set(r.symbol, new Map()); if (!price.get(r.symbol)!.has(r.day)) price.get(r.symbol)!.set(r.day, r.priceUsd); }
   for (const r of rows) if (r.kind === "snapshot" && r.btcPriceUsd) { if (!price.has("BTC")) price.set("BTC", new Map()); if (!price.get("BTC")!.has(r.day)) price.get("BTC")!.set(r.day, r.btcPriceUsd); }
   const priceAt = (sym: string, day: string, slackDays = 3) => { const m = price.get(sym); if (!m) return null; for (let k = 0; k <= slackDays; k++) { const v = m.get(addDays(day, k)); if (v != null) return v; } return null; };
 
@@ -120,4 +130,51 @@ export function summarizeLedger(rows: LedgerRow[], today: string): LedgerSummary
   });
   recent.sort((a, b) => b.day.localeCompare(a.day));
   return { firstDay: days[0] ?? null, lastDay: days.length ? lastDay : null, days: days.length, groups: stats, recent: recent.filter((r) => r.group === "buy" || r.group === "bet").slice(0, 20) };
+}
+
+export interface SignalClassStats { key: string; events: number; horizons: Record<string, { n: number; avgNetPct: number | null; hitRate: number | null; avgVsBtcPct: number | null; pending: number; lostCoverage: number }> }
+
+/**
+ * Forward outcome of openings grouped by volume-shock class and by verdict. An event is the first day a coin shows a
+ * class (repeats within 3 days are the same event). Entry at that day's recorded price, speculative-tier costs.
+ */
+export function summarizeSignals(rows: LedgerRow[], today: string): { byClass: SignalClassStats[]; byVerdict: SignalClassStats[] } {
+  const sig = rows.filter((r): r is SignalRow => r.kind === "signal").sort((a, b) => a.day.localeCompare(b.day));
+  const days = [...new Set(rows.map((r) => r.day))].sort();
+  const lastDay = days.at(-1) ?? today;
+  const price = new Map<string, Map<string, number>>();
+  for (const r of rows) {
+    const p = r.kind === "snapshot" ? null : r.priceUsd;
+    if (r.kind !== "snapshot" && p != null && p > 0) { if (!price.has(r.symbol)) price.set(r.symbol, new Map()); if (!price.get(r.symbol)!.has(r.day)) price.get(r.symbol)!.set(r.day, p); }
+    if (r.kind === "snapshot" && r.btcPriceUsd) { if (!price.has("BTC")) price.set("BTC", new Map()); if (!price.get("BTC")!.has(r.day)) price.get("BTC")!.set(r.day, r.btcPriceUsd); }
+  }
+  const at = (sym: string, day: string) => { const m = price.get(sym); if (!m) return null; for (let k = 0; k <= 3; k++) { const v = m.get(addDays(day, k)); if (v != null) return v; } return null; };
+  const group = (keyOf: (r: SignalRow) => string): SignalClassStats[] => {
+    const last = new Map<string, string>();
+    const events: SignalRow[] = [];
+    for (const r of sig) { const k = `${r.symbol}|${keyOf(r)}`; const prev = last.get(k); if (!prev || addDays(prev, 3) < r.day) events.push(r); last.set(k, r.day); }
+    const keys = [...new Set(events.map(keyOf))].sort();
+    return keys.map((key) => {
+      const ev = events.filter((e) => keyOf(e) === key);
+      const horizons: SignalClassStats["horizons"] = {};
+      for (const h of [7, 30]) {
+        const rets: number[] = [], vs: number[] = [];
+        let pending = 0, lost = 0;
+        for (const e of ev) {
+          const exitDay = addDays(e.day, h);
+          if (exitDay > today) { pending++; continue; }
+          const exit = at(e.symbol, exitDay);
+          if (exit == null) { if (addDays(exitDay, 3) > lastDay) pending++; else lost++; continue; }
+          const cost = FEE_PER_SIDE + slippageFor(e.symbol, e.rank);
+          const net = ((exit * (1 - cost)) / (e.priceUsd! * (1 + cost)) - 1) * 100;
+          rets.push(net);
+          const b0 = at("BTC", e.day), b1 = at("BTC", exitDay);
+          if (b0 && b1) vs.push(net - (b1 / b0 - 1) * 100);
+        }
+        horizons[`${h}d`] = { n: rets.length, avgNetPct: avg(rets), hitRate: rets.length ? rets.filter((x) => x > 0).length / rets.length : null, avgVsBtcPct: avg(vs), pending, lostCoverage: lost };
+      }
+      return { key, events: ev.length, horizons };
+    });
+  };
+  return { byClass: group((r) => r.volumeClass), byVerdict: group((r) => r.verdict) };
 }

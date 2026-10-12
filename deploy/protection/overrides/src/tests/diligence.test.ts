@@ -10,7 +10,7 @@ const regime = { allowSmallCapBets: true, state: "RISK_ON" as const };
 describe("small-cap contract diligence", () => {
   it("finds the token's home chain and contract; native coins have none", () => {
     expect(parseCoinDetail({ id: "c", asset_platform_id: "ethereum", platforms: { ethereum: "0xabc" }, links: { repos_url: { github: ["https://github.com/o/r", "https://github.com/o"] } } }))
-      .toEqual({ assetPlatformId: "ethereum", contract: "0xabc", githubRepos: ["https://github.com/o/r"] });
+      .toMatchObject({ assetPlatformId: "ethereum", contract: "0xabc", githubRepos: ["https://github.com/o/r"] });
     expect(parseCoinDetail({ id: "t", asset_platform_id: null, platforms: { "": "" } }).contract).toBeNull();
     expect([goPlusPath("ethereum"), goPlusPath("solana"), goPlusPath("chiliz")]).toEqual(["/api/v1/token_security/1", "/api/v1/solana/token_security", null]);
   });

@@ -880,7 +880,7 @@ const API: ApiRouter = {
     catch (e) { errorResponse(res, 503, e); }
   },
   "GET /api/ledger": (_req, res) => {
-    try { const st = ledgerStatus(); jsonResponse(res, 200, { rows: st.rows, error: st.error, summary: st.summary }); }
+    try { const st = ledgerStatus(); jsonResponse(res, 200, { rows: st.rows, error: st.error, summary: st.summary, signals: st.signals }); }
     catch (e) { errorResponse(res, 503, e); }
   },
   "GET /api/market-overview": async (req, res) => {

@@ -167,3 +167,26 @@ export function parseCoinGeckoSectors(raw: unknown): Array<{ id: string; label: 
   });
 }
 export const fetchCoinGeckoSectors = async (fetcher: FetchLike) => parseCoinGeckoSectors(await getJson(fetcher, "https://api.coingecko.com/api/v3/coins/categories"));
+
+/** Ranks 501-1000 (the speculative universe), without sparklines to keep the download small. */
+export const fetchCoinGeckoRanks501to1000 = async (fetcher: FetchLike): Promise<MarketCoin[]> => {
+  const page = (n: number) => `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${n}&price_change_percentage=7d,30d,200d,1y&sparkline=false`;
+  return [...parseCoinGeckoMarkets(await getJson(fetcher, page(3))), ...parseCoinGeckoMarkets(await getJson(fetcher, page(4)))];
+};
+
+/** CoinGecko /search/trending: the most-searched coins right now (a free mindshare signal). geckoId -> position. */
+export function parseCoinGeckoTrending(raw: unknown): Map<string, number> {
+  const coins = (raw as any)?.coins;
+  if (!Array.isArray(coins)) throw new Error("CoinGecko trending: expected coins");
+  const out = new Map<string, number>();
+  coins.forEach((c: any, i: number) => { const id = c?.item?.id; if (typeof id === "string" && !out.has(id)) out.set(id, i); });
+  return out;
+}
+export const fetchCoinGeckoTrending = async (fetcher: FetchLike) => parseCoinGeckoTrending(await getJson(fetcher, "https://api.coingecko.com/api/v3/search/trending"));
+
+/** Ids of the coins in one CoinGecko category (e.g. artificial-intelligence), top 250 by market cap. */
+export async function fetchCoinGeckoCategoryIds(fetcher: FetchLike, category: string): Promise<Set<string>> {
+  const rows = parseCoinGeckoMarkets(await getJson(fetcher, `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&category=${encodeURIComponent(category)}&order=market_cap_desc&per_page=250&page=1&sparkline=false`));
+  return new Set(rows.map((r) => r.geckoId));
+}
+export const fetchJson = getJson;
