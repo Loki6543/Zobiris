@@ -1,7 +1,8 @@
 // Small, dependency-free SVG charts shared by the dashboard pages.
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 
-export const fmtUsd = (n: number | null | undefined, digits = 2) => n == null || !Number.isFinite(n) ? "—" : n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: Math.abs(n) < 1 ? 6 : digits, minimumFractionDigits: Math.abs(n) < 1 ? 2 : Math.min(digits, 2) });
+const tinyUsd = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumSignificantDigits: 4 }); // e.g. $0.0000004512
+export const fmtUsd = (n: number | null | undefined, digits = 2) => n == null || !Number.isFinite(n) ? "—" : n !== 0 && Math.abs(n) < 0.001 ? tinyUsd(n) : n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: Math.abs(n) < 1 ? 6 : digits, minimumFractionDigits: Math.abs(n) < 1 ? 2 : Math.min(digits, 2) });
 export const fmtPct = (n: number | null | undefined, d = 2) => n == null || !Number.isFinite(n) ? "—" : (n > 0 ? "+" : "") + n.toFixed(d) + "%";
 export const fmtBig = (n: number | null | undefined) => {
   if (n == null || !Number.isFinite(n)) return "—";
@@ -51,6 +52,7 @@ export function RangeTabs<T extends string>({ options, value, onChange, label }:
 export function AreaChart({ points, height = 220, format = (v: number) => fmtUsd(v, 0), ariaLabel }: { points: Array<[number, number]>; height?: number; format?: (v: number) => string; ariaLabel: string }) {
   const [box, W] = useWidth(640);
   const [hover, setHover] = useState<number | null>(null);
+  const fillId = `zs-area-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`; // one gradient per chart; a shared id paints every chart like the first
   const PAD = { l: 6, r: 64, t: 12, b: 22 };
   const geo = useMemo(() => {
     if (points.length < 2) return null;
@@ -79,10 +81,10 @@ export function AreaChart({ points, height = 220, format = (v: number) => fmtUsd
   return (
     <div ref={box} className={`zs-area ${up ? "is-up" : "is-down"}`}>
       <svg viewBox={`0 0 ${W} ${height}`} width="100%" height={height} onPointerMove={onMove} onPointerLeave={() => setHover(null)} role="img" aria-label={ariaLabel}>
-        <defs><linearGradient id="zs-area-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="currentColor" stopOpacity=".32" /><stop offset="1" stopColor="currentColor" stopOpacity="0" /></linearGradient></defs>
+        <defs><linearGradient id={fillId} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="currentColor" stopOpacity=".32" /><stop offset="1" stopColor="currentColor" stopOpacity="0" /></linearGradient></defs>
         {geo.ticks.map((t) => <g key={t}><line x1={PAD.l} x2={W - PAD.r} y1={geo.y(t)} y2={geo.y(t)} className="zs-grid" /><text x={W - PAD.r + 6} y={geo.y(t) + 4} className="zs-axis">{format(t)}</text></g>)}
         {geo.xt.map((i) => <text key={i} x={geo.x(i)} y={height - 5} className="zs-axis" textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}>{dateFmt(points[i]![0])}</text>)}
-        <polygon points={`${geo.x(0)},${height - PAD.b} ${geo.line} ${geo.x(points.length - 1)},${height - PAD.b}`} fill="url(#zs-area-fill)" />
+        <polygon points={`${geo.x(0)},${height - PAD.b} ${geo.line} ${geo.x(points.length - 1)},${height - PAD.b}`} fill={`url(#${fillId})`} />
         <polyline points={geo.line} className="zs-line" />
         <circle cx={geo.x(points.length - 1)} cy={geo.y(last[1])} r="4" className="zs-dot" />
         <g transform={`translate(${Math.min(W - PAD.r - 4, geo.x(points.length - 1))},${geo.y(last[1]) - 12})`}><rect x="-62" y="-11" width="62" height="18" rx="5" className="zs-tag" /><text x="-31" y="2" textAnchor="middle" className="zs-tag-text">{format(last[1])}</text></g>
@@ -123,8 +125,9 @@ export function CandleChart({ candles, height: wanted = 300, ariaLabel }: { cand
     const px = ((e.clientX - r.left) / r.width) * W;
     setHover(Math.max(0, Math.min(candles.length - 1, Math.floor((px - PAD.l) / geo.step))));
   };
-  const c = candles[hover ?? candles.length - 1]!;
-  const prev = candles[(hover ?? candles.length - 1) - 1];
+  const at = hover != null && hover < candles.length ? hover : candles.length - 1; // data can shrink under a resting pointer
+  const c = candles[at]!;
+  const prev = candles[at - 1];
   const last = candles[candles.length - 1]!;
   return (
     <div ref={box} className="zs-candles">
@@ -141,7 +144,7 @@ export function CandleChart({ candles, height: wanted = 300, ariaLabel }: { cand
           </g>;
         })}
         <g transform={`translate(${W - PAD.r + 2},${geo.y(last.c)})`}><rect x="0" y="-9" width="62" height="18" rx="4" className={last.c >= last.o ? "zs-tag-up" : "zs-tag-down"} /><text x="31" y="4" textAnchor="middle" className="zs-tag-text">{fmtUsd(last.c, 0)}</text></g>
-        {hover != null ? <line x1={geo.x(hover)} x2={geo.x(hover)} y1={PAD.t} y2={height - PAD.b} className="zs-cross" pointerEvents="none" /> : null}
+        {hover != null ? <line x1={geo.x(at)} x2={geo.x(at)} y1={PAD.t} y2={height - PAD.b} className="zs-cross" pointerEvents="none" /> : null}
       </svg>
       <div className="zs-readout" aria-live="polite">
         {new Date(c.t * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · O {fmtUsd(c.o, 0)} · H {fmtUsd(c.h, 0)} · L {fmtUsd(c.l, 0)} · C <strong>{fmtUsd(c.c, 0)}</strong>
@@ -183,18 +186,22 @@ export function useApi<T>(url: string | null, everyMs = 5 * 60_000) {
     let live = true;
     const load = async (force: boolean) => {
       const hit = cache.get(url);
-      if (!force && hit && Date.now() - hit.at < everyMs && hit.data) { setData(hit.data as T); return; }
+      if (!force && hit && Date.now() - hit.at < everyMs && hit.data) { setData(hit.data as T); return false; }
       try {
-        const p = hit?.p ?? fetch(url).then(async (r) => { const b = await r.json().catch(() => null); if (!r.ok) throw new Error(b?.error ?? `HTTP ${r.status}`); return b; });
+        const p = hit?.p ?? fetch(url).then(async (r) => { const b = await r.json().catch(() => null); if (!r.ok) throw new Error(b?.error ?? `HTTP ${r.status}`); if (b == null || typeof b !== "object") throw new Error("Unexpected response"); return b; });
         cache.set(url, { at: hit?.at ?? 0, data: hit?.data, p });
         const body = await p;
         cache.set(url, { at: Date.now(), data: body });
         if (live) { setData(body as T); setError(""); }
-      } catch (e) { cache.set(url, { at: hit?.at ?? 0, data: hit?.data }); if (live) setError(String(e instanceof Error ? e.message : e)); }
+        return Array.isArray((body as { pending?: unknown[] })?.pending) && (body as { pending: unknown[] }).pending.length > 0; // still loading server-side
+      } catch (e) { cache.set(url, { at: hit?.at ?? 0, data: hit?.data }); if (live) setError(String(e instanceof Error ? e.message : e)); return true; }
+      return false;
     };
-    void load(false);
-    const t = setInterval(() => void load(true), everyMs);
-    return () => { live = false; clearInterval(t); };
+    // Poll on the normal interval; after a failure or a partial answer, try again within a minute.
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const next = (soon: boolean) => { if (live) t = setTimeout(async () => next(await load(true)), soon ? Math.min(60_000, everyMs) : everyMs); };
+    void load(false).then(next);
+    return () => { live = false; clearTimeout(t); };
   }, [url, everyMs]);
   return { data, error };
 }

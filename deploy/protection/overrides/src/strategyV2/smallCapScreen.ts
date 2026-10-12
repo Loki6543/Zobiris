@@ -97,6 +97,7 @@ export function screenSmallCap(a: SmallCapInput, regime: Pick<BtcRegime, "allowS
     else if (a.security.status === "WARN") notes.push(...a.security.warnings.map((w) => `CONTRACT_${w}`));
     else if (a.security.status === "UNSUPPORTED_CHAIN") notes.push("CONTRACT_NOT_SCANNABLE_ON_THIS_CHAIN");
     else if (a.security.status === "PASS") notes.push("CONTRACT_CHECKS_PASSED");
+    else if (a.security.status === "NATIVE") notes.push("NATIVE_COIN_NO_TOKEN_CONTRACT");
   }
 
   if (rejections.length) return { symbol: a.symbol, eligible: false, convexityScore: 0, rejections, notes };

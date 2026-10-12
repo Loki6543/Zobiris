@@ -9,43 +9,59 @@ export function ledgerPath(): string {
   return process.env.ZOBIRIS_LEDGER_PATH ?? join(dirname(process.env.ZOBIRIS_DB_PATH ?? "/data/zobiris.sqlite"), "zobiris-decisions.jsonl");
 }
 
-let rows: LedgerRow[] | null = null;
+let cache: { path: string; rows: LedgerRow[]; endsWithNewline: boolean } | null = null;
 let lastError: string | null = null;
 
-function load(path = ledgerPath()): LedgerRow[] {
-  if (rows) return rows;
-  rows = [];
+/** Rows on disk. A read error is thrown (and never cached) so a bad read cannot make today look unrecorded. */
+function load(path = ledgerPath()): { rows: LedgerRow[]; endsWithNewline: boolean } {
+  if (cache?.path === path) return cache;
+  const rows: LedgerRow[] = [];
+  let endsWithNewline = true;
   if (existsSync(path)) {
-    for (const line of readFileSync(path, "utf8").split("\n")) {
+    const text = readFileSync(path, "utf8");
+    endsWithNewline = text.length === 0 || text.endsWith("\n");
+    for (const line of text.split("\n")) {
       if (!line.trim()) continue;
       try { rows.push(JSON.parse(line)); } catch { /* a torn last line from a crash is skipped, never repaired in place */ }
     }
   }
-  return rows;
+  cache = { path, rows, endsWithNewline };
+  return cache;
 }
+
+/** Short, path-free error text for the public status. */
+const errorText = (e: unknown) => { const code = (e as NodeJS.ErrnoException)?.code; return code ? `file error ${code}` : "file error"; };
 
 /** Append today's rows once. Returns true when something was written. */
 export function recordReport(report: StrategyReport, path = ledgerPath()): boolean {
   try {
-    const all = load(path);
+    const state = load(path);
     const day = dayOf(report.asOf);
-    if (all.some((r) => r.kind === "snapshot" && r.day === day)) return false;
+    if (state.rows.some((r) => r.kind === "snapshot" && r.day === day)) return false;
     const fresh = rowsForReport(report);
+    // The snapshot goes last: it marks the day as recorded, so a write cut short is retried rather than half-kept.
+    // Repeated same-day decision rows from such a retry do not change the scoring (one onset per run, one price per day).
+    const ordered = [...fresh.filter((r) => r.kind !== "snapshot"), ...fresh.filter((r) => r.kind === "snapshot")];
     mkdirSync(dirname(path), { recursive: true });
-    appendFileSync(path, fresh.map((r) => JSON.stringify(r)).join("\n") + "\n", "utf8");
-    all.push(...fresh);
+    // Start on a new line if the file ends in a torn line, so the first new row is not glued onto it.
+    appendFileSync(path, (state.endsWithNewline ? "" : "\n") + ordered.map((r) => JSON.stringify(r)).join("\n") + "\n", "utf8");
+    state.rows.push(...ordered);
+    state.endsWithNewline = true;
     lastError = null;
     return true;
   } catch (e) {
-    lastError = String(e instanceof Error ? e.message : e);
+    cache = null; // re-read the file next time so memory matches what actually reached the disk
+    lastError = errorText(e);
     return false;
   }
 }
 
 export function ledgerStatus() {
-  const all = load();
-  return { path: ledgerPath(), rows: all.length, error: lastError, summary: summarizeLedger(all, new Date().toISOString().slice(0, 10)) };
+  let rows: LedgerRow[] = [];
+  let error = lastError;
+  try { rows = load().rows; } catch (e) { error = errorText(e); }
+  return { path: ledgerPath(), rows: rows.length, error, summary: summarizeLedger(rows, new Date().toISOString().slice(0, 10)) };
 }
 
 /** Test hook: forget the in-memory copy so the next call re-reads the file. */
-export function resetLedgerCache() { rows = null; lastError = null; }
+export function resetLedgerCache() { cache = null; lastError = null; }

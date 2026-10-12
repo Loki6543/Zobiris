@@ -11,7 +11,8 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 async function getJson(fetcher: FetchLike, url: string): Promise<{ status: number; body: unknown }> {
   const res = await fetcher(url, { headers: { Accept: "application/json", "User-Agent": "ZOBIRIS/2 research" }, signal: AbortSignal.timeout(20_000) });
-  return { status: res.status, body: res.ok ? await res.json() : null };
+  if (!res.ok) return { status: res.status, body: null };
+  try { return { status: res.status, body: await res.json() }; } catch { return { status: res.status, body: null }; } // HTML or truncated body
 }
 
 export async function checkCoin(geckoId: string, fetcher: FetchLike, now = Date.now()): Promise<Diligence> {
@@ -57,7 +58,12 @@ export async function getDiligence(geckoIds: string[], fetcher: FetchLike = fetc
       const value = await checkCoin(id, fetcher, now);
       cache.set(id, { value, at: now, ttl: value.security.status === "UNCHECKED" ? FAIL_TTL_MS : TTL_MS });
       out.set(id, value);
-    } catch { /* missing => screen fails closed for contract tokens */ }
+    } catch (error) {
+      // Remember the failure for FAIL_TTL so a broken response is not re-fetched on every refresh; the screen fails closed.
+      const value: Diligence = { geckoId: id, security: { status: "UNCHECKED", vetoes: [], warnings: [`CHECK_FAILED: ${String((error as Error)?.message ?? error).slice(0, 80)}`], top10HolderPct: null, chain: null }, commits12w: null, repo: null, checkedAt: new Date(now).toISOString() };
+      cache.set(id, { value, at: now, ttl: FAIL_TTL_MS });
+      out.set(id, value);
+    }
   }
   return out;
 }

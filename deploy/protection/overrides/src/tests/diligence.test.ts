@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluateEvmSecurity, evaluateSolanaSecurity, goPlusPath, parseCoinDetail, parseGithubParticipation } from "../strategyV2/diligence";
 import { screenSmallCap } from "../strategyV2/smallCapScreen";
-import { checkCoin } from "../server/diligenceService";
+import { checkCoin, getDiligence } from "../server/diligenceService";
 
 const base = { symbol: "X", cmcRank: 150, marketCapUsd: 300e6, fullyDilutedValueUsd: 330e6, volume24hUsd: 15e6, ageDays: 900, krakenListed: true,
   change30dPct: 6, change90dPct: -30, btcChange30dPct: 5, drawdownFromAthPct: -85, priceAboveSma50: true, unlockShareNext60d: 0 };
@@ -52,4 +52,16 @@ describe("small-cap contract diligence", () => {
     expect(calls).toEqual(["api.coingecko.com", "api.gopluslabs.io", "api.github.com"]);
     expect([d.security.status, d.commits12w]).toEqual(["PASS", 12]);
   }, 10_000);
+  it("treats an HTML or broken response as unchecked and remembers the failure instead of refetching", async () => {
+    let calls = 0;
+    const html = async () => { calls++; return { ok: true, status: 200, json: async () => { throw new SyntaxError("Unexpected token <"); } }; };
+    const d = await checkCoin("h", html as any, 0);
+    expect([d.security.status, d.security.warnings]).toEqual(["UNCHECKED", ["COINGECKO_HTTP_200"]]);
+    const bad = async () => { calls++; return { ok: true, status: 200, json: async () => ({ error: "no id" }) }; }; // parseCoinDetail throws
+    const first = await getDiligence(["broken-coin"], bad as any, 1_000);
+    expect(first.get("broken-coin")?.security.status).toBe("UNCHECKED");
+    const before = calls;
+    await getDiligence(["broken-coin"], bad as any, 2_000);
+    expect(calls).toBe(before); // cached for the failure TTL
+  });
 });
