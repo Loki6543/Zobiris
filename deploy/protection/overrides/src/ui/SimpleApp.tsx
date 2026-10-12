@@ -25,6 +25,7 @@ import { EnginePage } from "./EnginePage";
 import { ForgePage } from "./ForgePage";
 import { BitcoinPage } from "./BitcoinPage";
 import { MindPage } from "./MindPage";
+import { BacktestPage } from "./BacktestPage";
 import { DashboardPage } from "./DashboardPage";
 import { CoinSearch, DailyEdge, TopbarTicker, markDailyEdge, readDailyEdge } from "./DashboardChrome";
 import { CMC_WATCHLIST } from "../strategyV2/watchlist";
@@ -38,9 +39,10 @@ import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "mind" | "bitcoin" | "dashboard" | "engine" | "forge" | "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
+type View = "backtest" | "mind" | "bitcoin" | "dashboard" | "engine" | "forge" | "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
 const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
   dashboard: { title: "Dashboard", description: "Market mood, your watchlist decisions and today's engine signals." },
+  backtest: { title: "Backtest Lab", description: "Bitcoin trading rules tested without peeking ahead, with costs, walk-forward windows and Monte Carlo odds." },
   mind: { title: "Mind", description: "The engine as a mind at work: what it believes, what would change its posture, where its attention is, and what it got wrong." },
   bitcoin: { title: "Bitcoin", description: "Full Bitcoin chart, the daily 1/3/7-day forecast, what drives it, and how past forecasts actually scored." },
   forge: { title: "Valley Forge", description: "Elastic allocation by market phase, openings outside the top 100, volume shocks, the daily Claude review and stablecoin yield." },
@@ -903,6 +905,7 @@ export function App() {
         {([
           ["mind", "Mind"],
           ["bitcoin", "Bitcoin"],
+          ["backtest", "Backtest Lab"],
           ["dashboard", "Dashboard"],
           ["engine", "Engine"],
           ["forge", "Valley Forge"],
@@ -1095,6 +1098,7 @@ export function App() {
       {view === "dashboard" ? <DashboardPage onOpen={setView} onAnalyze={(symbol) => { setAnalysisSymbol(symbol); setView("compare"); }} /> : null}
       {view === "mind" ? <MindPage cashUsd={LIVE_CASH_USD} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, value: row.value }))} onOpen={(v) => setView(v as View)} /> : null}
       {view === "bitcoin" ? <BitcoinPage /> : null}
+      {view === "backtest" ? <BacktestPage /> : null}
       {view === "forge" ? <ForgePage cashUsd={LIVE_CASH_USD} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, value: row.value }))} /> : null}
       {view === "engine" ? <EnginePage cashUsd={LIVE_CASH_USD} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, value: row.value }))} onOpen={setView} /> : null}
       {view === "strategy" ? <StrategyPage portfolioUsd={total} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, quantity: row.quantity, avgPriceUsd: row.avgPriceUsd ?? null, value: row.value }))} /> : null}
@@ -1404,6 +1408,7 @@ function DashboardIcon({name}: {name: string}) {
     refresh: "M20 7a9 9 0 1 0 1 8M20 3v5h-5",
     strategy: "M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
     dashboard: "M4 13h6V4H4ZM14 20h6v-9h-6ZM14 4h6v4h-6ZM4 20h6v-4H4Z",
+    backtest: "M4 19V5M4 19h16M8 15l3-4 3 2 5-6M17 7h2v2",
     mind: "M12 3a7 7 0 0 0-4 12.7V18a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3A7 7 0 0 0 12 3ZM9 10h6M12 10v10",
     bitcoin: "M9 4v16M13 4v3M13 17v3M7 7h7a3 3 0 0 1 0 6H7M7 13h8a3 3 0 0 1 0 6H7",
     forge: "M12 3 4 6v6c0 4.5 3.4 8.2 8 9 4.6-.8 8-4.5 8-9V6ZM9 12l2 2 4-4",
