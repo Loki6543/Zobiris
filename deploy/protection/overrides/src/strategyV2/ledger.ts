@@ -55,6 +55,11 @@ export function rowsForReport(report: StrategyReport): LedgerRow[] {
     logged.add(o.symbol);
     rows.push({ kind: "signal", day, symbol: o.symbol, geckoId: o.geckoId, rank: o.rank, tier: o.tier, volumeClass: o.volume.class, score: o.score, verdict: o.verdict, priceUsd: o.priceUsd });
   }
+  // Exchange events, logged as their own "class" so the forward test measures what each kind led to.
+  for (const a of report.valleyForge?.exchangeAlerts ?? []) {
+    if (a.priceUsd == null) continue;
+    rows.push({ kind: "signal", day, symbol: a.symbol, geckoId: a.geckoId, rank: a.rank, tier: "event", volumeClass: `EVENT_${a.exchange.toUpperCase()}_${a.kind}`, score: 0, verdict: a.kind === "LISTING" ? "WATCH" : "AVOID", priceUsd: a.priceUsd });
+  }
   for (const c of report.marketSmallCapCandidates) {
     if (seen.has(c.symbol)) continue;
     seen.add(c.symbol);

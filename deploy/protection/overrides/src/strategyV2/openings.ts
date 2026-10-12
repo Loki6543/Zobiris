@@ -18,6 +18,9 @@ import { volumeShock, median, VOLUME_CLASS_TILT, type VolumeShock } from "./volu
 import { riskProfile, halfRecoveryUpsidePct, type RiskProfile } from "./riskMetrics";
 import { firstTranchePct, sleeveForRank, type TierOfRank } from "./valleyForge";
 import type { AiWatchItem } from "./aiWatchlist";
+import type { ExchangeNotice } from "./exchangeNotices";
+import { leverageFlag, type PerpState } from "./leverage";
+import { verifiedUnlockShare } from "./unlockOverrides";
 
 export type OpeningTier = Exclude<TierOfRank, "top100">;
 export type Verdict = "CONSIDER" | "WATCH" | "AVOID";
@@ -38,6 +41,9 @@ export interface OpeningCandidate {
   firstTranchePct: number;
   krakenListed: boolean;
   ai: AiWatchItem | null;
+  /** Latest exchange notice (Binance/Upbit) in the last 30 days. */
+  notice?: ExchangeNotice | null;
+  leverage?: { flag: string | null; fundingAprPct: number; openInterestUsd: number } | null;
 }
 
 export interface OpeningsInput {
@@ -55,6 +61,8 @@ export interface OpeningsInput {
   krakenPairs: Map<string, string>;
   aiWatchlist: AiWatchItem[];
   allowNewBuys: boolean;
+  notices?: Map<string, ExchangeNotice>;
+  perps?: Map<string, PerpState>;
 }
 
 export const OPENING_WEIGHTS = { value: 0.18, dilution: 0.12, turn: 0.2, liquidity: 0.1, volume: 0.15, attention: 0.1, legitimacy: 0.15 } as const;
@@ -167,16 +175,26 @@ export function scoreOpenings(i: OpeningsInput): OpeningCandidate[] {
       if (vol.class === "DISTRIBUTION" || vol.class === "VOLUME_COLLAPSE") reasons.push(vol.class);
       if (c.change30dPct != null && c.change30dPct > 150) reasons.push("CHASING_150PCT_30D");
       if (ai?.verdict === "AVOID") reasons.push("AI_REVIEW_AVOID");
+      // Research-backed hard vetoes: exchange risk notices and large verified unlocks ahead.
+      const notice = own ? i.notices?.get(c.symbol) ?? null : null;
+      if (notice && notice.kind !== "LISTING") reasons.push(`${notice.exchange.toUpperCase()}_${notice.kind}`);
+      const unlock = own ? verifiedUnlockShare(c.symbol, i.now) : null;
+      if (unlock && unlock.share60d > 0.05) reasons.push("LARGE_UNLOCK_60D");
       let verdict: Verdict = reasons.length ? "AVOID" : "WATCH";
       if (verdict === "WATCH" && score >= 60 && legit.grade !== "UNVERIFIED" && legit.score >= 50) verdict = i.allowNewBuys ? "CONSIDER" : "WATCH";
       if (verdict === "WATCH" && legit.grade === "UNVERIFIED") reasons.push("AWAITING_LEGITIMACY_SCAN");
+      // Fresh listings pop then reverse from day 2: never a CONSIDER inside the first 3 days.
+      if (notice?.kind === "LISTING" && i.now - Date.parse(notice.at) < 3 * 86_400_000) { labels.push("FRESH_LISTING"); if (verdict === "CONSIDER") verdict = "WATCH"; reasons.push("FRESH_LISTING_FADE"); }
+      const perp = own ? i.perps?.get(c.symbol) : undefined;
+      const lev = perp ? { flag: leverageFlag(perp, c.marketCapUsd), fundingAprPct: Math.round(perp.fundingAprPct * 10) / 10, openInterestUsd: Math.round(perp.openInterestUsd) } : null;
+      if (lev?.flag) labels.push(lev.flag);
 
       const closes = own ? i.closesBySymbol.get(c.symbol) ?? null : null;
       out.push({
         geckoId: c.geckoId, symbol: c.symbol, name: c.name, rank: c.rank!, tier, priceUsd: c.priceUsd!, marketCapUsd: c.marketCapUsd!, volume24hUsd: c.volume24hUsd!,
         change24hPct: c.change24hPct, change7dPct: c.change7dPct, change30dPct: c.change30dPct, athChangePct: c.athChangePct,
         score, factors, volume: vol, legitimacy: legit, risk: riskProfile(closes, i.btcCloses), upsideHalfAthPct: halfRecoveryUpsidePct(c.athChangePct),
-        labels, verdict, reasons, firstTranchePct: firstTranchePct(tier, c.symbol), krakenListed, ai,
+        labels, verdict, reasons, firstTranchePct: lev?.flag ? firstTranchePct(tier, c.symbol) / 2 : firstTranchePct(tier, c.symbol), krakenListed, ai, notice, leverage: lev,
       });
     });
   }

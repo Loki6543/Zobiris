@@ -104,7 +104,7 @@ export function parseKrakenDailyCloses(raw: unknown): number[] {
   return parseKrakenDailyCandles(raw).map((c) => c.close);
 }
 
-export type FetchLike = (url: string, init?: { headers?: Record<string, string>; signal?: AbortSignal }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
+export type FetchLike = (url: string, init?: { headers?: Record<string, string>; signal?: AbortSignal; method?: string; body?: string }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 
 async function getJson(fetcher: FetchLike, url: string): Promise<unknown> {
   const res = await fetcher(url, { headers: { Accept: "application/json", "User-Agent": "ZOBIRIS/2 research" }, signal: AbortSignal.timeout(20_000) });
