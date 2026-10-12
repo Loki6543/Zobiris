@@ -27,6 +27,14 @@ export interface SmallCapInput {
   priceAboveSma50: boolean | null;
   /** Share of circulating supply unlocking in the next 60 days (0.05 = 5%). null = unknown. */
   unlockShareNext60d: number | null;
+  /**
+   * Circulating / max(total, max) supply. Used as a free proxy when no unlock schedule exists:
+   * if most supply already circulates, future unlocks are necessarily small.
+   */
+  unlockedSupplyShare?: number | null;
+  /** For stablecoin / pegged-asset detection. */
+  priceUsd?: number | null;
+  change7dPct?: number | null;
 }
 
 export interface SmallCapScreenResult {
@@ -46,6 +54,7 @@ export const SMALL_CAP_RULES = {
   maxTurnover: 1.0, // above this, volume is likely wash-traded or a pump
   minFloatRatio: 0.4, // market cap / FDV: below this, future dilution dominates
   maxUnlockShare60d: 0.05,
+  minUnlockedSupplyShareProxy: 0.75,
   minAgeDays: 180,
   minDrawdownForConvexityPct: -60,
 } as const;
@@ -58,6 +67,8 @@ export function screenSmallCap(a: SmallCapInput, regime: Pick<BtcRegime, "allowS
   const notes: string[] = [];
 
   if (!regime.allowSmallCapBets) rejections.push(`BTC_REGIME_${regime.state}_NO_SMALL_CAP_BETS`);
+  const pegged = finite(a.priceUsd ?? null) && a.priceUsd! > 0.9 && a.priceUsd! < 1.2 && Math.abs(a.change7dPct ?? 99) < 1.5 && Math.abs(a.change30dPct ?? 99) < 3;
+  if (pegged) rejections.push("STABLECOIN_OR_PEGGED_ASSET");
   if (!finite(a.cmcRank) || a.cmcRank < r.minRank || a.cmcRank > r.maxRank) rejections.push("OUTSIDE_RANK_101_500");
   if (!a.krakenListed) rejections.push("NOT_TRADABLE_ON_KRAKEN");
   if (!finite(a.volume24hUsd) || a.volume24hUsd < r.minVolume24hUsd) rejections.push("VOLUME_TOO_LOW_OR_UNKNOWN");
@@ -69,8 +80,11 @@ export function screenSmallCap(a: SmallCapInput, regime: Pick<BtcRegime, "allowS
   }
   if (!finite(a.fullyDilutedValueUsd) || !finite(a.marketCapUsd) || a.fullyDilutedValueUsd <= 0) rejections.push("FDV_UNKNOWN");
   else if (a.marketCapUsd / a.fullyDilutedValueUsd < r.minFloatRatio) rejections.push("HEAVY_FUTURE_DILUTION");
-  if (a.unlockShareNext60d == null) rejections.push("UNLOCK_SCHEDULE_UNKNOWN");
-  else if (a.unlockShareNext60d > r.maxUnlockShare60d) rejections.push("LARGE_UNLOCK_WITHIN_60D");
+  if (a.unlockShareNext60d == null) {
+    if (a.unlockedSupplyShare == null || !Number.isFinite(a.unlockedSupplyShare)) rejections.push("UNLOCK_SCHEDULE_UNKNOWN");
+    else if (a.unlockedSupplyShare < r.minUnlockedSupplyShareProxy) rejections.push("UNLOCK_RISK_TOO_MUCH_SUPPLY_LOCKED");
+    else notes.push("UNLOCK_RISK_FROM_SUPPLY_PROXY");
+  } else if (a.unlockShareNext60d > r.maxUnlockShare60d) rejections.push("LARGE_UNLOCK_WITHIN_60D");
   if (!finite(a.ageDays) || a.ageDays < r.minAgeDays) rejections.push("TOO_NEW_UNPROVEN_SURVIVAL");
   if (!finite(a.drawdownFromAthPct) || !finite(a.change30dPct) || !finite(a.change90dPct) || a.priceAboveSma50 == null) rejections.push("PRICE_HISTORY_INCOMPLETE");
 

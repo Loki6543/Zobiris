@@ -1,0 +1,80 @@
+// Builds and caches the Strategy v2 report from free, keyless public APIs.
+// Refreshes in the background; requests always get the last good report (or a clear warming-up error).
+import { fetchCoinGeckoTop500, fetchKrakenDailyCloses, fetchKrakenUsdPairs, fetchPaprikaFirstSeen, type FetchLike, type MarketCoin } from "../strategyV2/feed.js";
+import { buildStrategyReport, tierFor, type StrategyReport } from "../strategyV2/report.js";
+import { CMC_WATCHLIST } from "../strategyV2/watchlist.js";
+import { SMALL_CAP_RULES } from "../strategyV2/smallCapScreen.js";
+
+const REPORT_TTL_MS = 15 * 60_000;
+const SLOW_TTL_MS = 6 * 3_600_000; // AssetPairs, CoinPaprika ages, per-coin daily closes
+const KRAKEN_SPACING_MS = 1_100; // Kraken public API: ~1 request/second
+const MAX_COIN_HISTORIES = 120;
+
+interface Cached<T> { value: T; at: number }
+let report: Cached<StrategyReport> | null = null;
+let lastError: string | null = null;
+let inflight: Promise<StrategyReport> | null = null;
+let pairs: Cached<Map<string, string>> | null = null;
+let ages: Cached<Map<string, { firstDataAt: string; rank: number; name: string }>> | null = null;
+const histories = new Map<string, Cached<number[]>>();
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const fresh = <T>(c: Cached<T> | null, ttl: number, now: number): c is Cached<T> => Boolean(c && now - c.at < ttl);
+
+/** Coins worth spending a Kraken history request on: rank 101-500, Kraken-listed, liquid. */
+export function historyCandidates(market: MarketCoin[], krakenPairs: Map<string, string>): MarketCoin[] {
+  return market.filter((c) => {
+    if (tierFor(c.rank) !== "RANK_101_500" || !krakenPairs.has(c.symbol)) return false;
+    if (c.volume24hUsd == null || c.marketCapUsd == null || c.marketCapUsd <= 0) return false;
+    if (c.priceUsd != null && c.priceUsd > 0.9 && c.priceUsd < 1.2 && Math.abs(c.change30dPct ?? 99) < 3) return false; // stablecoins
+    const t = c.volume24hUsd / c.marketCapUsd;
+    return c.volume24hUsd >= SMALL_CAP_RULES.minVolume24hUsd && t >= SMALL_CAP_RULES.minTurnover && t <= SMALL_CAP_RULES.maxTurnover;
+  }).slice(0, MAX_COIN_HISTORIES);
+}
+
+export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknown as FetchLike, now = Date.now()): Promise<StrategyReport> {
+  const market = await fetchCoinGeckoTop500(fetcher);
+  if (!fresh(pairs, SLOW_TTL_MS, now)) pairs = { value: await fetchKrakenUsdPairs(fetcher), at: now };
+  if (!fresh(ages, SLOW_TTL_MS, now)) {
+    try { ages = { value: await fetchPaprikaFirstSeen(fetcher), at: now }; }
+    catch { ages = ages ?? { value: new Map(), at: 0 }; } // age unknown => screen fails closed on age
+  }
+  const btcPair = pairs.value.get("BTC") ?? "XXBTZUSD";
+  await sleep(KRAKEN_SPACING_MS);
+  const btcDailyCloses = await fetchKrakenDailyCloses(fetcher, btcPair);
+  const coinDailyCloses = new Map<string, number[]>();
+  for (const coin of historyCandidates(market, pairs.value)) {
+    const cached = histories.get(coin.symbol);
+    if (fresh(cached ?? null, SLOW_TTL_MS, now)) { coinDailyCloses.set(coin.symbol, cached!.value); continue; }
+    await sleep(KRAKEN_SPACING_MS);
+    try {
+      const closes = await fetchKrakenDailyCloses(fetcher, pairs.value.get(coin.symbol)!);
+      histories.set(coin.symbol, { value: closes, at: now });
+      coinDailyCloses.set(coin.symbol, closes);
+    } catch { /* missing history => screen rejects PRICE_HISTORY_INCOMPLETE */ }
+  }
+  const value = buildStrategyReport({ now, btcDailyCloses, market, krakenPairs: pairs.value, firstSeen: ages.value, coinDailyCloses, watchlist: CMC_WATCHLIST });
+  report = { value, at: now };
+  lastError = null;
+  return value;
+}
+
+/** Last good report; triggers a background refresh when stale. */
+export async function getStrategyReport(): Promise<StrategyReport> {
+  const now = Date.now();
+  if (!fresh(report, REPORT_TTL_MS, now) && !inflight) {
+    inflight = refreshStrategyReport().catch((e) => { lastError = String(e instanceof Error ? e.message : e); throw e; }).finally(() => { inflight = null; });
+  }
+  if (report) return report.value;
+  if (inflight) return inflight;
+  throw new Error(lastError ?? "Strategy report unavailable");
+}
+
+export function startStrategyV2Timer(onClose: (stop: () => void) => void) {
+  if (process.env.ZOBIRIS_STRATEGY_V2_FEED === "0") return;
+  const tick = () => { if (!inflight) { inflight = refreshStrategyReport().catch((e) => { lastError = String(e); throw e; }).finally(() => { inflight = null; }); inflight.catch(() => {}); } };
+  const timer = setInterval(tick, REPORT_TTL_MS);
+  timer.unref();
+  tick();
+  onClose(() => clearInterval(timer));
+}

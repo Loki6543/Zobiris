@@ -73,15 +73,31 @@ Example with the current ~$930 portfolio: the sleeve is about $93 and each bet a
 |---|---|
 | Margin trading removed (UI, `/api/tactical`, service, tests) | ✅ done |
 | `computeBtcRegime`, `rotationBreadth` | ✅ built and tested |
-| `screenSmallCap` | ✅ built and tested |
+| `screenSmallCap` (plus the supply-proxy unlock check and the stablecoin filter) | ✅ built and tested |
 | `planBarbell`, `ladderDecision` | ✅ built and tested |
-| Server: feed 400 Kraken BTC daily closes into the regime | ⏳ next. Reuse the Kraken OHLC fetch behind `/api/market-brief`. |
-| Wire the regime into `delayedRotation` instead of its own bull check | ⏳ next |
-| Ranks 101–500 data | ⏳ needs the CMC `/v1/cryptocurrency/listings/latest?start=101&limit=400` (paid key): `cmc_rank`, `fully_diluted_market_cap`, `circulating_supply`, `max_supply`, `date_added`, `volume_24h`, `percent_change_30d/90d`. ATH and drawdown come from CMC historical data or Kraken OHLC. |
-| Unlock schedules | ⏳ needs an unlock data source (e.g. Tokenomist). Until then every coin fails `UNLOCK_SCHEDULE_UNKNOWN`. This is intentional. |
-| Kraken-listed check | ⏳ Kraken `AssetPairs` (public, already used for entry rules) |
-| UI: "BTC direction" card on Market Today plus an "Opportunities (101–500)" page with sleeve budget and ladder actions | ⏳ after the data endpoints |
-| Validation: forward paper ledger of every screened coin, **including the ones that later delist**, compared against equal-weight rank 101–500 and BTC | ⏳ reuse the existing trial ledger |
+| Top-100 delayed rotation on free data (`strategyV2/rotation.ts`) | ✅ built and tested |
+| Free data feed (`strategyV2/feed.ts`, `server/strategyV2Service.ts`) and `GET /api/strategy-v2` | ✅ built and tested; dry-run on recorded live responses from 12 Oct 2026 |
+| Owner's CoinMarketCap watchlist "Coins" (79 coins) in `strategyV2/watchlist.ts` | ✅ |
+| UI: **Opportunities** page (BTC direction, regime rules, barbell sleeve, watchlist signals, market candidates); cards on mobile | ✅ |
+| Wire the regime into the legacy `delayedRotation` engine | ⏳ optional; the new page uses `rotation.ts` |
+| Validation: forward paper ledger of every screened coin, **including the ones that later delist**, compared against equal-weight rank 101–500 and BTC | ⏳ next |
+
+### 3.1 Free data sources (no API keys)
+
+| Need | Source | Notes |
+|---|---|---|
+| Rank, price, market cap, FDV, 24h volume, circulating/total/max supply, % from ATH, 7d/30d/200d/1y change | CoinGecko `GET /api/v3/coins/markets?vs_currency=usd&per_page=250&page=1..2&price_change_percentage=7d,30d,200d,1y` | 2 calls = top 500. Keyless tier is about 5–15 calls/min, so the report refreshes every 15 min. |
+| Coin age (first trading data) | CoinPaprika `GET /v1/tickers` | One call, cached for 6 hours. If it fails, age is unknown and the screen rejects (fails closed). |
+| Tradable on Kraken in USD | Kraken `GET /0/public/AssetPairs` | Cached for 6 hours. Aliases XBT→BTC and XDG→DOGE. |
+| BTC regime (400+ daily closes) and the coin's 50-day average | Kraken `GET /0/public/OHLC?pair=…&interval=1440` | Requests spaced 1.1 s apart. Only for liquid, Kraken-listed rank 101–500 coins (at most 120), cached for 6 hours. The still-forming candle is dropped. |
+
+**Why not CoinMarketCap's API:** the CMC MCP connector works inside Claude, but the deployed server would need its own CMC API key and its monthly credit budget. CoinGecko returns the fields this strategy uses without a key. The CMC watchlist was imported once from the owner's public watchlist page. It is a static list: edit `strategyV2/watchlist.ts` to change it.
+
+**Unlock schedules:** DefiLlama's emissions API is paid (HTTP 402), and Tokenomist is paid. The free proxy is **circulating ÷ minted (total) supply ≥ 75%**. If at least three quarters of the minted supply already circulates, a 60-day unlock cannot exceed about 5–8% of float. Together with market cap/FDV ≥ 0.4, this rejects the heavy-unlock names. Unmined emission (e.g. DASH) is not treated as an unlock.
+
+**Matching CMC symbols to CoinGecko:** exact ticker first. A ticker held by a different coin whose rank is more than 150 places away is refused (e.g. UNT). Duplicate tickers are resolved by name, then by nearest rank. Coins outside CoinGecko's top 500 show "No free data", and coins ranked above 500 show "Outside strategy".
+
+Set `ZOBIRIS_STRATEGY_V2_FEED=0` to turn the background feed off.
 
 ## 4. Honest limits
 - None of this predicts price. The regime gate limits drawdowns, the screen removes likely failures, and the barbell caps the damage. Returns come from a few large winners, which won't appear in every period.

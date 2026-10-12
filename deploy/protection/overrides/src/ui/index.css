@@ -440,6 +440,7 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 @media (forced-colors:active){
   .zcc-panel,.zcc-chart,.zcc-stat,.zcc-feed{border:1px solid CanvasText;}
   .zcc-feed-dot{outline:1px solid CanvasText;}
+}
 
 
 
@@ -790,3 +791,62 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 }
 .zobiris-dashboard .dashboard-panel table button[aria-label$="order analysis"]{box-shadow:none !important;padding:0 !important;}
 .zobiris-dashboard .dashboard-panel table button[aria-label$="order analysis"] > span:last-child{background:#12224a !important;color:#93b4f5 !important;border-radius:6px !important;}
+
+/* Opportunities (Strategy v2) */
+.zobiris-dashboard .strategy-page{display:grid;gap:14px;}
+.zobiris-dashboard .strategy-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+.zobiris-dashboard .strategy-kpis article{padding:14px 16px !important;margin:0 !important;display:grid;gap:6px;}
+.zobiris-dashboard .strategy-kpis strong{font-size:22px;font-weight:650;color:#fff;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .strategy-kpis small,.zobiris-dashboard .strategy-muted{color:var(--zv-muted);font-size:12px;line-height:1.45;}
+.zobiris-dashboard .strategy-label{color:var(--zv-muted);font-size:12px;}
+.zobiris-dashboard .strategy-regime.is-risk_on{border-color:#15803d !important;background:linear-gradient(180deg,#0d2a1f,#0b1630) !important;}
+.zobiris-dashboard .strategy-regime.is-risk_on strong{color:var(--zv-green);}
+.zobiris-dashboard .strategy-regime.is-neutral strong{color:var(--zv-amber);}
+.zobiris-dashboard .strategy-regime.is-risk_off{border-color:#7f1d1d !important;background:linear-gradient(180deg,#2a0f14,#0b1630) !important;}
+.zobiris-dashboard .strategy-regime.is-risk_off strong,.zobiris-dashboard .strategy-regime.is-unknown strong{color:var(--zv-red);}
+.zobiris-dashboard .strategy-columns{display:grid;grid-template-columns:1fr 1fr;}
+.zobiris-dashboard .strategy-panel{margin:0 !important;}
+.zobiris-dashboard .strategy-rules{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:8px;font-size:13px;}
+.zobiris-dashboard .strategy-rules li:before{content:"●";margin-right:8px;}
+.zobiris-dashboard .strategy-rules li.is-on:before{color:var(--zv-green);}
+.zobiris-dashboard .strategy-rules li.is-off:before{color:var(--zv-red);}
+.zobiris-dashboard .strategy-sleeve{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;margin:10px 0;}
+.zobiris-dashboard .strategy-sleeve div{display:grid;gap:3px;}
+.zobiris-dashboard .strategy-sleeve strong{font-size:18px;color:#fff;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .strategy-sleeve p{grid-column:1/-1;}
+.zobiris-dashboard .strategy-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+.zobiris-dashboard .strategy-filters{display:flex;gap:4px;flex-wrap:wrap;}
+.zobiris-dashboard .strategy-scroll{overflow-x:auto;}
+.zobiris-dashboard .strategy-table{width:100%;border-collapse:collapse;min-width:900px;}
+.zobiris-dashboard .strategy-table th,.zobiris-dashboard .strategy-table td{text-align:right;white-space:nowrap;}
+.zobiris-dashboard .strategy-table th:first-child,.zobiris-dashboard .strategy-table td:first-child,.zobiris-dashboard .strategy-table th:nth-last-child(2),.zobiris-dashboard .strategy-table td:nth-last-child(2){text-align:left;}
+.zobiris-dashboard .strategy-table .is-gain{color:var(--zv-green);}
+.zobiris-dashboard .strategy-table .is-loss{color:var(--zv-red);}
+.zobiris-dashboard .strategy-pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid #24418a;background:#10224a;color:#cbd6ec;}
+.zobiris-dashboard .strategy-pill.is-buy{border-color:#15803d;background:#0d2a1f;color:#4ade80;}
+.zobiris-dashboard .strategy-pill.is-watch{border-color:#92400e;background:#2a1d08;color:#fbbf24;}
+.zobiris-dashboard .strategy-pill.is-avoid{border-color:#3f1d26;background:#1a0d12;color:#9aa5b8;}
+.zobiris-dashboard .strategy-candidates{margin:10px 0 0;padding-left:20px;display:grid;gap:6px;font-size:13px;}
+.zobiris-dashboard .strategy-candidates li{display:flex;align-items:center;gap:8px;}
+.zobiris-dashboard .strategy-score{margin-left:auto;font-weight:700;color:#93c5fd;font-variant-numeric:tabular-nums;}
+@media(max-width:900px){.zobiris-dashboard .strategy-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}.zobiris-dashboard .strategy-columns{grid-template-columns:1fr;}}
+@media(max-width:420px){.zobiris-dashboard .strategy-kpis{grid-template-columns:1fr;}}
+.zobiris-dashboard .strategy-page,.zobiris-dashboard .strategy-kpis,.zobiris-dashboard .strategy-columns{grid-template-columns:minmax(0,1fr);min-width:0;}
+.zobiris-dashboard .strategy-page>*,.zobiris-dashboard .strategy-columns>*,.zobiris-dashboard .strategy-kpis>*{min-width:0;}
+@media(min-width:901px){.zobiris-dashboard .strategy-kpis{grid-template-columns:repeat(4,minmax(0,1fr));}.zobiris-dashboard .strategy-columns{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(min-width:421px) and (max-width:900px){.zobiris-dashboard .strategy-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
+/* Phones: watchlist rows become cards, no sideways scrolling. */
+@media(max-width:640px){
+  .zobiris-dashboard .strategy-scroll{overflow:visible;}
+  .zobiris-dashboard .strategy-table{min-width:0;}
+  .zobiris-dashboard .strategy-table thead{display:none;}
+  .zobiris-dashboard .strategy-table,.zobiris-dashboard .strategy-table tbody{display:block;}
+  .zobiris-dashboard .strategy-table tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;padding:12px 0;border-bottom:1px solid #1b2a52;}
+  .zobiris-dashboard .strategy-table td{display:grid;gap:2px;text-align:left !important;white-space:normal;padding:0 !important;border:0 !important;font-size:13px;}
+  .zobiris-dashboard .strategy-table td[data-label]:before{content:attr(data-label);color:var(--zv-muted);font-size:11px;}
+  .zobiris-dashboard .strategy-table td.strategy-asset,.zobiris-dashboard .strategy-table td.strategy-signal{grid-column:1/-1;}
+  .zobiris-dashboard .strategy-table td.strategy-signal:before{display:none;}
+  .zobiris-dashboard .strategy-table td.strategy-signal{justify-items:start;}
+  .zobiris-dashboard .strategy-pill{white-space:normal;}
+  .zobiris-dashboard .strategy-candidates li{flex-wrap:wrap;}
+}

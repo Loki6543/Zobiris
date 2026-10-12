@@ -2,6 +2,7 @@ import { mergeAssetUniverse, visibleAssetData } from "../shared/assetUniverse";
 import {ResearchEvidencePanel,useResearchEvidence} from './ResearchEvidencePanel';
 import {entryReference,validateEntry,type EntryRules} from '../shared/entryPlan';
 import { WatchlistPage } from './WatchlistPage';
+import { StrategyPage } from './StrategyPage';
 import { MarketBrief } from './MarketBrief';
 import { Fragment, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
@@ -26,8 +27,9 @@ import { CompareLab } from "./CompareLab";
 import { TimeOutlookPage } from "./TimeOutlookPage";
 import { isLongTermProtected, timeOutlookFor } from "./timeOutlook";
 
-type View = "portfolio" | "market" | "watchlist" | "outlook" | "history" | "compare";
+type View = "portfolio" | "strategy" | "market" | "watchlist" | "outlook" | "history" | "compare";
 const PAGE_HEADINGS: Record<View, { title: string; description: string }> = {
+  strategy: { title: "Opportunities", description: "Bitcoin direction, top-100 rotation entries and small-cap bets for your watchlist." },
   portfolio: { title: "Portfolio", description: "Your holdings, allocation and trading decisions at a glance." },
   market: { title: "Market Today", description: "Verified Bitcoin market conditions, trend and technical analysis." },
   watchlist: { title: "Watchlist", description: "Spot prices, asset performance and entry research." },
@@ -862,6 +864,7 @@ export function App() {
         </div>
         {([
           ["portfolio", "Portfolio"],
+          ["strategy", "Opportunities"],
           ["market", "Market Today"],
           ["outlook", "Time Outlook"],
           ["watchlist", "Watchlist"],
@@ -1047,6 +1050,8 @@ export function App() {
 
                   </main>
       ) : null}
+
+      {view === "strategy" ? <StrategyPage portfolioUsd={total} accountSynced={accountSynced} holdings={portfolioRows.map((row) => ({ symbol: row.symbol, quantity: row.quantity, avgPriceUsd: row.avgPriceUsd ?? null, value: row.value }))} /> : null}
 
       {view === "outlook" ? <TimeOutlookPage watchlist={watchlist} holdingSymbols={portfolioRows.map((row) => row.symbol)} /> : null}
 
@@ -1351,7 +1356,7 @@ function DashboardIcon({name}: {name: string}) {
     compare: "M9 3h6M10 3v7L4 20h16l-6-10V3M8 15h8",
     lock: "M7 10V7a5 5 0 0 1 10 0v3M6 10h12v11H6ZM12 14v3",
     refresh: "M20 7a9 9 0 1 0 1 8M20 3v5h-5",
-    advisory: "M12 3 4 7v10l8 4 8-4V7l-8-4ZM4 7l8 4 8-4M12 11v10",
+    strategy: "M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z",
   };
   return <svg className="dashboard-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] ?? paths.portfolio}/></svg>;
 }

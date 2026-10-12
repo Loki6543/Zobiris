@@ -17,6 +17,7 @@ import { reportShadowEntryPlans } from './evidenceServiceClient.js';
 import { readSwarmLedger, summarizeSwarmAttribution, summarizeSwarmCalibration, updateSwarmLedger, type SwarmOutcomeHorizon } from "./swarmLedger.js";
 import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readLatestHyperliquidPositioning, type HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
 import { marketBrief } from './marketBrief.js';
+import { getStrategyReport, startStrategyV2Timer } from './strategyV2Service.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
 import { accountCapital, accountProvenance, accountMappings, buildAccountDependency, getAccountView, refreshAccountContextFromKraken, startAccountContextSync } from "./accountContext.js";
@@ -872,6 +873,10 @@ const API: ApiRouter = {
     let repo:ReturnType<typeof researchRepository>|undefined;
     try{const body=JSON.parse(await readBody(req));repo=researchRepository();jsonResponse(res,200,importResearchEvidence(repo,body.records,true));}catch{jsonResponse(res,400,{error:'Invalid research import: check identities, dates, source URLs and record limits (64KB HTTP body).'});}finally{repo?.close();}
   },
+  "GET /api/strategy-v2": async (_req, res) => {
+    try { jsonResponse(res, 200, await getStrategyReport()); }
+    catch (e) { errorResponse(res, 503, e); }
+  },
   "GET /api/market-brief": async (_req, res) => {
     try { jsonResponse(res, 200, await marketBrief()); }
     catch(e) { errorResponse(res, 503, e); }
@@ -1660,6 +1665,7 @@ export function createZobirisServer() {
 export function startZobirisServer(port = PORT, host = HOST) {
   const server = createZobirisServer();
   startAccountContextSync();
+  if(process.env.NODE_ENV!=='test'&&!process.env.VITEST)startStrategyV2Timer(stop=>server.on('close',stop));
   const stopResearch=startResearchTimers(async()=>{
     const assets=researchAssets();const repo=researchRepository(assets);
     try{
