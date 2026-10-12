@@ -1,0 +1,40 @@
+name: ZOBIRIS Claude context budget
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+jobs:
+  budget-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout with history for diff comparison
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Python budget tests
+        run: python3 -m unittest discover -s scripts -p 'test_zobiris_budget.py' -v
+
+      - name: Evaluate changed-file context
+        if: github.event_name == 'pull_request'
+        env:
+          ZOBIRIS_BASE_REF: ${{ github.base_ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/zobiris_budget.py \
+            --changed-from "origin/${ZOBIRIS_BASE_REF}" \
+            --max-fable-uncached 80000
+
+      - name: Evaluate selected research docs (manual run)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python3 scripts/zobiris_budget.py \
+            --target docs/research \
+            --max-fable-uncached 80000
