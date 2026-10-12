@@ -20,6 +20,7 @@ import { marketBrief } from './marketBrief.js';
 import { getStrategyReport, startStrategyV2Timer } from './strategyV2Service.js';
 import { getMarketOverview, getPriceHistory } from './marketOverviewService.js';
 import { getBitcoinReport, getCandles, TIMEFRAMES } from './btcService.js';
+import { getCoinMeta } from './coinMetaService.js';
 import { ledgerStatus } from './ledgerService.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
@@ -879,6 +880,11 @@ const API: ApiRouter = {
   "GET /api/strategy-v2": async (_req, res) => {
     try { jsonResponse(res, 200, await getStrategyReport()); }
     catch (e) { errorResponse(res, 503, e); }
+  },
+  "GET /api/coin-meta": async (req, res) => {
+    const raw = new URL(req.url ?? "/", "http://localhost").searchParams.get("symbols") ?? "";
+    const symbols = [...new Set(raw.split(",").map((x) => x.trim().toUpperCase()).filter((x) => /^[A-Z0-9]{1,15}$/.test(x)))].slice(0, 200);
+    try { jsonResponse(res, 200, await getCoinMeta(symbols)); } catch (e) { errorResponse(res, 503, e); }
   },
   "GET /api/bitcoin": async (_req, res) => {
     try { jsonResponse(res, 200, await getBitcoinReport()); }
