@@ -20,6 +20,7 @@ import { marketBrief } from './marketBrief.js';
 import { getStrategyReport, startStrategyV2Timer } from './strategyV2Service.js';
 import { getMarketOverview, getPriceHistory } from './marketOverviewService.js';
 import { getBitcoinReport, getCandles, TIMEFRAMES } from './btcService.js';
+import { getBacktestReport } from './backtestService.js';
 import { getCoinMeta } from './coinMetaService.js';
 import { ledgerStatus } from './ledgerService.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
@@ -888,6 +889,12 @@ const API: ApiRouter = {
   },
   "GET /api/bitcoin": async (_req, res) => {
     try { jsonResponse(res, 200, await getBitcoinReport()); }
+    catch (e) { errorResponse(res, 503, e); }
+  },
+  "GET /api/backtest": async (req, res) => {
+    const limit = checkRateLimit('backtest:' + clientIpFrom(req), Date.now(), 60);
+    if (!limit.allowed) return send429(res, limit.retryAfterSec);
+    try { jsonResponse(res, 200, await getBacktestReport()); }
     catch (e) { errorResponse(res, 503, e); }
   },
   "GET /api/bitcoin/candles": async (req, res) => {

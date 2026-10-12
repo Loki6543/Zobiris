@@ -1,0 +1,45 @@
+/* Backtest Lab page. Mobile first: cards stack, stat grids wrap, nothing relies on a wide table. */
+.zobiris-dashboard .bt-page{display:grid;gap:14px;min-width:0;}
+.zobiris-dashboard .bt-page>*{min-width:0;}
+.zobiris-dashboard .bt-page .is-gain{color:var(--zv-green);}
+.zobiris-dashboard .bt-page .is-loss{color:var(--zv-red);}
+.zobiris-dashboard .bt-hero{margin:0 !important;display:grid;gap:8px;}
+.zobiris-dashboard .bt-hero h1{font-size:26px;margin:2px 0;color:#eafcff;overflow-wrap:anywhere;}
+.zobiris-dashboard .bt-hero p{margin:0;color:#c7d3ea;line-height:1.6;}
+.zobiris-dashboard .bt-note{margin:0;font-size:12px;color:var(--zv-muted);line-height:1.5;}
+.zobiris-dashboard .bt-panel{margin:0 !important;display:grid;gap:12px;min-width:0;}
+.zobiris-dashboard .bt-chart{width:100%;height:auto;display:block;min-height:170px;}
+.zobiris-dashboard .bt-grid{stroke:#14485c;stroke-dasharray:3 4;}
+.zobiris-dashboard .bt-base{stroke:#2a6b82;}
+.zobiris-dashboard .bt-axis{fill:#6f94a1;font:600 11px Inter,system-ui,sans-serif;}
+.zobiris-dashboard .bt-legend{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:#c7d3ea;}
+.zobiris-dashboard .bt-legend i,.zobiris-dashboard .bt-pick i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;flex:none;}
+.zobiris-dashboard .bt-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:12px;}
+.zobiris-dashboard .bt-card{border:1px solid var(--zv-border);border-radius:14px;padding:14px;display:grid;gap:10px;background:var(--zv-panel-2);min-width:0;align-content:start;}
+.zobiris-dashboard .bt-card.is-beats_hold{border-color:#34d39988;box-shadow:0 0 18px -10px #34d399;}
+.zobiris-dashboard .bt-card.is-loses{opacity:.85;}
+.zobiris-dashboard .bt-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+.zobiris-dashboard .bt-pick{display:flex;align-items:center;gap:6px;cursor:pointer;min-width:0;}
+.zobiris-dashboard .bt-pick strong{overflow-wrap:anywhere;}
+.zobiris-dashboard .bt-verdict{font-size:11px;font-weight:700;border-radius:999px;padding:3px 10px;border:1px solid var(--zv-border);white-space:nowrap;}
+.zobiris-dashboard .bv-beats_hold{color:#34d399;border-color:#34d39988;}
+.zobiris-dashboard .bv-risk_reducer{color:#67e8f9;border-color:#67e8f988;}
+.zobiris-dashboard .bv-unproven{color:#fbbf24;border-color:#fbbf2488;}
+.zobiris-dashboard .bv-loses{color:#fb7185;border-color:#fb718588;}
+.zobiris-dashboard .bt-desc{margin:0;font-size:12.5px;color:#b4c6d3;line-height:1.5;}
+.zobiris-dashboard .bt-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0;}
+.zobiris-dashboard .bt-stats>div{border:1px solid var(--zv-border-soft);border-radius:9px;padding:7px 9px;display:grid;gap:2px;min-width:0;background:#06182566;}
+.zobiris-dashboard .bt-stats dt{font-size:10.5px;color:var(--zv-muted);}
+.zobiris-dashboard .bt-stats dd{margin:0;font-size:14px;font-weight:650;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+.zobiris-dashboard .bt-dim{color:var(--zv-dim);font-weight:500 !important;}
+.zobiris-dashboard .bt-detail{display:grid;gap:8px;border-top:1px dashed var(--zv-border);padding-top:10px;}
+.zobiris-dashboard .bt-detail h3{margin:4px 0 0;font-size:12.5px;color:#eafcff;}
+.zobiris-dashboard .bt-splits,.zobiris-dashboard .bt-mc{list-style:none;margin:0;padding:0;display:grid;gap:5px;font-size:12px;}
+.zobiris-dashboard .bt-splits li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:6px 0;border-bottom:1px solid #0d2a3a;color:var(--zv-muted);}
+.zobiris-dashboard .bt-splits li b{color:#dbe9f0;font-weight:600;text-align:right;}
+.zobiris-dashboard .bt-splits li em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;font-weight:650;}
+.zobiris-dashboard .bt-mc li{display:grid;grid-template-columns:62px minmax(0,1fr);gap:2px 10px;padding:5px 0;border-bottom:1px solid #0d2a3a;}
+.zobiris-dashboard .bt-mc li em{grid-column:2;font-style:normal;color:var(--zv-muted);}
+.zobiris-dashboard .bt-method{margin:0;padding-left:18px;display:grid;gap:8px;color:#c7d3ea;font-size:13px;line-height:1.55;}
+.zobiris-dashboard .bt-method b{color:#eafcff;}
+@media(max-width:520px){.zobiris-dashboard .bt-hero h1{font-size:22px;}.zobiris-dashboard .bt-stats dd{font-size:13px;}}
