@@ -277,7 +277,11 @@ async function verifyCandidate() {
     const liveAccount = (await jsonCheck(localOrigin, '/api/account', {
       headers: { Authorization: `Bearer ${token}` },
     }, [200], 'candidate authenticated synchronized holdings')).payload.account;
-    if (!liveAccount?.privateAccountSynced || !Array.isArray(liveAccount.holdings)) throw new Error('candidate private holdings are not synchronized');
+    // The Kraken account link is optional: with no API keys set the account is intentionally disconnected and the
+    // portfolio stays locked. A configured key that fails to sync is still an error.
+    const accountDisconnected = !liveAccount?.privateAccountSynced && liveAccount?.syncMode === 'fallback' && /credentials are not configured/i.test(String(liveAccount?.lastError ?? ''));
+    if ((!liveAccount?.privateAccountSynced && !accountDisconnected) || !Array.isArray(liveAccount?.holdings)) throw new Error('candidate private holdings are not synchronized');
+    if (accountDisconnected) console.log('PASS candidate Kraken account link is disconnected (no API keys); private holdings stay locked');
     const exposure = account?.portfolioDependency?.grossCurrentExposureUsd;
     if (!Number.isFinite(exposure) || exposure < 0) throw new Error('account exposure invalid in Strategy 2.1');
     const hasValuedHoldings = liveAccount.holdings.some(h => h.quantity > 0 && h.fallbackPriceUsd > 0);

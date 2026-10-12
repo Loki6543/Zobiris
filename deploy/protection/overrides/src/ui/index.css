@@ -1261,3 +1261,103 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 .zobiris-dashboard .engine-ledger th{text-align:left;color:#8ea0c4;font-weight:500;font-size:12px;padding:6px 8px;border-bottom:1px solid #1d3570;}
 .zobiris-dashboard .engine-ledger td{padding:8px;border-bottom:1px solid #132650;color:#cbd6ec;font-variant-numeric:tabular-nums;}
 .zobiris-dashboard .engine-ledger small{color:#7d8db0;}
+
+/* Valley Forge page */
+.zobiris-dashboard .forge-page{display:grid;gap:14px;min-width:0;}
+.zobiris-dashboard .forge-page>*{min-width:0;}
+.zobiris-dashboard .forge-page .is-gain{color:var(--zv-green);}
+.zobiris-dashboard .forge-page .is-loss{color:var(--zv-red);}
+.zobiris-dashboard .forge-hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px;margin:0 !important;}
+.zobiris-dashboard .forge-hero h1{font-size:26px;margin:6px 0 4px;overflow-wrap:anywhere;}
+.zobiris-dashboard .forge-hero p{margin:6px 0;color:#c7d3ea;line-height:1.5;}
+.zobiris-dashboard .forge-doctrine{color:#9db4ff !important;font-weight:600;}
+.zobiris-dashboard .posture-recovery h1,.zobiris-dashboard .posture-transition h1{color:var(--zv-green);}
+.zobiris-dashboard .posture-exploration h1{color:#9db4ff;}
+.zobiris-dashboard .posture-euphoria h1,.zobiris-dashboard .posture-deterioration h1{color:var(--zv-amber);}
+.zobiris-dashboard .posture-capitulation h1{color:#c4b5fd;}
+.zobiris-dashboard .posture-integrity h1{color:var(--zv-red);}
+.zobiris-dashboard .forge-signals{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-content:start;}
+.zobiris-dashboard .forge-signals li{border:1px solid var(--zv-border);border-radius:10px;padding:8px 10px;display:grid;gap:2px;min-width:0;}
+.zobiris-dashboard .forge-signals span{color:var(--zv-muted);font-size:11px;}
+.zobiris-dashboard .forge-signals strong{font-size:14px;overflow-wrap:anywhere;}
+.zobiris-dashboard .forge-signals .is-good strong{color:var(--zv-green);}
+.zobiris-dashboard .forge-signals .is-bad strong{color:var(--zv-amber);}
+.zobiris-dashboard .forge-panel{margin:0 !important;display:grid;gap:12px;min-width:0;}
+.zobiris-dashboard .forge-mixes{display:grid;gap:10px;}
+.zobiris-dashboard .forge-mixes>div{display:grid;gap:5px;}
+.zobiris-dashboard .forge-mixbar{display:flex;height:16px;border-radius:8px;overflow:hidden;background:#0d1a33;}
+.zobiris-dashboard .forge-mixbar i{display:block;height:100%;}
+.zobiris-dashboard .forge-rows{display:grid;gap:6px;}
+.zobiris-dashboard .forge-row{display:grid;grid-template-columns:12px minmax(110px,1.2fr) repeat(3,minmax(70px,.6fr)) minmax(0,2.4fr);gap:8px;align-items:center;font-size:13px;padding:7px 0;border-bottom:1px solid #132650;}
+.zobiris-dashboard .forge-row small{color:var(--zv-muted);}
+.zobiris-dashboard .forge-swatch{width:12px;height:12px;border-radius:3px;}
+.zobiris-dashboard .forge-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.zobiris-dashboard .forge-tabs button{background:#0e1b38;color:#c9d6ef;border:1px solid var(--zv-border);border-radius:999px;padding:7px 13px;cursor:pointer;font-size:13px;}
+.zobiris-dashboard .forge-tabs button[aria-selected=true]{background:var(--zv-blue);border-color:var(--zv-blue-2);color:#fff;}
+.zobiris-dashboard .forge-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:12px;}
+.zobiris-dashboard .forge-card{border:1px solid var(--zv-border);border-radius:14px;padding:12px;display:grid;gap:9px;background:var(--zv-panel-2);min-width:0;}
+.zobiris-dashboard .forge-card.verdict-consider{border-color:#1f6f45;}
+.zobiris-dashboard .forge-card.verdict-avoid{opacity:.78;}
+.zobiris-dashboard .forge-card-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
+.zobiris-dashboard .forge-card-head small{color:var(--zv-muted);overflow-wrap:anywhere;}
+.zobiris-dashboard .forge-page .forge-verdict{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid var(--zv-border);white-space:nowrap;background:#0b1630;color:#c9d6ef;}
+.zobiris-dashboard .forge-page .forge-verdict.fv-consider{color:var(--zv-green);border-color:#1f6f45;}
+.zobiris-dashboard .forge-page .forge-verdict.fv-watch{color:#9db4ff;border-color:#27407a;}
+.zobiris-dashboard .forge-page .forge-verdict.fv-avoid{color:#fca5a5;border-color:#7f1d1d;}
+.zobiris-dashboard .forge-stats,.zobiris-dashboard .forge-yields{list-style:none;margin:0;padding:0;display:grid;gap:6px;}
+.zobiris-dashboard .forge-stats li,.zobiris-dashboard .forge-yields li{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:7px 0;border-bottom:1px solid #132650;font-size:13px;}
+.zobiris-dashboard .forge-stats li>strong,.zobiris-dashboard .forge-yields li>div{flex:1 1 100%;min-width:0;overflow-wrap:anywhere;}
+.zobiris-dashboard .forge-stats small,.zobiris-dashboard .forge-yields small{color:var(--zv-muted);}
+.zobiris-dashboard .forge-stats span,.zobiris-dashboard .forge-yields span{color:#c7d3ea;font-variant-numeric:tabular-nums;}
+.zobiris-dashboard .forge-yields a{color:#9db4ff;}
+.zobiris-dashboard .forge-yields b{color:var(--zv-green);}
+.zobiris-dashboard .forge-card-score{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;}
+.zobiris-dashboard .forge-card-score b{font-size:28px;line-height:1;}
+.zobiris-dashboard .forge-card-score small{color:var(--zv-muted);}
+.zobiris-dashboard .forge-card-score span{flex-basis:100%;font-size:12px;color:#c7d3ea;}
+.zobiris-dashboard .forge-card-score em{font-style:normal;}
+.zobiris-dashboard .forge-labels{display:flex;flex-wrap:wrap;gap:5px;}
+.zobiris-dashboard .forge-labels span{font-size:11px;padding:2px 7px;border-radius:6px;background:#132650;color:#b9c8e6;}
+.zobiris-dashboard .forge-factors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;}
+.zobiris-dashboard .forge-factors div{display:grid;grid-template-columns:70px minmax(0,1fr);gap:6px;align-items:center;font-size:11px;color:var(--zv-muted);}
+.zobiris-dashboard .forge-factors i{display:block;height:6px;border-radius:3px;background:#132650;overflow:hidden;}
+.zobiris-dashboard .forge-factors b{display:block;height:100%;background:var(--zv-blue-2);}
+.zobiris-dashboard .forge-facts{display:grid;gap:3px;margin:0;font-size:12px;}
+.zobiris-dashboard .forge-facts div{display:flex;justify-content:space-between;gap:10px;}
+.zobiris-dashboard .forge-facts dt{color:var(--zv-muted);}
+.zobiris-dashboard .forge-facts dd{margin:0;text-align:right;overflow-wrap:anywhere;}
+.zobiris-dashboard .forge-facts small{color:var(--zv-dim);}
+.zobiris-dashboard .forge-ai{font-size:12px;line-height:1.5;margin:0;color:#d3dcf0;border-left:2px solid #8b5cf6;padding-left:8px;overflow-wrap:anywhere;}
+.zobiris-dashboard .forge-reasons{font-size:11px;margin:0;color:var(--zv-amber);}
+.zobiris-dashboard .forge-more{justify-self:start;background:none;border:0;color:#9db4ff;cursor:pointer;padding:0;font-size:12px;}
+.zobiris-dashboard .forge-why{font-size:12px;color:#c7d3ea;display:grid;gap:4px;}
+.zobiris-dashboard .forge-why ul{list-style:none;margin:0;padding:0;display:grid;gap:2px;}
+.zobiris-dashboard .forge-why li{display:flex;justify-content:space-between;gap:8px;}
+.zobiris-dashboard .forge-why p{margin:0;overflow-wrap:anywhere;}
+.zobiris-dashboard .forge-why a{color:#9db4ff;margin-right:4px;}
+.zobiris-dashboard .forge-shocks{list-style:none;margin:0;padding:0;display:grid;gap:4px;}
+.zobiris-dashboard .forge-shocks li{display:grid;grid-template-columns:minmax(52px,auto) 44px minmax(0,1fr) 48px 56px;gap:6px;align-items:center;font-size:13px;padding:5px 0;border-bottom:1px solid #132650;}
+.zobiris-dashboard .forge-shocks small{color:var(--zv-muted);}
+.zobiris-dashboard .forge-shocks em{font-style:normal;text-align:right;}
+.zobiris-dashboard .forge-class{font-size:12px;overflow-wrap:anywhere;}
+.zobiris-dashboard .forge-class.is-breakout,.zobiris-dashboard .forge-class.is-accumulation{color:var(--zv-green);}
+.zobiris-dashboard .forge-class.is-distribution,.zobiris-dashboard .forge-class.is-volume_collapse{color:var(--zv-red);}
+.zobiris-dashboard .forge-class.is-capitulation_flush{color:#c4b5fd;}
+.zobiris-dashboard .forge-ai-list{list-style:none;margin:0;padding:0;display:grid;gap:10px;}
+.zobiris-dashboard .forge-ai-list li{border-bottom:1px solid #132650;padding-bottom:8px;}
+.zobiris-dashboard .forge-ai-list small{color:var(--zv-muted);}
+.zobiris-dashboard .forge-ai-list p{margin:4px 0 0;font-size:12px;color:#c7d3ea;line-height:1.5;overflow-wrap:anywhere;}
+.zobiris-dashboard .forge-page .engine-ledger a{color:#9db4ff;}
+@media(max-width:900px){.zobiris-dashboard .forge-hero{grid-template-columns:minmax(0,1fr);}}
+@media(max-width:640px){
+  .zobiris-dashboard .forge-hero h1{font-size:22px;}
+  .zobiris-dashboard .forge-row{grid-template-columns:12px minmax(0,1fr) auto;grid-template-areas:"sw name target" "sw base now" "sw act act";row-gap:2px;}
+  .zobiris-dashboard .forge-row>:nth-child(1){grid-area:sw;align-self:start;margin-top:3px;}
+  .zobiris-dashboard .forge-row>:nth-child(2){grid-area:name;}
+  .zobiris-dashboard .forge-row>:nth-child(3){grid-area:base;color:var(--zv-muted);}
+  .zobiris-dashboard .forge-row>:nth-child(4){grid-area:target;text-align:right;}
+  .zobiris-dashboard .forge-row>:nth-child(5){grid-area:now;text-align:right;}
+  .zobiris-dashboard .forge-row>:nth-child(6){grid-area:act;}
+  .zobiris-dashboard .forge-shocks li{grid-template-columns:minmax(48px,auto) minmax(0,1fr) 44px 52px;}
+  .zobiris-dashboard .forge-shocks li small{display:none;}
+}

@@ -8,6 +8,7 @@ import type { WatchlistEntry } from "./watchlist";
 import { verifiedUnlockShare } from "./unlockOverrides";
 import { computeAltGate, type AltGate } from "./altGate";
 import type { Diligence } from "./diligence";
+import { buildForge, type ForgeInputs, type ForgeReport } from "./forgeReport";
 
 export type Tier = "TOP_100" | "RANK_101_500" | "OUTSIDE_STRATEGY";
 
@@ -50,6 +51,8 @@ export interface StrategyReport {
   feeds: FeedStatus[];
   /** Second gate for altcoin entries: dominance trend, stablecoin flow, 30-day breadth. */
   altGate: AltGate;
+  /** Valley Forge allocation: posture, elastic target mix, openings, volume shocks, AI review, stablecoin yield. */
+  valleyForge?: ForgeReport | null;
 }
 
 export interface FeedStatus { name: string; ok: boolean; detail: string; at: string | null }
@@ -72,6 +75,8 @@ export interface ReportInputs {
   stablecoins?: { supplyUsd: number; change30dPct: number | null } | null;
   /** CoinGecko id -> diligence. Coins absent from the map get no contract finding. */
   diligence?: Map<string, Diligence>;
+  /** Extra inputs for the Valley Forge section (omitted in older callers and tests). */
+  forge?: ForgeInputs;
 }
 
 const REGIME_VOTES: Array<[string, string, string, number]> = [
@@ -244,5 +249,7 @@ export function buildStrategyReport(inputs: ReportInputs): StrategyReport {
     asOf: new Date(inputs.now).toISOString(), regime, breadth, barbell, watchlist, marketSmallCapCandidates,
     sources: ["CoinGecko /coins/markets (keyless)", "CoinPaprika /v1/tickers (keyless)", "Kraken public AssetPairs + daily OHLC"],
     btcSeries, regimeComponents, rotationMap, screenFunnel, feeds: inputs.feeds ?? [], altGate,
+    valleyForge: inputs.forge ? buildForge({ now: inputs.now, regime, altGate, market: inputs.market, btcCloses: inputs.btcDailyCloses, closesBySymbol: inputs.coinDailyCloses,
+      diligence: inputs.diligence ?? new Map(), firstSeen: inputs.firstSeen, krakenPairs: inputs.krakenPairs, forge: inputs.forge }) : null,
   };
 }

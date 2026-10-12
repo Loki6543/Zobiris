@@ -231,7 +231,7 @@ function LedgerPanel() {
 }
 
 /* ---------- Page ---------- */
-export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdings: EngineHolding[]; cashUsd: number; accountSynced: boolean; onOpen: (view: "strategy" | "portfolio" | "market") => void }) {
+export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdings: EngineHolding[]; cashUsd: number; accountSynced: boolean; onOpen: (view: "strategy" | "portfolio" | "market" | "forge") => void }) {
   const { data: report, error } = useJson<StrategyReport>("/api/strategy-v2", 5 * 60_000);
   const { data: health } = useJson<{ krakenAccount?: { privateAccountSynced: boolean; capturedAt: string | null; syncMode?: string; lastError?: string | null } }>("/api/health", 60_000);
   const [now, setNow] = useState(Date.now());
@@ -254,9 +254,11 @@ export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdi
   holdings.forEach((h) => { const t = tierOf(h.symbol); if (t === "TOP_100") buckets.core += h.value; else if (t === "RANK_101_500") buckets.sleeve += h.value; else buckets.other += h.value; });
   const totalUsd = buckets.cash + buckets.core + buckets.sleeve + buckets.other;
   const share = (v: number) => (totalUsd > 0 ? v / totalUsd : 0);
-  const sleeveCap = DEFAULT_BARBELL.sleevePct;
+  // Rank 101+ share allowed by the Valley Forge target for the current posture (falls back to the old 10% sleeve).
+  const vfTarget = report.valleyForge?.allocation.target;
+  const sleeveCap = vfTarget ? (vfTarget.rank101_200 + vfTarget.rank201_500 + vfTarget.speculative) / 100 : DEFAULT_BARBELL.sleevePct;
   const acct = health?.krakenAccount;
-  const feeds = [...report.feeds, ...(acct ? [{ name: "Kraken account", ok: acct.privateAccountSynced && !acct.lastError, detail: acct.privateAccountSynced ? `synced · ${acct.syncMode ?? "poll"}` : "locked / not synced", at: acct.capturedAt }] : [])];
+  const feeds = [...report.feeds, ...(acct ? [{ name: "Kraken account", ok: acct.privateAccountSynced && !acct.lastError, detail: acct.privateAccountSynced ? `synced · ${acct.syncMode ?? "poll"}` : /not configured/i.test(acct.lastError ?? "") ? "disconnected · no account link" : "locked / not synced", at: acct.capturedAt }] : [])];
 
   return (
     <main className="engine-page">
@@ -347,7 +349,7 @@ export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdi
           </div>
         </article>
         <article className="dashboard-panel engine-panel">
-          <div className="engine-panel-head"><h2>Portfolio vs barbell</h2><button type="button" className="engine-link" onClick={() => onOpen("portfolio")}>Portfolio →</button></div>
+          <div className="engine-panel-head"><h2>Portfolio vs Valley Forge</h2><button type="button" className="engine-link" onClick={() => onOpen("forge")}>Valley Forge →</button></div>
           {accountSynced && totalUsd > 0 ? <>
             <div className="engine-barbell" role="img" aria-label={`Cash ${Math.round(share(buckets.cash) * 100)}%, top-100 ${Math.round(share(buckets.core) * 100)}%, small-cap sleeve ${Math.round(share(buckets.sleeve) * 100)}%, other ${Math.round(share(buckets.other) * 100)}%`}>
               <i className="b-cash" style={{ width: `${share(buckets.cash) * 100}%` }} />
@@ -363,10 +365,10 @@ export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdi
               <li><i className="b-other" />Rank 500+<strong>{money(buckets.other)}</strong></li>
             </ul>
             <p className={share(buckets.sleeve + buckets.other) > sleeveCap ? "engine-warn" : "strategy-muted"}>
-              Speculative share {Math.round(share(buckets.sleeve + buckets.other) * 100)}% of a {Math.round(sleeveCap * 100)}% cap.
-              {share(buckets.sleeve + buckets.other) > sleeveCap ? " Over the cap: no new small bets until it shrinks." : ` Room for about ${money(Math.max(0, sleeveCap * totalUsd - buckets.sleeve - buckets.other))} more.`}
+              Rank 101+ share {Math.round(share(buckets.sleeve + buckets.other) * 100)}% of a {Math.round(sleeveCap * 100)}% target{report.valleyForge ? ` (${report.valleyForge.allocation.posture.name.toLowerCase()})` : ""}.
+              {share(buckets.sleeve + buckets.other) > sleeveCap ? " Over target: trim before adding new bets." : ` Room for about ${money(Math.max(0, sleeveCap * totalUsd - buckets.sleeve - buckets.other))} more.`}
             </p>
-          </> : <p className="strategy-muted">Unlock your private portfolio to check it against the 90/10 barbell.</p>}
+          </> : <p className="strategy-muted">Unlock your private portfolio to check it against the Valley Forge target mix.</p>}
         </article>
       </section>
     </main>

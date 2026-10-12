@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { StrategyReport, WatchlistDecision } from "../strategyV2/report";
-import { planBarbell, type SpeculativePosition } from "../strategyV2/barbell";
+import { DEFAULT_BARBELL, planBarbell, type SpeculativePosition } from "../strategyV2/barbell";
 
 export interface StrategyHolding { symbol: string; quantity: number; avgPriceUsd: number | null; value: number }
 
@@ -42,7 +42,11 @@ export function StrategyPage({ portfolioUsd, holdings, accountSynced }: { portfo
     const smallCapSymbols = new Set(report.watchlist.filter((w) => w.tier === "RANK_101_500").map((w) => w.symbol));
     const positions: SpeculativePosition[] = holdings.filter((h) => smallCapSymbols.has(h.symbol))
       .map((h) => ({ symbol: h.symbol, costUsd: h.avgPriceUsd ? h.avgPriceUsd * h.quantity : h.value, valueUsd: h.value }));
-    return { plan: planBarbell(portfolioUsd, positions, report.regime.exposureMultiplier), positions };
+    // The Valley Forge target sets the rank 101-500 sleeve for the current posture (bets at most 1.5% each).
+    const t = report.valleyForge?.allocation.target;
+    const cfg = t ? { ...DEFAULT_BARBELL, sleevePct: (t.rank101_200 + t.rank201_500) / 100, maxOpenBets: Math.min(25, Math.ceil((t.rank101_200 + t.rank201_500) / 1.5)) } : DEFAULT_BARBELL;
+    const multiplier = report.valleyForge ? (report.valleyForge.allocation.posture.allowNewBuys ? 1 : 0) : report.regime.exposureMultiplier;
+    return { plan: planBarbell(portfolioUsd, positions, multiplier, cfg), positions, cfg };
   }, [report, holdings, portfolioUsd, accountSynced]);
 
   if (error && !report) return <main><section className="dashboard-panel strategy-panel" role="status"><h2>Opportunities</h2><p className="strategy-muted">{error}. The free market feeds refresh every 15 minutes; first load can take about two minutes.</p></section></main>;
@@ -78,12 +82,12 @@ export function StrategyPage({ portfolioUsd, holdings, accountSynced }: { portfo
         <article className="dashboard-panel strategy-panel" aria-label="Small-cap sleeve">
           <h2>Small-cap sleeve (barbell)</h2>
           {barbell ? <div className="strategy-sleeve">
-            <div><span className="strategy-label">Sleeve budget (10%)</span><strong>{money(barbell.plan.sleeveBudgetUsd)}</strong></div>
+            <div><span className="strategy-label">Sleeve budget ({Math.round(barbell.cfg.sleevePct * 100)}%)</span><strong>{money(barbell.plan.sleeveBudgetUsd)}</strong></div>
             <div><span className="strategy-label">Committed at cost</span><strong>{money(barbell.plan.sleeveCommittedUsd)}</strong></div>
             <div><span className="strategy-label">Next bet size</span><strong>{barbell.plan.canOpenNewBet ? money(barbell.plan.betSizeUsd) : "None"}</strong></div>
-            <div><span className="strategy-label">Open slots</span><strong>{barbell.plan.slotsOpen} / 8</strong></div>
+            <div><span className="strategy-label">Open slots</span><strong>{barbell.plan.slotsOpen} / {barbell.cfg.maxOpenBets}</strong></div>
             {!barbell.plan.canOpenNewBet ? <p className="strategy-muted">{barbell.plan.reasons.map((r) => r.replaceAll("_", " ").toLowerCase()).join(" · ")}</p> : null}
-          </div> : <p className="strategy-muted">Unlock your portfolio to size bets (max 1.5% of portfolio each, 10% total).</p>}
+          </div> : <p className="strategy-muted">Unlock your portfolio to size bets (max 1.5% of portfolio each; the sleeve follows the Valley Forge target).</p>}
           <p className="strategy-muted">Take profits: sell half at 2× (stake back), 25% at 5×, 15% at 10×, keep a 10% runner.</p>
         </article>
       </section>

@@ -2,7 +2,7 @@
 // One write per UTC day: the first strategy report of the day appends its rows; nothing is ever rewritten.
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { dayOf, rowsForReport, summarizeLedger, type LedgerRow } from "../strategyV2/ledger.js";
+import { dayOf, rowsForReport, summarizeLedger, summarizeSignals, type LedgerRow } from "../strategyV2/ledger.js";
 import type { StrategyReport } from "../strategyV2/report.js";
 
 export function ledgerPath(): string {
@@ -60,7 +60,14 @@ export function ledgerStatus() {
   let rows: LedgerRow[] = [];
   let error = lastError;
   try { rows = load().rows; } catch (e) { error = errorText(e); }
-  return { path: ledgerPath(), rows: rows.length, error, summary: summarizeLedger(rows, new Date().toISOString().slice(0, 10)) };
+  const today = new Date().toISOString().slice(0, 10);
+  return { path: ledgerPath(), rows: rows.length, error, summary: summarizeLedger(rows, today), signals: summarizeSignals(rows, today) };
+}
+
+/** BTC regime state per recorded day, oldest first (for the Valley Forge transition check). */
+export function recentRegimes(days = 30): string[] {
+  try { return load().rows.filter((r) => r.kind === "snapshot").sort((a, b) => a.day.localeCompare(b.day)).slice(-days).map((r) => (r as { regime: string }).regime); }
+  catch { return []; }
 }
 
 /** Test hook: forget the in-memory copy so the next call re-reads the file. */
