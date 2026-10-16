@@ -641,7 +641,6 @@ async function runRefreshHandler(
       snapshotId: persisted.snapshotId,
       outboxIds: persisted.outboxIds,
       providerHealth: providerHealth.providers,
-      providerFallbacks: providerHealth.optionalFallbacks,
       attentionCollection,
       researchSweep: refreshResearch
         ? {
