@@ -3,6 +3,7 @@
 // daily closes, so the page shows how the model is actually doing.
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { COINMETRICS_BTC_URL, DERIBIT_BTC_OPTIONS_URL, parseCoinMetricsFlows, parseDeribitOptions, type ChainFlows, type OptionsContext } from "../strategyV2/marketContext.js";
 import { fetchJson, fetchFearGreed, parseKrakenDailyCandles, type Candle, type FetchLike } from "../strategyV2/feed.js";
 import { buildForecast, scoreForecasts, type Forecast, type Macro } from "../strategyV2/btcForecast.js";
 import { krakenSlot } from "./strategyV2Service.js";
@@ -63,6 +64,13 @@ async function getLiquidations(fetcher: FetchLike): Promise<LiqSummary | null> {
   } catch { return liq?.value ?? null; }
 }
 
+let opts: Cached<OptionsContext> | null = null, flows: Cached<ChainFlows> | null = null;
+/** Keyless context feeds (Deribit options, Coin Metrics flows): information only, no forecast weight; null until one succeeds. */
+async function getContext<T>(cache: Cached<T> | null, ttl: number, load: () => Promise<T>, set: (c: Cached<T>) => void): Promise<T | null> {
+  if (cache && Date.now() - cache.at < ttl) return cache.value;
+  try { const value = await load(); set({ value, at: Date.now() }); return value; } catch { return cache?.value ?? null; }
+}
+
 export function forecastPath(): string {
   return process.env.ZOBIRIS_BTC_FORECAST_PATH ?? join(dirname(process.env.ZOBIRIS_DB_PATH ?? "/data/zobiris.sqlite"), "zobiris-btc-forecasts.jsonl");
 }
@@ -83,12 +91,15 @@ function record(f: Forecast, path = forecastPath()) {
 export async function getBitcoinReport(fetcher = defaultFetch) {
   const day = await getCandles("1d", fetcher);
   if (fng == null || Date.now() - fng.at > 3_600_000) { try { fng = { value: (await fetchFearGreed(fetcher)).at(-1)?.value ?? null, at: Date.now() }; } catch { fng = fng ?? { value: null, at: 0 }; } }
-  const [mac, liqs] = await Promise.all([getMacro(fetcher), getLiquidations(fetcher)]);
+  const [mac, liqs, options, chain] = await Promise.all([getMacro(fetcher), getLiquidations(fetcher),
+    getContext(opts, 15 * 60_000, async () => parseDeribitOptions(await fetchJson(fetcher, DERIBIT_BTC_OPTIONS_URL), Date.now()), (c) => { opts = c; }),
+    getContext(flows, 6 * 3_600_000, async () => parseCoinMetricsFlows(await fetchJson(fetcher, COINMETRICS_BTC_URL)), (c) => { flows = c; })]);
   const today = new Date((day.at(-1)?.time ?? 0) * 1000).toISOString().slice(0, 10);
   const f = buildForecast({ closes: day.map((c) => c.close), highs: day.map((c) => c.high), lows: day.map((c) => c.low), macro: mac, fearGreed: fng.value, eventRisk: [] }, today);
   if (f && process.env.ZOBIRIS_LEDGER !== "0") record(f);
   const closeByDay = new Map(day.map((c) => [new Date(c.time * 1000).toISOString().slice(0, 10), c.close]));
-  return { asOf: new Date().toISOString(), forecast: f, score: scoreForecasts(loadRecorded(), closeByDay), recordedDays: loadRecorded().length, macro: mac, fearGreed: fng.value, liquidations: liqs,
-    sources: ["Kraken public OHLC (XXBTZUSD)", "Yahoo Finance chart API (^NDX, DX-Y.NYB, ^TNX)", "alternative.me Fear & Greed", "OKX public liquidation orders"] };
+  return { asOf: new Date().toISOString(), forecast: f, score: scoreForecasts(loadRecorded(), closeByDay), recordedDays: loadRecorded().length, macro: mac, fearGreed: fng.value, liquidations: liqs, options, chain,
+    sources: ["Kraken public OHLC (XXBTZUSD)", "Yahoo Finance chart API (^NDX, DX-Y.NYB, ^TNX)", "alternative.me Fear & Greed", "OKX public liquidation orders",
+      ...(options ? ["Deribit public options book"] : []), ...(chain ? ["Coin Metrics community API"] : [])] };
 }
-export function resetBtcCache() { recorded = null; candles.clear(); macro = null; fng = null; liq = null; }
+export function resetBtcCache() { recorded = null; candles.clear(); macro = null; fng = null; liq = null; opts = null; flows = null; }

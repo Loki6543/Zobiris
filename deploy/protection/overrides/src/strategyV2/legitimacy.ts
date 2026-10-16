@@ -8,11 +8,12 @@
 //   Top-10 wallets <= 25% 10 (<= 40% 5) (Bubblemaps clustered top-10 when a holder map exists, else GoPlus raw top-10)
 //   Bubblemaps decentralization score >= 60 5
 //   Liquidity: DEX pools >= $1M or Kraken-listed or 24h volume >= $5M 10 (>= $250k 5)
-// Deductions: CoinGecko public notice (hack, migration, delisting) -25 · LP tokens mostly unlocked -10 · sentiment < 30% -5
+// Deductions: CoinGecko public notice (hack, migration, delisting) -25 · DefiLlama-listed exploit >= $1M in 90 days -20 · LP tokens mostly unlocked -10 · sentiment < 30% -5
 //   Bundled supply >= 25% -15 · fresh-wallet supply >= 20% -10 (Bubblemaps holder map, optional paid feed)
+import type { Exploit } from "./exploits";
 import type { Diligence } from "./diligence";
 
-export interface LegitimacyInput { diligence: Diligence | null | undefined; ageDays: number | null; krakenListed: boolean; volume24hUsd: number | null; now?: number }
+export interface LegitimacyInput { diligence: Diligence | null | undefined; ageDays: number | null; krakenListed: boolean; volume24hUsd: number | null; now?: number; exploit?: Exploit | null }
 export interface Legitimacy { score: number; grade: "STRONG" | "MODERATE" | "WEAK" | "UNVERIFIED"; points: Array<{ label: string; points: number }>; redFlags: string[] }
 
 export function legitimacyScore(i: LegitimacyInput): Legitimacy {
@@ -56,6 +57,7 @@ export function legitimacyScore(i: LegitimacyInput): Legitimacy {
   else if (liq >= 250e3 || vol >= 250e3) add("Liquidity over $250k", 5);
   else red.push("THIN_LIQUIDITY");
   if (p?.publicNotice) { add("CoinGecko public notice", -25); red.push("PUBLIC_NOTICE"); }
+  if (i.exploit) { add(`Exploited ${i.exploit.at.slice(0, 10)}: $${(i.exploit.amountUsd / 1e6).toFixed(1)}M (DefiLlama)`, -20); red.push("RECENT_EXPLOIT"); }
   if (s.lpLockedPct != null && s.lpLockedPct < 50 && liq > 0 && s.chain && s.chain !== "solana") { add("LP tokens mostly unlocked", -10); red.push("LP_UNLOCKED"); }
   if (p?.sentimentUpPct != null && p.sentimentUpPct < 30) { add("Community sentiment under 30% positive", -5); red.push("NEGATIVE_SENTIMENT"); }
   let score = Math.max(0, Math.min(100, pts.reduce((a, b) => a + b.points, 0)));

@@ -159,6 +159,14 @@ export function ForgePage({ holdings, cashUsd, accountSynced }: { holdings: Forg
         ))}</ul> : <p className="strategy-muted">No delistings, Monitoring Tags or caution notices for tracked coins in the last 30 days.</p>}
       </section>
 
+      {(vf.governance ?? []).length > 0 && <section className="dashboard-panel forge-panel" aria-label="Governance votes">
+        <div className="engine-panel-head"><h2>Governance votes</h2><span className="strategy-muted">Active Snapshot proposals for tracked coins · information only</span></div>
+        <ul className="forge-stats">{vf.governance.map((g) => (
+          <li key={g.url}><strong>{g.symbol}</strong><span><a href={g.url} target="_blank" rel="noopener noreferrer">{g.title}</a></span>
+            <small>{g.space} · ends {new Date(g.endsAt).toLocaleDateString()}</small></li>
+        ))}</ul>
+      </section>}
+
       <section className="engine-grid">
         <article className="dashboard-panel engine-panel" aria-label="Stablecoin yield">
           <div className="engine-panel-head"><h2>Stablecoin yield sleeve</h2><span className="strategy-muted">DefiLlama · single-asset, no IL, TVL ≥ $25M</span></div>

@@ -15,6 +15,8 @@ import { scoreOpenings, shortlistForDiligence } from "../strategyV2/openings.js"
 import { recordMarketDay, volumeHistory, marketHistoryStatus } from "./marketHistoryService.js";
 import { recentRegimes } from "./ledgerService.js";
 import { parseBinanceNotices, parseUpbitNotices, type ExchangeNotice } from "../strategyV2/exchangeNotices.js";
+import { parseLlamaHacks, type Exploit } from "../strategyV2/exploits.js";
+import { SNAPSHOT_ACTIVE_URL } from "../strategyV2/marketContext.js";
 
 const HOUR_MS = 3_600_000;
 /** Where the daily Claude review publishes its watchlist (a data-only branch, so it never triggers a deploy). */
@@ -134,6 +136,8 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
   const BN = (cat: number) => `https://www.binance.com/bapi/composite/v1/public/cms/article/list/query?type=1&catalogId=${cat}&pageNo=1&pageSize=30`;
   const binance = await sideFeed<ExchangeNotice[]>("binanceNotices", 15 * 60_000, now, async () => [48, 161, 49].reduce<Promise<ExchangeNotice[]>>(async (acc, cat) => [...(await acc), ...parseBinanceNotices(await fetchJson(fetcher, BN(cat)))], Promise.resolve([])));
   const upbit = await sideFeed<ExchangeNotice[]>("upbitNotices", 15 * 60_000, now, async () => parseUpbitNotices(await fetchJson(fetcher, "https://api-manager.upbit.com/api/v1/announcements?os=web&page=1&per_page=40&category=all")));
+  const hacks = await sideFeed<Exploit[]>("llamaHacks", 6 * HOUR_MS, now, async () => parseLlamaHacks(await fetchJson(fetcher, "https://api.llama.fi/hacks"), now));
+  const votes = await sideFeed<unknown>("snapshotVotes", HOUR_MS, now, () => fetchJson(fetcher, SNAPSHOT_ACTIVE_URL));
   const allCoins = [...market, ...(spec?.value ?? []).filter((c) => (c.rank ?? 0) > 500)];
   if (process.env.ZOBIRIS_LEDGER !== "0") recordMarketDay(allCoins, now);
   const hist = marketHistoryStatus();
@@ -141,12 +145,14 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
   const forge = {
     fearGreed: fng?.value ?? null, recentRegimes: recentRegimes(30), coreFeedsOk: market.length >= 400 && btcCandles.length >= 221,
     specMarket: spec?.value ?? [], volumeHistory: volumeHistory(today), trending: trending?.value ?? new Map<string, number>(), aiCategory: aiCat?.value ?? new Set<string>(),
-    stablePools: pools?.value ?? [], notices: [...(binance?.value ?? []), ...(upbit?.value ?? [])], aiWatchlist: { generatedAt: aiList?.value.generatedAt ?? null, items: aiList?.value.items ?? [] },
+    stablePools: pools?.value ?? [], notices: [...(binance?.value ?? []), ...(upbit?.value ?? [])], exploits: hacks?.value ?? [], governanceRaw: votes?.value ?? null, aiWatchlist: { generatedAt: aiList?.value.generatedAt ?? null, items: aiList?.value.items ?? [] },
   };
   feeds.push(
     { name: "Speculative universe (501-1000)", ok: (spec?.value.length ?? 0) >= 300, detail: spec ? `${spec.value.length} coins` : "unavailable", at: spec ? iso(spec.at) : null },
     { name: "Mindshare (CoinGecko trending)", ok: Boolean(trending?.value.size), detail: trending ? `${trending.value.size} trending coins` : "unavailable", at: trending ? iso(trending.at) : null },
     { name: "Exchange notices (Binance + Upbit)", ok: Boolean(binance && upbit), detail: `Binance ${binance ? binance.value.length + " notices" : "unavailable (region-blocked?)"} · Upbit ${upbit ? upbit.value.length + " notices" : "unavailable"}`, at: binance ? iso(binance.at) : null },
+    { name: "Exploit history (DefiLlama)", ok: Boolean(hacks), detail: hacks ? `${hacks.value.length} exploits over $1M in 90 days` : "unavailable", at: hacks ? iso(hacks.at) : null },
+    { name: "Governance votes (Snapshot)", ok: Boolean(votes), detail: votes ? `${((votes.value as any)?.data?.proposals ?? []).length} active proposals fetched` : "unavailable", at: votes ? iso(votes.at) : null },
     { name: "Fear & Greed", ok: fng?.value != null, detail: fng?.value != null ? String(fng.value) : "unavailable", at: fng ? iso(fng.at) : null },
     { name: "Stablecoin yields (DefiLlama)", ok: Boolean(pools?.value.length), detail: pools ? `${pools.value.length} pools pass the filters` : "unavailable", at: pools ? iso(pools.at) : null },
     { name: "Volume history", ok: hist.days >= 7, detail: hist.error ? `not writable: ${hist.error}` : `${hist.days} day${hist.days === 1 ? "" : "s"} recorded${hist.days < 7 ? " (cross-section until 7)" : ""}`, at: hist.lastDay ? `${hist.lastDay}T00:00:00.000Z` : null },
