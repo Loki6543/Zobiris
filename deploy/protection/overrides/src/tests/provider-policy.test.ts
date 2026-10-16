@@ -3,7 +3,7 @@ import { attentionAvailabilityView, providerHealthView } from "../server/provide
 import { localChallengeEvidence } from "../server/localChallenger.js";
 
 describe("optional provider and challenger fallbacks", () => {
-  it("removes credential-gated optional providers from degraded health and names the active substitutes", () => {
+  it("omits providers whose credentials are missing instead of listing them as not configured or covered by a fallback", () => {
     const view = providerHealthView([
       { provider: "kraken", status: "connected", freshness: "live" },
       { provider: "cmc", status: "connected", freshness: "live" },
@@ -12,18 +12,14 @@ describe("optional provider and challenger fallbacks", () => {
       { provider: "coinmarketcal", status: "credentials-needed" },
     ]);
     expect(view.providers.map((row) => row.provider)).toEqual(["kraken", "cmc"]);
-    expect(view.optionalFallbacks.map((row) => row.provider)).toEqual([
-      "lunarcrush",
-      "coinglass",
-      "coinmarketcal",
-    ]);
-    expect(view.optionalFallbacks.every((row) => row.status === "COVERED_BY_FALLBACK")).toBe(true);
+    expect(JSON.stringify(view)).not.toMatch(/COVERED_BY_FALLBACK|optionalFallbacks|lunarcrush/i);
   });
 
   it("treats missing Stocktwits credentials as an optional challenger gap when the CMC baseline completed", () => {
     const view = attentionAvailabilityView({ status: "PARTIAL", runId: "r1" }, {});
     expect(view.status).toBe("BASELINE_COMPLETE");
     expect(view.baseline).toBe("CMC_KEYLESS");
+    expect(JSON.stringify(view)).not.toMatch(/NOT_CONFIGURED|stocktwits/i);
   });
 
   it("does not hide a partial attention state when Stocktwits was configured", () => {

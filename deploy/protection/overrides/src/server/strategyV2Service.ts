@@ -173,8 +173,8 @@ export async function refreshStrategyReport(fetcher: FetchLike = fetch as unknow
   feeds.push({ name: "Contract scans", ok: scanned.every((d) => d.security.status !== "UNCHECKED") && scanned.length >= forDiligence.length,
     detail: `${scanned.length} of ${forDiligence.length} candidates · ${scanned.filter((d) => d.security.status === "FAIL").length} failed`, at: iso(now) });
   const mapped = [...diligence.values()].filter((d) => d.holders).length;
-  feeds.push({ name: "Bubblemaps holder maps", ok: holderMapsConfigured() ? mapped > 0 || diligence.size === 0 : true,
-    detail: holderMapsConfigured() ? `${mapped} of ${diligence.size} scanned coins mapped` : "not configured (optional paid feed) — GoPlus top-10 used", at: iso(now) });
+  // An unconfigured optional feed does not exist as far as the dashboard is concerned: only list it once it can run.
+  if (holderMapsConfigured()) feeds.push({ name: "Bubblemaps holder maps", ok: mapped > 0 || diligence.size === 0, detail: `${mapped} of ${diligence.size} scanned coins mapped`, at: iso(now) });
   const value = buildStrategyReport({ ...inputs, diligence });
   report = { value, at: now };
   // The ledger keeps one report per UTC day, so it waits for a report whose key feeds are healthy; after 12:00 UTC it

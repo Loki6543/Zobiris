@@ -67,9 +67,7 @@ export function ResearchEvidenceContent({
         {providers.map((p: any) => (
           <div key={p.provider}>
             <strong>{p.provider}</strong>
-            <span>
-              {p.status === "NOT_CONFIGURED" ? "Not configured" : p.status}
-            </span>
+            <span>{p.status}</span>
           </div>
         ))}
       </div>

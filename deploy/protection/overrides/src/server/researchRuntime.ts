@@ -126,14 +126,10 @@ export function researchView(
     },
     attentionIgnition: attention,
     assets: rows,
-    providers: ["parallel-news", "stocktwits", "cryptobert-stocktwits", "brightdata-mcp-investigator"].map(
-      (p) =>
-        repo.getState("provider:" + p) ?? {
-          provider: p,
-          status: "NOT_CONFIGURED",
-          lastSuccessAt: null,
-        },
-    ),
+    // Providers with no recorded status (never configured) are left out rather than listed as "not configured".
+    providers: ["parallel-news", "stocktwits", "cryptobert-stocktwits", "brightdata-mcp-investigator"]
+      .map((p) => repo.getState("provider:" + p) as { provider: string; status: string } | null)
+      .filter((p): p is { provider: string; status: string } => Boolean(p) && p!.status !== "NOT_CONFIGURED"),
     outcomeCollection: repo.getState("outcomes"),
     lastImportAt: repo.getState("lastImportAt"),
     bundleImportStatus: repo.getState("bundleImportStatus"),
