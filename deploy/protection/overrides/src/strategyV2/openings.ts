@@ -14,6 +14,7 @@
 import type { MarketCoin } from "./feed";
 import type { Diligence } from "./diligence";
 import { legitimacyScore, type Legitimacy } from "./legitimacy";
+import { normName, type Exploit } from "./exploits";
 import { volumeShock, median, VOLUME_CLASS_TILT, type VolumeShock } from "./volumeShock";
 import { riskProfile, halfRecoveryUpsidePct, type RiskProfile } from "./riskMetrics";
 import { firstTranchePct, sleeveForRank, type TierOfRank } from "./valleyForge";
@@ -63,6 +64,8 @@ export interface OpeningsInput {
   aiWatchlist: AiWatchItem[];
   allowNewBuys: boolean;
   notices?: Map<string, ExchangeNotice>;
+  /** DefiLlama exploits by normalised project name (90 days, >= $1M). */
+  exploits?: Map<string, Exploit>;
 }
 
 export const OPENING_WEIGHTS = { value: 0.18, dilution: 0.12, turn: 0.2, liquidity: 0.1, volume: 0.15, attention: 0.1, legitimacy: 0.15 } as const;
@@ -141,7 +144,7 @@ export function scoreOpenings(i: OpeningsInput): OpeningCandidate[] {
       const own = owner.get(c.symbol) === c;
       const krakenListed = own && i.krakenPairs.has(c.symbol);
       const dil = i.diligence.get(c.geckoId);
-      const legit = legitimacyScore({ diligence: dil, ageDays: r.ageDays, krakenListed, volume24hUsd: c.volume24hUsd, now: i.now });
+      const legit = legitimacyScore({ diligence: dil, ageDays: r.ageDays, krakenListed, volume24hUsd: c.volume24hUsd, now: i.now, exploit: own ? i.exploits?.get(normName(c.name)) ?? null : null });
       const vol = volumeShock(c.volume24hUsd, i.volumeHistory.get(c.geckoId) ?? [], r.turnover, bandTurnover, c.change24hPct, c.change7dPct);
       const rel7 = c.change7dPct != null && i.btc7dPct != null ? c.change7dPct - i.btc7dPct : null;
       const rel30 = c.change30dPct != null && i.btc30dPct != null ? c.change30dPct - i.btc30dPct : null;

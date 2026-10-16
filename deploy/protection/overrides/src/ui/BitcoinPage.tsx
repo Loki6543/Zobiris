@@ -5,7 +5,7 @@ import { fmtBig, fmtPct, fmtUsd, useApi, useWidth } from "./charts";
 import type { Forecast, ScoreStats } from "../strategyV2/btcForecast";
 
 type C = { t: number; o: number; h: number; l: number; c: number; v: number };
-type Report = { asOf: string; forecast: Forecast | null; score: Record<string, ScoreStats>; recordedDays: number; macro: { ndx5dPct: number | null; dxy5dPct: number | null; us10y5dBp: number | null }; fearGreed: number | null; liquidations: { longUsd24h: number; shortUsd24h: number; count: number; source: string } | null; sources: string[] };
+type Report = { asOf: string; forecast: Forecast | null; score: Record<string, ScoreStats>; recordedDays: number; macro: { ndx5dPct: number | null; dxy5dPct: number | null; us10y5dBp: number | null }; fearGreed: number | null; options?: { nearMoneyIvPct: number; putCallOiRatio: number } | null; chain?: { day: string; netflowUsd: number; netflow7dUsd: number; activeAddresses: number; activeAddresses30dAvg: number | null; preliminary: boolean } | null; liquidations: { longUsd24h: number; shortUsd24h: number; count: number; source: string } | null; sources: string[] };
 
 // Timeframes in order of evidence: daily carries the measured signal; weekly gives cycle context; 4h/1h are for timing.
 const TFS: Array<[string, string, string]> = [["1d", "1D", "default · best evidence"], ["1w", "1W", "cycle context"], ["4h", "4H", "entry timing"], ["1h", "1H", "event days"]];
@@ -116,9 +116,11 @@ export function BitcoinPage() {
             <li><strong>US dollar index (5 days)</strong><span>{fmtPct(rep?.macro.dxy5dPct, 1)}</span></li>
             <li><strong>10-year yield (5 days)</strong><span>{rep?.macro.us10y5dBp == null ? "—" : `${rep.macro.us10y5dBp.toFixed(0)} bp`}</span><small>rising yields + firm dollar hurt BTC</small></li>
             <li><strong>Fear & Greed</strong><span>{rep?.fearGreed ?? "—"}</span></li>
+            {rep?.options && <li><strong>Options implied vol (7–45d, near money)</strong><span>{rep.options.nearMoneyIvPct.toFixed(1)}%</span><span>put/call OI {rep.options.putCallOiRatio.toFixed(2)}</span><small>Deribit · information only: puts above calls = hedging demand</small></li>}
+            {rep?.chain && <li><strong>Exchange netflow ({rep.chain.day})</strong><span className={rep.chain.netflowUsd > 0 ? "is-loss" : "is-gain"}>{rep.chain.netflowUsd > 0 ? "+" : "−"}{fmtBig(Math.abs(rep.chain.netflowUsd))}</span><span>7d {rep.chain.netflow7dUsd > 0 ? "+" : "−"}{fmtBig(Math.abs(rep.chain.netflow7dUsd))}</span><small>Coin Metrics{rep.chain.preliminary ? " (preliminary)" : ""} · inflow = coins moving to exchanges · {rep.chain.activeAddresses.toLocaleString()} active addresses{rep.chain.activeAddresses30dAvg ? ` (30d avg ${rep.chain.activeAddresses30dAvg.toLocaleString()})` : ""}</small></li>}
             <li><strong>Liquidations, 24h sample</strong>{rep?.liquidations ? <><span className="is-loss">longs {fmtBig(rep.liquidations.longUsd24h)}</span><span className="is-gain">shorts {fmtBig(rep.liquidations.shortUsd24h)}</span><small>information only: no study shows what follows over days</small></> : <span>unavailable</span>}</li>
           </ul>
-          <p className="strategy-muted">ETF flows (5-day sums), Strategy's mNAV and on-chain exchange reserves are next to add. Fed/CPI days and war headlines widen the range rather than set direction.</p>
+          <p className="strategy-muted">ETF flows (5-day sums) and Strategy's mNAV are next to add. Fed/CPI days and war headlines widen the range rather than set direction.</p>
         </article>
       </section>
       <p className="visual-footnote">Research output, not orders. Sources: {rep?.sources.join(" · ")}</p>
