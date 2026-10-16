@@ -229,9 +229,13 @@ async function verifyCandidate() {
     if ((diagnosticProviders.payload.providers ?? []).some(p => p.status === 'credentials-needed')) {
       throw new Error('credential-gated optional providers still degrade provider health');
     }
-    const fallbackProviders = new Set((diagnosticProviders.payload.optionalFallbacks ?? []).map(row => row.provider));
-    for (const provider of ['lunarcrush','coinglass','coinmarketcal']) {
-      if (!fallbackProviders.has(provider)) throw new Error(`missing explicit fallback policy for ${provider}`);
+    // Unconfigured optional providers must not exist in the API at all: no "not configured" rows and no "covered by fallback" rows.
+    if ((diagnosticProviders.payload.optionalFallbacks ?? []).length) {
+      throw new Error('unconfigured optional providers must be hidden, not listed as fallbacks');
+    }
+    const unconfiguredListed = (diagnosticProviders.payload.providers ?? []).filter(p => /not.?configured|credentials-needed/i.test(String(p.status)));
+    if (unconfiguredListed.length) {
+      throw new Error(`unconfigured providers are still listed: ${unconfiguredListed.map(p => p.provider).join(', ')}`);
     }
 
     if (refresh.live !== true) throw new Error('candidate refresh did not run live provider policy');
