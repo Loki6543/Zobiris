@@ -5,8 +5,8 @@ overfitting tests the October 16 technical whitepaper asked for. It runs the eng
 (`engine/lagebild-engine.js`, copied verbatim from the published artifact), so a result here is a
 result for the real app.
 
-Results: [`results/REPORT.md`](results/REPORT.md). Research only: it reads no exchange credentials and has no trading authority. Every configuration's weekly returns are in
-`results/runs/`, and the numbers behind the report are in `results/summary.json`.
+Results: [`results/REPORT.md`](results/REPORT.md). Research only: it reads no exchange credentials and has no trading authority. The numbers behind the report are in `results/summary.json`; each configuration's weekly returns are
+written to `results/runs/` when you run the replay (kept out of git for size).
 
 ## Run it
 
