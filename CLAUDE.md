@@ -25,6 +25,13 @@ No leverage or margin features: the owner has ruled them out.
 - Sonnet 5.5: routine coding, tests, refactoring, focused debugging,
   contradiction review, and most scoped multi-file tasks.
 - Opus 5.5: optional escalation after Sonnet fails a verified difficult task.
+  Effort policy when Opus 5.5 is the working model: Medium for normal
+  implementation; Low for narrow extraction or mechanical edits; High for hard
+  diagnosis, contradictions and consequential logic; Extra high (xhigh) only for
+  a specific unresolved complex decision. The user/runtime sets effort; do not
+  claim a prompt or this file changed it. Return to Medium afterward. After two
+  attempts without progress, change the hypothesis, obtain missing evidence or
+  recommend raising effort; do not repeat an unchanged failing approach.
 - Fable 5.1: complex architecture, irreducible multi-system root cause,
   advanced strategy evaluation, and high-stakes synthesis only.
 Use `/zobiris-frugal` for major development work and
