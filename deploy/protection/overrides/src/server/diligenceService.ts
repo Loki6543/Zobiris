@@ -2,6 +2,8 @@
 // Only called for the few coins that already pass the cheap hygiene screen, spaced to respect free rate limits.
 import { evaluateEvmSecurity, evaluateSolanaSecurity, goPlusPath, parseCoinDetail, parseGithubParticipation, type Diligence } from "../strategyV2/diligence.js";
 import type { FetchLike } from "../strategyV2/feed.js";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { bubblemapsChain, bubblemapsMetricsUrl, parseHolderMap, type HolderMap } from "../strategyV2/bubblemaps.js";
 
 const TTL_MS = 24 * 3_600_000;
@@ -24,6 +26,39 @@ async function fetchHolderMap(fetcher: FetchLike, platform: string, contract: st
   } catch { return null; }
 }
 const cache = new Map<string, { value: Diligence; at: number; ttl: number }>();
+
+// The cache is saved on the data volume so a deploy or restart does not wipe a day of scans: rebuilding it at 20 coins
+// per refresh takes over an hour, and until then openings show "awaiting legitimacy scan". Entries keep their own expiry.
+export function diligenceCachePath(): string {
+  return process.env.ZOBIRIS_DILIGENCE_CACHE_PATH ?? join(dirname(process.env.ZOBIRIS_DB_PATH ?? "/data/zobiris.sqlite"), "zobiris-diligence-cache.json");
+}
+// Off under the test runner unless a test points the cache at its own file.
+const persist = () => process.env.ZOBIRIS_LEDGER !== "0" && (!process.env.VITEST || Boolean(process.env.ZOBIRIS_DILIGENCE_CACHE_PATH));
+let loaded = false;
+function loadCache(now: number) {
+  if (loaded || !persist()) return;
+  loaded = true;
+  try {
+    const path = diligenceCachePath();
+    if (!existsSync(path)) return;
+    const rows = JSON.parse(readFileSync(path, "utf8"));
+    for (const r of Array.isArray(rows) ? rows : []) {
+      if (typeof r?.id === "string" && r.value && Number.isFinite(r.at) && Number.isFinite(r.ttl) && now - r.at < r.ttl) cache.set(r.id, { value: r.value, at: r.at, ttl: r.ttl });
+    }
+  } catch { /* unreadable or torn file: start empty, scans rebuild it */ }
+}
+function saveCache(now: number) {
+  if (!persist()) return;
+  try {
+    const path = diligenceCachePath(), tmp = `${path}.tmp`;
+    const rows = [...cache.entries()].filter(([, e]) => now - e.at < e.ttl).map(([id, e]) => ({ id, ...e }));
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(tmp, JSON.stringify(rows));
+    renameSync(tmp, path); // atomic replace: a crash mid-write never leaves a half file
+  } catch { /* read-only volume: the in-memory cache still works */ }
+}
+/** Test hook: forget the in-memory cache and reload from disk on next use. */
+export function resetDiligenceCache() { cache.clear(); loaded = false; }
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 async function getJson(fetcher: FetchLike, url: string): Promise<{ status: number; body: unknown }> {
@@ -67,6 +102,7 @@ export async function getDiligence(geckoIds: string[], fetcher: FetchLike = fetc
   const out = new Map<string, Diligence>();
   let fetched = 0;
   holderMapsThisRefresh = 0;
+  loadCache(now);
   for (const id of [...new Set(geckoIds)]) {
     const hit = cache.get(id);
     if (hit && now - hit.at < hit.ttl) { out.set(id, hit.value); continue; }
@@ -84,5 +120,6 @@ export async function getDiligence(geckoIds: string[], fetcher: FetchLike = fetc
       out.set(id, value);
     }
   }
+  if (fetched) saveCache(now);
   return out;
 }
