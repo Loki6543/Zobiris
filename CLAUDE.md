@@ -54,6 +54,16 @@ current/requested effort; files, symbols or sources; exact error or
 conflicting evidence; hypotheses tested and outcomes; constraints and
 authority boundaries; the one decision still needed; next verification step.
 
+## Learning loop
+- Keep facts, hypotheses and predictions apart; label each.
+- Record a forecast with its probability and scoring test before
+  the outcome; score it afterwards (Brier) and never edit it.
+- Record errors with the corrected rule; consult them on similar work.
+- Promote a rule, weight or model change only after a pre-registered
+  test on held-out data; keep the prior version for instant rollback.
+- Research and self-generated lessons stay shadow evidence; they never
+  authorize trades or bypass promotion gates.
+
 ## Context, caching, and connector discipline
 1. State acceptance criteria and the execution authority boundary.
 2. Search symbols/diffs first. Read the smallest relevant files and log lines.
