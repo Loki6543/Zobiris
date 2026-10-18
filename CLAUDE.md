@@ -19,17 +19,40 @@ No leverage or margin features: the owner has ruled them out.
 - Some historical artifacts are archives: do not read them wholesale by default.
 - Inspect current Git status and the relevant paths before assuming architecture.
 
-## Frugal model routing
-- Haiku 5.5: narrow extraction, metadata, deduplication, classification,
-  connector payload triage, file discovery, and compact status summaries.
-- Sonnet 5.5: routine coding, tests, refactoring, focused debugging,
-  contradiction review, and most scoped multi-file tasks.
-- Opus 5.5: optional escalation after Sonnet fails a verified difficult task.
-- Fable 5.1: complex architecture, irreducible multi-system root cause,
-  advanced strategy evaluation, and high-stakes synthesis only.
-Use `/zobiris-frugal` for major development work and
-`/zobiris-research-triage` for source-heavy investigations.
-Do not switch the parent model just to run a cheap scan; use forked skills.
+## Opus 5.5 credit policy
+Use Opus 5.5. Recommend Medium for normal implementation.
+Use Low for narrow, reviewable extraction or mechanical edits.
+Use High for hard diagnosis, contradictions and consequential logic.
+Use Extra high (xhigh) for a specific unresolved complex decision.
+The user/runtime must apply the effort setting; do not claim
+a prompt or this file changed it. Return to Medium afterward.
+
+Before work, identify the deliverable, likely files/sources,
+acceptance checks and remaining uncertainty. Read targeted
+files and diffs before expanding scope. Keep exact evidence.
+
+Use one discovery provider first. Add another for a named gap.
+Deduplicate source families. Separate snippets from confirmation.
+Keep raw artifacts retrievable; return decision-relevant evidence.
+Do not spawn agents or switch models merely to save credits.
+
+After two attempts without progress, change the hypothesis,
+obtain missing evidence, or recommend raising effort.
+Avoid repeating an unchanged failing approach.
+
+Preserve research/shadow authority and fail-closed rules.
+Never weaken provenance, sizing, promotion or exchange gates.
+Run checks appropriate to the change and required project gates.
+Do not skip validation to meet a token target.
+
+Finish with changed files, checks and results, unresolved risks,
+and any recommendation to restore Medium.
+Report measured usage only when available; label estimates.
+
+Escalation handoff (keep it short): objective and acceptance test;
+current/requested effort; files, symbols or sources; exact error or
+conflicting evidence; hypotheses tested and outcomes; constraints and
+authority boundaries; the one decision still needed; next verification step.
 
 ## Context, caching, and connector discipline
 1. State acceptance criteria and the execution authority boundary.
@@ -48,8 +71,8 @@ Do not switch the parent model just to run a cheap scan; use forked skills.
    usage telemetry if available. Never pad prompts to meet a token threshold.
 
 ## Execution and verification
-- Route routine changes and focused tests through Sonnet, escalating only the
-  unresolved question with a compact Context Brief (target <= 6k tokens).
+- Run routine changes and focused tests at Medium effort; escalate only the
+  unresolved question with the compact handoff above.
 - Keep investigation and trading/execution permissions separate.
 - Preserve fail-closed behavior on missing/contradictory evidence.
 - Check changed files, run tests appropriate to the touched subsystem, and
