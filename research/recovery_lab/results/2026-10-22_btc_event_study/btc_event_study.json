@@ -1,0 +1,926 @@
+{
+ "BTC_DROP": {
+  "n_events": 20,
+  "events": [
+   {
+    "t": "2025-10-10 17:00:00",
+    "btc_move": -0.0517
+   },
+   {
+    "t": "2025-10-22 10:00:00",
+    "btc_move": -0.0508
+   },
+   {
+    "t": "2025-10-30 04:00:00",
+    "btc_move": -0.0601
+   },
+   {
+    "t": "2025-11-12 19:00:00",
+    "btc_move": -0.0502
+   },
+   {
+    "t": "2025-11-20 16:00:00",
+    "btc_move": -0.0601
+   },
+   {
+    "t": "2025-12-01 00:00:00",
+    "btc_move": -0.0525
+   },
+   {
+    "t": "2025-12-15 17:00:00",
+    "btc_move": -0.0507
+   },
+   {
+    "t": "2026-01-20 14:00:00",
+    "btc_move": -0.052
+   },
+   {
+    "t": "2026-01-29 15:00:00",
+    "btc_move": -0.059
+   },
+   {
+    "t": "2026-02-05 15:00:00",
+    "btc_move": -0.1362
+   },
+   {
+    "t": "2026-02-12 16:00:00",
+    "btc_move": -0.0581
+   },
+   {
+    "t": "2026-02-23 01:00:00",
+    "btc_move": -0.061
+   },
+   {
+    "t": "2026-03-06 12:00:00",
+    "btc_move": -0.0514
+   },
+   {
+    "t": "2026-03-18 14:00:00",
+    "btc_move": -0.0586
+   },
+   {
+    "t": "2026-03-27 08:00:00",
+    "btc_move": -0.0529
+   },
+   {
+    "t": "2026-05-28 03:00:00",
+    "btc_move": -0.0539
+   },
+   {
+    "t": "2026-06-04 03:00:00",
+    "btc_move": -0.0929
+   },
+   {
+    "t": "2026-06-18 15:00:00",
+    "btc_move": -0.0565
+   },
+   {
+    "t": "2026-06-25 15:00:00",
+    "btc_move": -0.0548
+   },
+   {
+    "t": "2026-10-08 13:00:00",
+    "btc_move": -0.051
+   }
+  ],
+  "24h": {
+   "all_alts_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -1.69,
+    "ci95_pct": [
+     -3.48,
+     -0.37
+    ]
+   },
+   "high_beta_quintile_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -2.09,
+    "ci95_pct": [
+     -4.28,
+     -0.44
+    ]
+   },
+   "feature_ic": {
+    "drop_beta": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.024,
+      "t": 0.25
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.177,
+      "t": -2.68
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": -0.056,
+      "t": -0.86
+     },
+     "passes": false
+    },
+    "dd_30d": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.081,
+      "t": 0.83
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.197,
+      "t": 3.45
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.127,
+      "t": 2.02
+     },
+     "passes": true
+    },
+    "bounce_vs_btc": {
+     "discovery": {
+      "n_events": 0
+     },
+     "holdout": {
+      "n_events": 0
+     },
+     "all": {
+      "n_events": 0
+     },
+     "passes": false
+    },
+    "range_pos_24h": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": -0.047,
+      "t": -0.81
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.17,
+      "t": 2.9
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.04,
+      "t": 0.83
+     },
+     "passes": false
+    },
+    "rel90_vs_btc": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": -0.098,
+      "t": -1.03
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.103,
+      "t": 0.93
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": 0.009,
+      "t": 0.12
+     },
+     "passes": false
+    },
+    "rotation_score": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": -0.082,
+      "t": -1.39
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.041,
+      "t": 0.55
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": -0.016,
+      "t": -0.33
+     },
+     "passes": false
+    }
+   }
+  },
+  "72h": {
+   "all_alts_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -1.37,
+    "ci95_pct": [
+     -2.99,
+     0.07
+    ]
+   },
+   "high_beta_quintile_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -1.8,
+    "ci95_pct": [
+     -3.88,
+     0.22
+    ]
+   },
+   "feature_ic": {
+    "drop_beta": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": -0.032,
+      "t": -0.37
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.109,
+      "t": -1.58
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": -0.063,
+      "t": -1.08
+     },
+     "passes": false
+    },
+    "dd_30d": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.137,
+      "t": 2.14
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.125,
+      "t": 2.34
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.132,
+      "t": 3.07
+     },
+     "passes": true
+    },
+    "bounce_vs_btc": {
+     "discovery": {
+      "n_events": 0
+     },
+     "holdout": {
+      "n_events": 0
+     },
+     "all": {
+      "n_events": 0
+     },
+     "passes": false
+    },
+    "range_pos_24h": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": -0.102,
+      "t": -1.85
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.12,
+      "t": 2.08
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": -0.013,
+      "t": -0.28
+     },
+     "passes": false
+    },
+    "rel90_vs_btc": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": 0.029,
+      "t": 0.17
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.055,
+      "t": 0.75
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": 0.043,
+      "t": 0.5
+     },
+     "passes": false
+    },
+    "rotation_score": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": -0.139,
+      "t": -0.96
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.004,
+      "t": 0.09
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": -0.063,
+      "t": -0.89
+     },
+     "passes": false
+    }
+   }
+  },
+  "120h": {
+   "all_alts_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -1.93,
+    "ci95_pct": [
+     -3.72,
+     -0.18
+    ]
+   },
+   "high_beta_quintile_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -1.55,
+    "ci95_pct": [
+     -4.01,
+     0.82
+    ]
+   },
+   "feature_ic": {
+    "drop_beta": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": -0.041,
+      "t": -0.59
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.076,
+      "t": -3.4
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": -0.055,
+      "t": -1.32
+     },
+     "passes": true
+    },
+    "dd_30d": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.166,
+      "t": 2.63
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.054,
+      "t": 1.04
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.121,
+      "t": 2.75
+     },
+     "passes": false
+    },
+    "bounce_vs_btc": {
+     "discovery": {
+      "n_events": 0
+     },
+     "holdout": {
+      "n_events": 0
+     },
+     "all": {
+      "n_events": 0
+     },
+     "passes": false
+    },
+    "range_pos_24h": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": -0.096,
+      "t": -1.6
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.131,
+      "t": 2.09
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": -0.005,
+      "t": -0.1
+     },
+     "passes": false
+    },
+    "rel90_vs_btc": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": 0.065,
+      "t": 0.47
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.08,
+      "t": 1.51
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": 0.073,
+      "t": 1.08
+     },
+     "passes": false
+    },
+    "rotation_score": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": -0.152,
+      "t": -1.22
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.02,
+      "t": -0.36
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": -0.082,
+      "t": -1.25
+     },
+     "passes": false
+    }
+   }
+  }
+ },
+ "BTC_RECOVERY": {
+  "n_events": 20,
+  "events": [
+   {
+    "t": "2025-10-10 21:00:00",
+    "btc_move": -0.1905
+   },
+   {
+    "t": "2025-10-19 10:00:00",
+    "btc_move": -0.1784
+   },
+   {
+    "t": "2025-10-31 14:00:00",
+    "btc_move": -0.084
+   },
+   {
+    "t": "2025-11-07 19:00:00",
+    "btc_move": -0.1474
+   },
+   {
+    "t": "2025-11-18 15:00:00",
+    "btc_move": -0.1639
+   },
+   {
+    "t": "2025-12-02 10:00:00",
+    "btc_move": -0.1112
+   },
+   {
+    "t": "2025-12-17 14:00:00",
+    "btc_move": -0.096
+   },
+   {
+    "t": "2026-01-28 09:00:00",
+    "btc_move": -0.1186
+   },
+   {
+    "t": "2026-02-04 09:00:00",
+    "btc_move": -0.1949
+   },
+   {
+    "t": "2026-02-13 14:00:00",
+    "btc_move": -0.2307
+   },
+   {
+    "t": "2026-02-21 13:00:00",
+    "btc_move": -0.0823
+   },
+   {
+    "t": "2026-03-09 14:00:00",
+    "btc_move": -0.1096
+   },
+   {
+    "t": "2026-03-23 11:00:00",
+    "btc_move": -0.1093
+   },
+   {
+    "t": "2026-03-30 11:00:00",
+    "btc_move": -0.1405
+   },
+   {
+    "t": "2026-05-23 20:00:00",
+    "btc_move": -0.0963
+   },
+   {
+    "t": "2026-06-04 03:00:00",
+    "btc_move": -0.2138
+   },
+   {
+    "t": "2026-06-25 05:00:00",
+    "btc_move": -0.1217
+   },
+   {
+    "t": "2026-07-02 05:00:00",
+    "btc_move": -0.1256
+   },
+   {
+    "t": "2026-09-18 08:00:00",
+    "btc_move": -0.083
+   },
+   {
+    "t": "2026-10-11 15:00:00",
+    "btc_move": -0.0739
+   }
+  ],
+  "24h": {
+   "all_alts_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -0.9,
+    "ci95_pct": [
+     -2.21,
+     0.44
+    ]
+   },
+   "high_beta_quintile_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -0.66,
+    "ci95_pct": [
+     -2.43,
+     1.47
+    ]
+   },
+   "feature_ic": {
+    "drop_beta": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.056,
+      "t": 0.66
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.048,
+      "t": -0.7
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.014,
+      "t": 0.24
+     },
+     "passes": false
+    },
+    "dd_30d": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": -0.011,
+      "t": -0.15
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.102,
+      "t": 1.24
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.034,
+      "t": 0.62
+     },
+     "passes": false
+    },
+    "bounce_vs_btc": {
+     "discovery": {
+      "n_events": 11,
+      "mean_ic": 0.015,
+      "t": 0.26
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.038,
+      "t": -0.56
+     },
+     "all": {
+      "n_events": 19,
+      "mean_ic": -0.007,
+      "t": -0.17
+     },
+     "passes": false
+    },
+    "range_pos_24h": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.05,
+      "t": 0.84
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.021,
+      "t": 0.28
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.038,
+      "t": 0.84
+     },
+     "passes": false
+    },
+    "rel90_vs_btc": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": 0.023,
+      "t": 0.17
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.028,
+      "t": -0.39
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": -0.004,
+      "t": -0.06
+     },
+     "passes": false
+    },
+    "rotation_score": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": 0.013,
+      "t": 0.11
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.034,
+      "t": -0.44
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": -0.012,
+      "t": -0.19
+     },
+     "passes": false
+    }
+   }
+  },
+  "72h": {
+   "all_alts_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -1.18,
+    "ci95_pct": [
+     -3.16,
+     1.47
+    ]
+   },
+   "high_beta_quintile_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -0.74,
+    "ci95_pct": [
+     -3.71,
+     3.17
+    ]
+   },
+   "feature_ic": {
+    "drop_beta": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": -0.043,
+      "t": -0.46
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.013,
+      "t": -0.17
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": -0.031,
+      "t": -0.5
+     },
+     "passes": false
+    },
+    "dd_30d": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.053,
+      "t": 0.56
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.017,
+      "t": 0.2
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.039,
+      "t": 0.6
+     },
+     "passes": false
+    },
+    "bounce_vs_btc": {
+     "discovery": {
+      "n_events": 11,
+      "mean_ic": -0.03,
+      "t": -0.35
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.04,
+      "t": -0.5
+     },
+     "all": {
+      "n_events": 19,
+      "mean_ic": -0.034,
+      "t": -0.59
+     },
+     "passes": false
+    },
+    "range_pos_24h": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.025,
+      "t": 0.41
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.039,
+      "t": 0.5
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.03,
+      "t": 0.65
+     },
+     "passes": false
+    },
+    "rel90_vs_btc": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": -0.005,
+      "t": -0.05
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.092,
+      "t": -1.91
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": -0.051,
+      "t": -0.89
+     },
+     "passes": false
+    },
+    "rotation_score": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": -0.017,
+      "t": -0.2
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.1,
+      "t": 2.22
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": 0.045,
+      "t": 0.96
+     },
+     "passes": false
+    }
+   }
+  },
+  "120h": {
+   "all_alts_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -1.66,
+    "ci95_pct": [
+     -3.7,
+     0.7
+    ]
+   },
+   "high_beta_quintile_minus_btc_net": {
+    "n": 20,
+    "mean_pct": -1.31,
+    "ci95_pct": [
+     -4.18,
+     2.2
+    ]
+   },
+   "feature_ic": {
+    "drop_beta": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": -0.071,
+      "t": -0.76
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": -0.034,
+      "t": -0.37
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": -0.056,
+      "t": -0.86
+     },
+     "passes": false
+    },
+    "dd_30d": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.095,
+      "t": 0.95
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.069,
+      "t": 0.79
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.085,
+      "t": 1.25
+     },
+     "passes": false
+    },
+    "bounce_vs_btc": {
+     "discovery": {
+      "n_events": 11,
+      "mean_ic": 0.073,
+      "t": 0.92
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.015,
+      "t": 0.26
+     },
+     "all": {
+      "n_events": 19,
+      "mean_ic": 0.048,
+      "t": 0.95
+     },
+     "passes": false
+    },
+    "range_pos_24h": {
+     "discovery": {
+      "n_events": 12,
+      "mean_ic": 0.12,
+      "t": 2.02
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.018,
+      "t": 0.25
+     },
+     "all": {
+      "n_events": 20,
+      "mean_ic": 0.079,
+      "t": 1.73
+     },
+     "passes": false
+    },
+    "rel90_vs_btc": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": 0.026,
+      "t": 0.19
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.001,
+      "t": 0.02
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": 0.013,
+      "t": 0.18
+     },
+     "passes": false
+    },
+    "rotation_score": {
+     "discovery": {
+      "n_events": 7,
+      "mean_ic": 0.034,
+      "t": 0.34
+     },
+     "holdout": {
+      "n_events": 8,
+      "mean_ic": 0.037,
+      "t": 0.84
+     },
+     "all": {
+      "n_events": 15,
+      "mean_ic": 0.036,
+      "t": 0.7
+     },
+     "passes": false
+    }
+   }
+  }
+ },
+ "costs": {
+  "maker": 0.004,
+  "taker": 0.0076
+ }
+}
