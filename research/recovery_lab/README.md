@@ -12,6 +12,7 @@ credentials or changes Strategy 2.1 gates. Standard library only (Python 3.10+).
 | `event_study.py` | Year-long hourly event study: alt-vs-BTC returns net of Kraken fees after alt flushes, feature ICs with a chronological holdout |
 | `rotation_study.py` | Replay of the deployed delayed-rotation screen (status ladder, gate, score) on the same hourly year |
 | `btc_event_study.py` | Alt-vs-BTC outcomes 1–5 days after BTC drops and recoveries, with per-event feature ICs |
+| `drop_monitor.py` | Live Kraken check for the BTC-drop rule; logs each new drop with the 30-day-high ranking and scores it after 72h |
 | `ledger.py` | Forecast registry, Brier score, 2m − m² sizing calibration, Bonferroni Sharpe hurdle |
 | `legacy.py` | Exact re-implementation of the 19 Oct sweep test, kept only to reproduce its figures |
 | `run_verification.py` | Re-runs the 22 Oct verification from `data/` and writes a new results directory |

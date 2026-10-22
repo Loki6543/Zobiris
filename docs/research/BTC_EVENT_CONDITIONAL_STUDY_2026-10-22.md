@@ -63,3 +63,9 @@ A forward test, `post-btc-drop-relative-strength-forward-v1`, now scores the rel
 ```sh
 python3 -m research.recovery_lab.btc_event_study --out /tmp/zobiris_btc_events
 ```
+
+## Live monitor
+
+`python3 -m research.recovery_lab.drop_monitor` pulls closed Kraken 1h candles, applies the drop rule, and writes each new
+drop (with the ranking at the event hour) to `docs/market-memory/post-btc-drop-forward.jsonl`, then scores it after 72 hours.
+First scan, 22 Oct 05:00 UTC bar: BTC $82,737, −2.4% from its 48h high, no drop in the window.
