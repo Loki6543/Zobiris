@@ -1,7 +1,8 @@
 """Owner call log: record a market call with a probability, score it when it resolves. Research only; no orders.
 
 A call is written before its outcome is knowable, with the Kraken price of the coin and of BTC at that moment.
-Kinds: `beats_btc` (coin outperforms BTC over the window), `up` (coin higher), `above` (coin closes above --target).
+Kinds: `beats_btc` (coin outperforms BTC over the window), `up` (coin higher), `above` (coin closes above --target),
+`basket` (the equal-weight --strong basket outperforms the --weak basket).
 Scoring uses the close of the Kraken 1h candle at the deadline hour and the Brier score (0 perfect, 0.25 = coin flip at 50%).
 """
 import json
@@ -51,6 +52,17 @@ def add(path, coin, kind, p, hours, target=None, note='', now=None, price=spot):
     return rec
 
 
+def add_basket(path, strong, weak, p, hours, note='', now=None, price=spot):
+    now = now or _now()
+    strong, weak = [c.upper() for c in strong], [c.upper() for c in weak]
+    rec = {'id': f'BASKET-{now:%Y%m%dT%H%M}', 'type': 'call', 'made_at': now.isoformat(), 'coin': 'BASKET', 'kind': 'basket',
+           'p': p, 'resolves_at': (now + timedelta(hours=hours)).isoformat(), 'note': note, 'strong': strong, 'weak': weak,
+           'entry': {c: price(c) for c in strong + weak}, 'btc_price': price('BTC'),
+           'claim': f'{"+".join(strong)} beat {"+".join(weak)} within {hours}h', 'scoring': 'brier'}
+    register(path, rec)
+    return rec
+
+
 def outcome(call, coin_exit, btc_exit):
     if call['kind'] == 'beats_btc':
         return coin_exit / call['coin_price'] > btc_exit / call['btc_price']
@@ -72,6 +84,19 @@ def score_due(path, now=None, bars_for=fetch_kraken_1h):
     for c in [r for r in log if r.get('type') == 'call' and r['id'] not in done]:
         due = datetime.fromisoformat(c['resolves_at'])
         if due > now:
+            continue
+        if c['kind'] == 'basket':
+            exits = {k: _close_at(bars_for(_pair(k)), due) for k in c['strong'] + c['weak']}
+            if any(v is None for v in exits.values()):
+                continue
+            ret = lambda g: sum(exits[k] / c['entry'][k] - 1 for k in g) / len(g)
+            hit = ret(c['strong']) > ret(c['weak'])
+            rec = {'id': c['id'], 'type': 'outcome', 'scored_at': now.isoformat(), 'hit': hit, 'brier': round(brier(c['p'], hit), 4),
+                   'strong_pct': round(100 * ret(c['strong']), 2), 'weak_pct': round(100 * ret(c['weak']), 2),
+                   'coin_minus_btc_pct': round(100 * (ret(c['strong']) - ret(c['weak'])), 2)}
+            with open(path, 'a') as f:
+                f.write(json.dumps(rec, sort_keys=True) + '\n')
+            new.append(rec)
             continue
         coin_exit, btc_exit = _close_at(bars_for(_pair(c['coin'])), due), _close_at(bars_for(_pair('BTC')), due)
         if coin_exit is None or btc_exit is None:
@@ -96,7 +121,7 @@ def report(path):
     return {'calls': len(calls), 'scored': len(outs), 'hit_rate': round(sum(o['hit'] for o in outs) / len(outs), 2),
             'mean_brier': round(sum(br) / len(br), 3), 'coin_flip_brier': 0.25,
             'avg_confidence': round(sum(calls[o['id']]['p'] for o in outs) / len(outs), 2),
-            'avg_coin_minus_btc_pct': round(sum(o['coin_minus_btc_pct'] for o in outs) / len(outs), 2)}
+            'avg_edge_pct': round(sum(o['coin_minus_btc_pct'] for o in outs) / len(outs), 2)}
 
 
 def main(argv=None):
@@ -111,11 +136,19 @@ def main(argv=None):
     a.add_argument('--hours', type=int, required=True)
     a.add_argument('--target', type=float)
     a.add_argument('--note', default='')
+    b = sub.add_parser('basket')
+    b.add_argument('--strong', required=True, help='comma-separated coins expected to do better')
+    b.add_argument('--weak', required=True, help='comma-separated coins expected to do worse')
+    b.add_argument('--p', type=float, required=True)
+    b.add_argument('--hours', type=int, required=True)
+    b.add_argument('--note', default='')
     sub.add_parser('score')
     sub.add_parser('report')
     x = ap.parse_args(argv)
     if x.cmd == 'add':
         print(json.dumps(add(x.log, x.coin, x.kind, x.p, x.hours, x.target, x.note), indent=1))
+    elif x.cmd == 'basket':
+        print(json.dumps(add_basket(x.log, x.strong.split(','), x.weak.split(','), x.p, x.hours, x.note), indent=1))
     elif x.cmd == 'score':
         print(json.dumps(score_due(x.log), indent=1))
     print(json.dumps(report(x.log), indent=1))
