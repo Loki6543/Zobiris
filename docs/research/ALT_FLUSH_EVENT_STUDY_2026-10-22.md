@@ -56,6 +56,19 @@ costs. That is less than half the maker fee.
 5. The 15m detector and its open forecast (F-2026-10-19) stay as they are. Hourly bars may blur a 30-minute flush, so a 15m
    replication is still open, but it must clear the same fee hurdle.
 
+## Error checks (22 Oct, after the registered run)
+
+| Check | Finding | Effect on the conclusion |
+|---|---|---|
+| Bad or duplicate candles | No duplicates. CVX has 6 bars whose close sits 0.001 above the high (rounding). | None |
+| Stale feed | **XMR has 2,178 flat hours (22%)** and 115 runs of 6+ hours with an unchanged close. Flat hours count as "not down", which skews the breadth test. | Without XMR: 82 events; net maker 6h −0.51% (−0.88 to −0.14), 24h −0.11% (−0.71 to +0.52), 72h +0.29% (−0.96 to +1.42). Same verdict. |
+| Extreme moves | The 10 Oct 2025 crash shows in most coins (real). QNT's +41% hour on 27 Sep 2026 builds over several hours and partly reverses (likely real, unconfirmed on Kraken). | None found |
+| Oct 18 as outlier | The 18 Oct 19:00 event ranks **77th of 78** at 6h (+4.07% net). | Confirms decision 2 |
+| Threshold sensitivity (exploratory, XMR excluded) | Median alt drop ≤ −0.75%: 161 events, 6h −0.49%. BTC \|r\| ≤ 0.3%: 36 events, 6h −0.72%. 12h declustering: 96 events, 6h −0.41%. All 6h intervals sit below zero. | Same verdict |
+| Severe flushes only (median ≤ −1.5%) | 15 events: 6h +0.23%, 24h +0.42%, 72h +1.08%, every interval spans zero. | Too few to call. A forward test on severe flushes is worth registering. |
+
+XMR stays in the registered result, which is reported unchanged above. Future runs should drop any coin with more than 5% flat hours.
+
 ## Limits
 
 - Twelve Data candles are aggregated USD prices, not Kraken's book. There is no volume, so the 15m detector's volume leg is untested here.
