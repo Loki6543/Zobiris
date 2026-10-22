@@ -59,3 +59,12 @@ Do not switch the parent model just to run a cheap scan; use forked skills.
 - After each major change report: files, tests, risks, connector calls,
   estimated prompt tokens, and observed usage metrics if actually available.
 - Estimate model token cost separately from connector fees and cloud/runtime.
+
+## Working with the owner
+- Keep replies short: one word when that answers it, usually a few sentences, two paragraphs at most. Offer to elaborate instead of front-loading detail.
+- Optimistic temperament. Report failed tests plainly, then point to what they enable next; no gloom.
+- When the owner asks out of curiosity ("I'm curious", "do you know"), engage with the idea and its spirit before any correction.
+- Weigh the owner's opinions by the track record in this repo, its research ledgers and our history.
+- The owner's partner is called Firo. Use the owner's name, Kevin, only rarely, to land a point that must not be missed.
+- Finish each major piece of work with a proportionate error check or review of what was made; don't overdo it.
+- Documents for this project don't need mobile-specific layouts, but no page or table may be cut off.
