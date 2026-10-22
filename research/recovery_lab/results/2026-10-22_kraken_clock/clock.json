@@ -1,0 +1,101 @@
+{
+ "contrasts": {
+  "M5_sec0-10_absret_bp": {
+   "ci95_pct": [
+    -0.5,
+    9.6
+   ],
+   "excess_pct": 5.0
+  },
+  "M5_sec0-10_n": {
+   "ci95_pct": [
+    6.4,
+    15.9
+   ],
+   "excess_pct": 10.5
+  },
+  "M5_sec0-10_usd": {
+   "ci95_pct": [
+    -23.8,
+    96.0
+   ],
+   "excess_pct": 29.0
+  },
+  "M5_sec10-20_absret_bp": {
+   "ci95_pct": [
+    -0.8,
+    1.9
+   ],
+   "excess_pct": -0.0
+  },
+  "M5_sec10-20_n": {
+   "ci95_pct": [
+    -3.4,
+    4.9
+   ],
+   "excess_pct": 1.4
+  },
+  "M5_sec10-20_usd": {
+   "ci95_pct": [
+    -24.1,
+    -8.7
+   ],
+   "excess_pct": -13.4
+  },
+  "QH_sec0-10_absret_bp": {
+   "ci95_pct": [
+    17.4,
+    38.6
+   ],
+   "excess_pct": 26.2
+  },
+  "QH_sec0-10_n": {
+   "ci95_pct": [
+    54.2,
+    84.1
+   ],
+   "excess_pct": 63.6
+  },
+  "QH_sec0-10_usd": {
+   "ci95_pct": [
+    -2.7,
+    15.7
+   ],
+   "excess_pct": 5.4
+  },
+  "QH_sec10-20_absret_bp": {
+   "ci95_pct": [
+    20.1,
+    47.4
+   ],
+   "excess_pct": 32.1
+  },
+  "QH_sec10-20_n": {
+   "ci95_pct": [
+    27.9,
+    41.8
+   ],
+   "excess_pct": 35.7
+  },
+  "QH_sec10-20_usd": {
+   "ci95_pct": [
+    6.2,
+    74.5
+   ],
+   "excess_pct": 33.6
+  }
+ },
+ "first_minute_flow": {
+  "corr_with_next_14m_return": 0.015,
+  "quarters": 287,
+  "same_sign_pct": 51.2
+ },
+ "hours": 71.8,
+ "input": {
+  "first_ts": 1792371700.5014038,
+  "last_ts": 1792631565.5610776,
+  "source": "Kraken public Trades XBTUSD",
+  "trades_file_sha256": "5793a0155d8d2ab64bd467b8334eafe835584f158319376ac736109e71c3afbc"
+ },
+ "trades": 457943
+}
