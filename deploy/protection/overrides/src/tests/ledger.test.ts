@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FEE_PER_SIDE, slippageFor, summarizeLedger, type LedgerRow } from "../strategyV2/ledger";
+import { summarizeLedger, type LedgerRow } from "../strategyV2/ledger";
+import { netReturnPct } from "../strategyV2/costs";
 import { recordReport, resetLedgerCache } from "../server/ledgerService";
 
 const day = (n: number) => new Date(Date.UTC(2026, 0, 1 + n)).toISOString().slice(0, 10);
@@ -10,14 +11,13 @@ const snap = (n: number, btc: number): LedgerRow => ({ kind: "snapshot", day: da
 const dec = (n: number, symbol: string, group: any, price: number | null, extra: object = {}): LedgerRow => ({ kind: "decision", day: day(n), symbol, name: symbol, rank: 150, source: "watchlist", group, signal: group, priceUsd: price, limitPriceUsd: null, convexityScore: null, ...extra });
 
 describe("decision ledger scoring", () => {
-  it("counts a run of the same signal once and scores it net of fees and tiered slippage", () => {
+  it("counts a run of the same signal once and scores it net of the shared Kraken cost schedule", () => {
     const rows: LedgerRow[] = [];
     for (let n = 0; n <= 40; n++) { rows.push(snap(n, 100)); rows.push(dec(n, "AAA", n < 5 ? "bet" : "wait", 10 + n)); }
     const s = summarizeLedger(rows, day(40));
     const bet = s.groups.find((g) => g.group === "bet")!;
     expect(bet.events).toBe(1); // 5 days in a row = one event
-    const cost = FEE_PER_SIDE + slippageFor("AAA", 150);
-    expect(bet.horizons["7d"]!.avgNetPct).toBeCloseTo(((17 * (1 - cost)) / (10 * (1 + cost)) - 1) * 100, 6);
+    expect(bet.horizons["7d"]!.avgNetPct).toBeCloseTo(netReturnPct(10, 17, "AAA", 150), 6);
     expect(bet.horizons["30d"]!.avgVsBtcPct).toBeCloseTo(bet.horizons["30d"]!.avgNetPct!, 6); // BTC flat
     expect(bet.horizons["90d"]!.pending).toBe(1);
   });
@@ -30,8 +30,7 @@ describe("decision ledger scoring", () => {
     }
     const buy = summarizeLedger(rows, day(40)).groups.find((g) => g.group === "buy")!;
     expect([buy.events, buy.filled, buy.horizons["7d"]!.n]).toEqual([2, 1, 1]);
-    const cost = FEE_PER_SIDE + slippageFor("HIT", 150);
-    expect(buy.horizons["7d"]!.avgNetPct).toBeCloseTo(((10 * (1 - cost)) / (9.5 * (1 + cost)) - 1) * 100, 6);
+    expect(buy.horizons["7d"]!.avgNetPct).toBeCloseTo(netReturnPct(9.5, 10, "HIT", 150), 6);
   });
   it("reports coins that vanish from the data as lost coverage instead of dropping them", () => {
     const rows: LedgerRow[] = [snap(0, 100), dec(0, "GONE", "bet", 1)];

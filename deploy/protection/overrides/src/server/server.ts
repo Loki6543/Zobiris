@@ -1430,20 +1430,17 @@ const API: ApiRouter = {
       errorResponse(res, 500, e);
     }
   },
-  "GET /api/calibration": async (_req, res) => {
-    // v0.4.0: in-process forecast ledger report. Empty in production
-    // unless forecasts are actively being recorded during refresh.
-    try {
-      const { ForecastLedger } = await import("../learning/forecastLedger.js");
-      const ledger = new ForecastLedger();
-      const report = ledger.report();
-      jsonResponse(res, 200, {
-        report,
-        note: "Forecast ledger is in-process; persistent storage is deferred to slice 6+.",
-      });
-    } catch (e) {
-      errorResponse(res, 500, e);
-    }
+  "GET /api/calibration": (_req, res) => {
+    // No component records probability forecasts, so there is nothing to calibrate. The previous handler built a new,
+    // empty in-memory ledger on every request. Scored decisions live in the persisted stores listed below.
+    jsonResponse(res, 200, {
+      status: "NO_PROBABILITY_FORECASTS_RECORDED",
+      report: null,
+      scoredDecisionStores: {
+        "/api/ledger": "daily decisions (buy, bet, watch, wait, filtered), scored at 7/30/90 days net of Kraken costs",
+        "/api/outcomes": "refresh-time decisions, scored automatically at 1H/4H/1D/3D/7D",
+      },
+    });
   },
   "GET /api/regime": (_req, res) => {
     const storage = openStorage({ path: DEFAULT_DB });

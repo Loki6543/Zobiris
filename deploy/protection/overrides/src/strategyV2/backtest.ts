@@ -1,16 +1,18 @@
 // Backtest Lab engine: honest long/flat research backtests on daily bars. Pure and deterministic; nothing here trades.
 // Rules that keep it honest (the standard backtesting pitfalls):
 //   Look-ahead   a signal at bar i uses bars 0..i only (tests truncate the series to prove it) and executes at the NEXT bar's open.
-//   Costs        every entry and every exit pays COST_PER_SIDE (Kraken taker 0.26% + 0.10% slippage).
+//   Costs        every entry and every exit pays COST_PER_SIDE: the average one-side BTC cost from costs.ts.
 //   Overfitting  parameter grids are tiny; choices are made on a training window and scored on the test window after it (walk-forward).
 //   Uncertainty  a Sharpe ratio is shown with its 95% interval, and a block-bootstrap Monte Carlo gives loss odds and drawdown spread.
 //   No leverage  positions are 0 or 1 (flat or fully long); shorting and margin are not modelled.
+import { btcCostPerSide } from "./costs";
+
 export interface Bar { time: number; open: number; high: number; low: number; close: number }
 export type Position = 0 | 1;
 export type Params = Record<string, number>;
 
-/** Kraken taker fee 0.26% plus 0.10% slippage, charged on each entry and each exit. */
-export const COST_PER_SIDE = 0.0036;
+/** Average of Kraken's maker entry and taker exit cost for BTC (shared schedule), charged on each entry and each exit. */
+export const COST_PER_SIDE = btcCostPerSide();
 export const ANN = 365; // crypto trades every day
 export const WARMUP = 200;
 

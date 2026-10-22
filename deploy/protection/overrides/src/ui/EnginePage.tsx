@@ -216,7 +216,7 @@ function LedgerPanel() {
   return (
     <>
       <p className="strategy-muted">{s.firstDay ? <>Recording since {s.firstDay} · {s.days} day{s.days === 1 ? "" : "s"} · {data.rows} rows. </> : "Recording starts with the first report. "}
-        Net of 0.26% fees and tiered slippage per side · each signal counted once, on its first day · results appear 7 days after a signal.</p>
+        Net of Kraken fees (maker in, taker out) and half the bid-ask spread · each signal counted once, on its first day · results appear 7 days after a signal.</p>
       {data.error ? <p className="engine-warn">Ledger not writable: {data.error}</p> : null}
       <div className="engine-ledger-scroll"><table className="engine-ledger">
         <thead><tr><th>Signal group</th><th>Signals</th><th>7 days</th><th>30 days</th><th>90 days</th><th>30d vs BTC</th><th>30d hit rate</th></tr></thead>

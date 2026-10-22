@@ -5,11 +5,12 @@
 //  - A signal counts once, on the first day of a run (a coin in a buy zone for 8 days is one event, not 8).
 //  - Buy-zone events only count if a later recorded price reached the limit within 14 days; return is from the limit.
 //  - Every other group enters at that day's price.
-//  - Net return pays fees (0.26% per side, Kraken maker) and tiered slippage per side:
-//      BTC/ETH 0.1% · ranks 2-10 0.5% · ranks 11-100 2% · ranks 101+ 7%.
+//  - Net return pays the shared Kraken cost schedule (costs.ts): maker fee on entry, taker fee plus half the
+//    bid-ask spread on exit.
 //  - Each event is compared with holding BTC over the same days.
 //  - A coin with no recorded price at the horizon (dropped out of the data, e.g. delisted) is counted as "lost
 //    coverage", never silently dropped and never averaged in.
+import { netReturnPct } from "./costs";
 import { decisionGroup, type DecisionGroup, type StrategyReport } from "./report";
 
 export interface SnapshotRow { kind: "snapshot"; day: string; at: string; regime: string; score: number; altGate: string; dominancePct: number | null; stablecoinChange30dPct: number | null; breadth30dPositive: number | null; btcPriceUsd: number | null }
@@ -18,16 +19,8 @@ export interface DecisionRow { kind: "decision"; day: string; symbol: string; na
 export interface SignalRow { kind: "signal"; day: string; symbol: string; geckoId: string; rank: number | null; tier: string; volumeClass: string; score: number; verdict: string; priceUsd: number | null }
 export type LedgerRow = SnapshotRow | DecisionRow | SignalRow;
 
-export const FEE_PER_SIDE = 0.0026;
 export const HORIZONS = [7, 30, 90] as const;
 export const FILL_WINDOW_DAYS = 14;
-
-export function slippageFor(symbol: string, rank: number | null): number {
-  if (symbol === "BTC" || symbol === "ETH") return 0.001;
-  if (rank != null && rank <= 10) return 0.005;
-  if (rank != null && rank <= 100) return 0.02;
-  return 0.07;
-}
 
 export const dayOf = (iso: string) => iso.slice(0, 10);
 const addDays = (day: string, n: number) => new Date(Date.parse(day + "T00:00:00Z") + n * 86_400_000).toISOString().slice(0, 10);
@@ -111,7 +104,6 @@ export function summarizeLedger(rows: LedgerRow[], today: string): LedgerSummary
         if (!isFilled) { if (addDays(r.day, FILL_WINDOW_DAYS) <= today) recent.push({ day: r.day, symbol: r.symbol, group, entryUsd: r.limitPriceUsd, filled: false, ret30Pct: null }); continue; }
         filled++;
       }
-      const cost = FEE_PER_SIDE + slippageFor(r.symbol, r.rank);
       let ret30: number | null = null;
       for (const h of HORIZONS) {
         const key = `${h}d`, exitDay = addDays(entryDay, h);
@@ -119,7 +111,7 @@ export function summarizeLedger(rows: LedgerRow[], today: string): LedgerSummary
         const exit = priceAt(r.symbol, exitDay);
         // Not recorded yet (the exit day or its 3-day slack is after the last recorded day) is pending, not lost.
         if (exit == null) { if (addDays(exitDay, 3) > lastDay) per[key]!.pending++; else per[key]!.lostCoverage++; continue; }
-        const net = ((exit * (1 - cost)) / (entry * (1 + cost)) - 1) * 100;
+        const net = netReturnPct(entry, exit, r.symbol, r.rank);
         (rets[key] ??= []).push(net);
         if (h === 30) ret30 = net;
         const b0 = priceAt("BTC", entryDay, 0) ?? priceAt("BTC", entryDay), b1 = priceAt("BTC", exitDay);
@@ -170,8 +162,7 @@ export function summarizeSignals(rows: LedgerRow[], today: string): { byClass: S
           if (exitDay > today) { pending++; continue; }
           const exit = at(e.symbol, exitDay);
           if (exit == null) { if (addDays(exitDay, 3) > lastDay) pending++; else lost++; continue; }
-          const cost = FEE_PER_SIDE + slippageFor(e.symbol, e.rank);
-          const net = ((exit * (1 - cost)) / (e.priceUsd! * (1 + cost)) - 1) * 100;
+          const net = netReturnPct(e.priceUsd!, exit, e.symbol, e.rank);
           rets.push(net);
           const b0 = at("BTC", e.day), b1 = at("BTC", exitDay);
           if (b0 && b1) vs.push(net - (b1 / b0 - 1) * 100);

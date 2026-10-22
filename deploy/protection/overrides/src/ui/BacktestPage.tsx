@@ -105,7 +105,7 @@ export function BacktestPage() {
         <div className="engine-panel-head"><h2>How the tests are kept honest</h2></div>
         <ul className="bt-method">
           <li><b>No look-ahead.</b> A signal uses only bars up to that day's close and trades at the next day's open. Automated tests cut off the future and check that no past signal changes.</li>
-          <li><b>Real costs.</b> Kraken's 0.26% taker fee plus 0.10% slippage on every entry and every exit, which is why rules that trade often fare worst.</li>
+          <li><b>Real costs.</b> Kraken's published fees (maker to enter, taker to exit) plus half the bid-ask spread, averaged over every entry and every exit, which is why rules that trade often fare worst.</li>
           <li><b>Walk-forward.</b> Settings are chosen on {rep.trainDays} days of history, then judged on the next {rep.testDays} days, rolling forward. The first {rep.warmupDays} days only warm up indicators.</li>
           <li><b>Honest uncertainty.</b> Every Sharpe ratio carries its 95% range, and Monte Carlo reshuffles the out-of-sample days in blocks (keeping volatility clustering) to show loss odds and drawdowns.</li>
           <li><b>Long or flat only.</b> No shorting, no margin, no leverage. Bitcoin only, daily bars; {rep.bars} days is a short history with one bull-bear cycle, so treat every figure as a hint.</li>
