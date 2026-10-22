@@ -1,6 +1,6 @@
 # ZOBIRIS Market Memory — BTC floor defence and alt rotation, October 18–21, 2026
 
-**Status:** two forecasts scored, three open. **Authority:** `SHADOW_ONLY_NO_TRADING_AUTHORITY`. This is a research log with a
+**Status:** four forecasts scored, one open. **Authority:** `SHADOW_ONLY_NO_TRADING_AUTHORITY`. This is a research log with a
 companion JSONL ledger. It cannot size, buy, sell or bypass liquidity and portfolio controls.
 
 ## What happened (exchange-verified)
@@ -32,8 +32,8 @@ companion JSONL ledger. It cannot size, buy, sell or bypass liquidity and portfo
 | BTC holds $79,709 and is higher by Oct 21 20:10 | Oct 18 20:10 | PASS | user 0.00 (p=1.0), Claude 0.20 (p=0.55) |
 | High-beta coins (ZRO NEAR ENA ZEC SUI INJ) beat leaders (XMR KAS) and BTC over 72h | Oct 18 20:55 | PASS: +16.4% vs +9.1% vs +4.6% | Claude 0.30 (p=0.45) |
 | Next flush firing: cohort > +2% at 6h and beats BTC | Oct 19 03:45 | OPEN, no firing yet | — |
-| Oct 21 rotation buckets: LEAD beats FOLLOWING and NEEDS_CONFIRMATION over 24h | Oct 22 ~01:15 | OPEN, scores Oct 22 17:30 | — |
-| TIA two consecutive 1h closes above 0.6464 by Oct 22 17:30 | Oct 22 ~01:15 | OPEN | — |
+| Oct 21 rotation buckets: LEAD beats FOLLOWING and NEEDS_CONFIRMATION over 24h | Oct 22 ~01:15 | FAIL: vs BTC LEAD -3.53%, FOLLOWING -1.66%, NEEDS_CONF -4.85% (BTC -3.8%) | Claude 0.20 (p=0.45) |
+| TIA two consecutive 1h closes above 0.6464 by Oct 22 17:30 | Oct 22 ~01:15 | MISS: best 1h close 0.6285 | Claude 0.09 (p=0.30) |
 
 Disclosure: a routine 00:45 UTC scan showed QNT (LEAD) at −1.2% over 30 minutes before the Oct 21 tests were registered; no
 group or 24h return was viewed.
