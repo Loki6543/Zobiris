@@ -32,8 +32,11 @@ companion JSONL ledger. It cannot size, buy, sell or bypass liquidity and portfo
 | BTC holds $79,709 and is higher by Oct 21 20:10 | Oct 18 20:10 | PASS | user 0.00 (p=1.0), Claude 0.20 (p=0.55) |
 | High-beta coins (ZRO NEAR ENA ZEC SUI INJ) beat leaders (XMR KAS) and BTC over 72h | Oct 18 20:55 | PASS: +16.4% vs +9.1% vs +4.6% | Claude 0.30 (p=0.45) |
 | Next flush firing: cohort > +2% at 6h and beats BTC | Oct 19 03:45 | OPEN, no firing yet | — |
-| Oct 21 rotation buckets: LEAD beats FOLLOWING and NEEDS_CONFIRMATION over 24h | Oct 22 01:20 | OPEN, scores Oct 22 17:30 | — |
-| TIA two consecutive 1h closes above 0.6464 by Oct 22 17:30 | Oct 22 01:20 | OPEN | — |
+| Oct 21 rotation buckets: LEAD beats FOLLOWING and NEEDS_CONFIRMATION over 24h | Oct 22 ~01:15 | OPEN, scores Oct 22 17:30 | — |
+| TIA two consecutive 1h closes above 0.6464 by Oct 22 17:30 | Oct 22 ~01:15 | OPEN | — |
+
+Disclosure: a routine 00:45 UTC scan showed QNT (LEAD) at −1.2% over 30 minutes before the Oct 21 tests were registered; no
+group or 24h return was viewed.
 
 Both scored forecasts went the user's way, and Claude's probabilities were too cautious on both. Two outcomes from one regime
 are not calibration evidence; keep scoring.

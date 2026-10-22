@@ -107,9 +107,12 @@ Not adopted: a single blended "AI probability", any rule that turns a pattern in
 
 | Test | Registered | Resolves |
 |---|---|---|
-| Oct 21 rotation buckets: LEAD (ZEC, MNT, QNT) beats FOLLOWING and NEEDS_CONFIRMATION over 24h | 2026-10-22 01:20 UTC, before post-snapshot prices were inspected | 2026-10-22 17:30 UTC |
+| Oct 21 rotation buckets: LEAD (ZEC, MNT, QNT) beats FOLLOWING and NEEDS_CONFIRMATION over 24h | ~2026-10-22 01:15 UTC (see disclosure) | 2026-10-22 17:30 UTC |
 | TIA: two consecutive 1h closes above 0.6464 | same | same |
 | Next flush firing: cohort beats BTC and gains > 2% in 6h | 2026-10-19 03:45 UTC | first out-of-sample firing |
+
+Disclosure: a routine scan at 00:45 UTC on 22 Oct displayed a few coins' 30-minute moves before the two Oct 21 tests were
+registered, including QNT (LEAD) at −1.2%. No group or 24h return was computed or viewed.
 
 ## Reproduce
 
