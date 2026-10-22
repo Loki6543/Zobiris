@@ -10,6 +10,7 @@ credentials or changes Strategy 2.1 gates. Standard library only (Python 3.10+).
 | `clock.py` | Quarter-hour and 5-minute boundary activity in raw trades, and first-minute signed flow vs the rest of the quarter-hour |
 | `flush_detector.py` | Alt-flush divergence state (pre-registered thresholds, 19 Oct 2026) |
 | `event_study.py` | Year-long hourly event study: alt-vs-BTC returns net of Kraken fees after alt flushes, feature ICs with a chronological holdout |
+| `rotation_study.py` | Replay of the deployed delayed-rotation screen (status ladder, gate, score) on the same hourly year |
 | `ledger.py` | Forecast registry, Brier score, 2m − m² sizing calibration, Bonferroni Sharpe hurdle |
 | `legacy.py` | Exact re-implementation of the 19 Oct sweep test, kept only to reproduce its figures |
 | `run_verification.py` | Re-runs the 22 Oct verification from `data/` and writes a new results directory |
