@@ -1,0 +1,136 @@
+{
+ "events_with_funding": 70,
+ "rows": 2445,
+ "6h": {
+  "fund_now": {
+   "discovery": {
+    "n_events": 42,
+    "mean_ic": -0.007,
+    "t": -0.2
+   },
+   "holdout": {
+    "n_events": 28,
+    "mean_ic": -0.049,
+    "t": -2.3
+   },
+   "all": {
+    "n_events": 70,
+    "mean_ic": -0.024,
+    "t": -1.04
+   },
+   "passes": true
+  },
+  "fund_chg": {
+   "discovery": {
+    "n_events": 42,
+    "mean_ic": -0.01,
+    "t": -0.27
+   },
+   "holdout": {
+    "n_events": 28,
+    "mean_ic": -0.034,
+    "t": -1.2
+   },
+   "all": {
+    "n_events": 70,
+    "mean_ic": -0.019,
+    "t": -0.8
+   },
+   "passes": false
+  }
+ },
+ "24h": {
+  "fund_now": {
+   "discovery": {
+    "n_events": 42,
+    "mean_ic": -0.009,
+    "t": -0.32
+   },
+   "holdout": {
+    "n_events": 28,
+    "mean_ic": 0.019,
+    "t": 0.6
+   },
+   "all": {
+    "n_events": 70,
+    "mean_ic": 0.002,
+    "t": 0.11
+   },
+   "passes": false
+  },
+  "fund_chg": {
+   "discovery": {
+    "n_events": 42,
+    "mean_ic": -0.014,
+    "t": -0.59
+   },
+   "holdout": {
+    "n_events": 28,
+    "mean_ic": 0.013,
+    "t": 0.4
+   },
+   "all": {
+    "n_events": 70,
+    "mean_ic": -0.003,
+    "t": -0.15
+   },
+   "passes": false
+  }
+ },
+ "72h": {
+  "fund_now": {
+   "discovery": {
+    "n_events": 42,
+    "mean_ic": -0.02,
+    "t": -0.78
+   },
+   "holdout": {
+    "n_events": 28,
+    "mean_ic": 0.021,
+    "t": 0.59
+   },
+   "all": {
+    "n_events": 70,
+    "mean_ic": -0.004,
+    "t": -0.19
+   },
+   "passes": false
+  },
+  "fund_chg": {
+   "discovery": {
+    "n_events": 42,
+    "mean_ic": -0.014,
+    "t": -0.48
+   },
+   "holdout": {
+    "n_events": 28,
+    "mean_ic": -0.039,
+    "t": -1.22
+   },
+   "all": {
+    "n_events": 70,
+    "mean_ic": -0.024,
+    "t": -1.12
+   },
+   "passes": false
+  }
+ },
+ "event_split_24h": {
+  "funding_fell_most": {
+   "n": 35,
+   "mean_pct": -0.43,
+   "ci95_pct": [
+    -1.41,
+    0.55
+   ]
+  },
+  "funding_fell_least": {
+   "n": 35,
+   "mean_pct": 0.26,
+   "ci95_pct": [
+    -0.54,
+    1.08
+   ]
+  }
+ }
+}
