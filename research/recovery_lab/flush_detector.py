@@ -7,6 +7,8 @@ Fast recoverers (ZRO, CVX, INJ, NEAR, ZEC) are treated as confirmation canaries,
 Shadow evidence only. A FLUSH or CONFIRM state can nominate candidates for a paper ledger; it cannot place or size an order.
 Backtest on Kraken 15m, 12-19 Oct 2026: two firings (13 Oct 00:30, 18 Oct 19:45 UTC). One is the motivating event, so the
 sample is about 1.5 independent observations. Do not promote without out-of-sample firings.
+Year study (event_study.py, 1h bars, 80 firings Sep 2025-Oct 2026): the most-flushed alts did not beat BTC after maker fees
+at 6h or 24h, and no ranking feature survived the holdout. Treat a firing as market context, not an entry trigger.
 """
 import statistics as st
 
