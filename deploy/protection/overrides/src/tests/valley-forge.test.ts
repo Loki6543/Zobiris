@@ -14,6 +14,7 @@ import { summarizeSignals, type LedgerRow } from "../strategyV2/ledger";
 import { recordMarketDay, resetMarketHistoryCache, volumeHistory } from "../server/marketHistoryService";
 import type { BtcRegime } from "../strategyV2/btcRegime";
 import type { MarketCoin } from "../strategyV2/feed";
+import { netReturnPct } from "../strategyV2/costs";
 
 const regime = (over: Partial<BtcRegime> = {}): BtcRegime => ({
   state: "RISK_ON", score: 4, close: 100, sma50: 95, sma200: 80, sma140: 85, mayerMultiple: 1.25, sma200Rising: true, realizedVolAnnualPct: 45,
@@ -203,6 +204,6 @@ describe("market history and the volume-class forward test", () => {
     const s = summarizeSignals(rows, day(10));
     const acc = s.byClass.find((c) => c.key === "ACCUMULATION")!;
     expect(acc.events).toBe(1);
-    expect(acc.horizons["7d"]!.avgNetPct!).toBeCloseTo(((2 * (1 - 0.0726)) / (1 * 1.0726) - 1) * 100, 6); // doubled, minus 7% slippage + fees per side
+    expect(acc.horizons["7d"]!.avgNetPct!).toBeCloseTo(netReturnPct(1, 2, "ACC", 300), 6); // doubled, net of the shared Kraken cost schedule
   });
 });
