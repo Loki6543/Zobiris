@@ -68,8 +68,11 @@ by Oct 22 14:30 UTC and needs a manual deploy.
 | BlackRock | Filed for a "buffer" Bitcoin ETF (PBIT) | Yahoo/Decrypt |
 | Strategy (MSTR) | Bought only 267 BTC ($22.1M, avg $82,900) Oct 12-18; holds 848,517 BTC; spent ~3x more on its own buybacks than on BTC over 5 weeks; STRC buyback raised to $3B; MSTR fell ~10% on Oct 16 | The Block, SEC 8-K, 247wallst, Stocktwits |
 | Geopolitics | One outlet ties recent ETF inflows to "Operation Epic Fury" and a $5T drawdown in traditional markets; not yet verified against a primary source | cryptoticker.io |
+| Fed | Expected to hold at the upcoming FOMC, with a hike priced for December; minutes and hot September CPI (Oct 14) point to more tightening under Chair Warsh; Polymarket's modal end-2027 rate is 4.5% (38%) | Seeking Alpha preview, Yahoo Finance, Polymarket |
+| Jobs | September payrolls +29,000 vs ~84,000 expected; unemployment up to 4.2% (Oct 2) | BLS via CNBC, Yahoo |
+| AI stocks | Oct 22: AMD -8%, Micron -6%, Nvidia -4% on datacenter and chip-cost worries after earnings; non-AI stocks held up; oil higher | TheStreet, Guardian/AP, Barron's |
 | Liquidations | No free historical feed reached this session; next step is a positioning source (Coinglass or Hyperliquid) | — |
 
-**Read:** Bitcoin's main marginal buyer right now is ETFs led by IBIT, not Strategy, and stock-market risk (AI-led
+**Read:** A weak labour market alongside hot inflation and a hawkish Fed is a stagflation mix, which has historically weighed on risk assets including BTC. Bitcoin's main marginal buyer right now is ETFs led by IBIT, not Strategy, and stock-market risk (AI-led
 Nasdaq selloff) is the near-term headwind. The Nasdaq base rate leans toward a deeper week, which weighs against the
 $79,709 floor holding (Kevin 85%, Claude 45%).
