@@ -76,3 +76,17 @@ by Oct 22 14:30 UTC and needs a manual deploy.
 **Read:** A weak labour market alongside hot inflation and a hawkish Fed is a stagflation mix, which has historically weighed on risk assets including BTC. Bitcoin's main marginal buyer right now is ETFs led by IBIT, not Strategy, and stock-market risk (AI-led
 Nasdaq selloff) is the near-term headwind. The Nasdaq base rate leans toward a deeper week, which weighs against the
 $79,709 floor holding (Kevin 85%, Claude 45%).
+
+## Prediction markets (23 Oct, ~19:50 UTC)
+
+| Market | Odds |
+|---|---|
+| Polymarket: BTC dips to $80,000 by Oct 25 | 25.5% (to $78,000: 4.5%) |
+| Polymarket: BTC dips to $77,500 in October | 30.5% (to $75,000: 12.5%); up to $87,500: 14.5% |
+| Polymarket: BTC above $80,000 on Oct 29 | 69%; above $82,000: 42.5% |
+| Kalshi: BTC above $79,500 at Oct 30 5pm EDT | ~73% |
+| Polymarket: BTC hits $100k by Dec 31, 2026 / by mid-2027 | 21.5% / 53.5% |
+| Polymarket: 2026 low below $70,000 | 34.5% |
+
+**Read:** The crowd puts the chance of touching $79,709 by Oct 29 at roughly 35–40%, so a hold at about 60–65%.
+That sits between Kevin (85%) and Claude (45%, updated 35%). Daily checks now record these odds.
