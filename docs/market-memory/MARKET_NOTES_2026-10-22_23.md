@@ -90,3 +90,19 @@ $79,709 floor holding (Kevin 85%, Claude 45%).
 
 **Read:** The crowd puts the chance of touching $79,709 by Oct 29 at roughly 35–40%, so a hold at about 60–65%.
 That sits between Kevin (85%) and Claude (45%, updated 35%). Daily checks now record these odds.
+
+## Liquidation map (Hyperliquid, 23 Oct 21:27 UTC, BTC $81,429)
+
+| Below price (longs liquidated) | $M | Above price (shorts liquidated) | $M |
+|---|---|---|---|
+| 80.3–80.9k | 42 | 82.0–83.1k | 34 |
+| **79.8–80.3k** | **81** | 83.6–84.1k | 14 |
+| **79.3–79.8k** | **94** | 84.7–85.2k | 18 |
+| 78.2–79.3k | 67 | 87.9–88.5k | 23 |
+| 76.5–77.6k | 133 | | |
+| **74.4–74.9k** (largest) | **99** | | |
+
+Within ±10%: **$621M of longs vs $147M of shorts** at risk. About $175M of long liquidations sit right at the $79,709 floor,
+so a touch there could cascade toward $77k. Positioning: the most profitable wallet tier (Apex) is net short by notional
+(-0.34) while most other tiers, including the crowd, are net long. Last 7 days: $116M of BTC liquidated, split evenly
+long/short, peaking Oct 20–21. Hyperliquid only; Binance and Bybit maps are larger and not included.
