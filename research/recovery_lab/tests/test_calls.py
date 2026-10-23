@@ -21,7 +21,7 @@ class CallLogTests(unittest.TestCase):
             self.assertAlmostEqual(out[0]['brier'], 0.09)
             self.assertEqual(calls.score_due(log, now=datetime(2026, 1, 6, tzinfo=timezone.utc), bars_for=bars.get), [])
             rep = calls.report(log)
-        self.assertEqual((rep['scored'], rep['hit_rate']), (1, 1.0))
+        self.assertEqual((rep['scored'], rep['owner']['hit_rate']), (1, 1.0))
 
     def test_basket_call(self):
         made = datetime(2026, 1, 1, 10, 30, tzinfo=timezone.utc)
@@ -48,6 +48,19 @@ class CallLogTests(unittest.TestCase):
             broke = {'XBTUSD': [bar(10, 101.0), bar(11, 99.0)]}
             out = calls.score_due(log2, now=datetime(2026, 1, 1, 12, 5, tzinfo=timezone.utc), bars_for=broke.get)
         self.assertEqual((out[0]['hit'], out[0]['broke_at']), (False, '2026-01-01 11:00:00'))
+
+    def test_report_splits_by_forecaster(self):
+        made = datetime(2026, 1, 1, 10, 30, tzinfo=timezone.utc)
+        prices = {'UNI': 6.0, 'BTC': 80000.0}
+        bars = {'UNIUSD': [{'t': '2026-01-01 10:00:00', 'c': 5.0}], 'XBTUSD': [{'t': '2026-01-01 10:00:00', 'c': 80000.0}]}
+        with tempfile.TemporaryDirectory() as d:
+            log = os.path.join(d, 'c.jsonl')
+            calls.add(log, 'UNI', 'up', 0.8, 1, now=made, price=prices.get)
+            calls.add(log, 'UNI', 'up', 0.3, 1, now=made, price=prices.get, by='claude')
+            calls.score_due(log, now=datetime(2026, 1, 1, 13, tzinfo=timezone.utc), bars_for=bars.get)
+            rep = calls.report(log)
+        self.assertAlmostEqual(rep['owner']['mean_brier'], 0.64)
+        self.assertAlmostEqual(rep['claude']['mean_brier'], 0.09)
 
     def test_above_needs_target(self):
         with tempfile.TemporaryDirectory() as d, self.assertRaises(ValueError):

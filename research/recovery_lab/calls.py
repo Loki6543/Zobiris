@@ -40,10 +40,14 @@ def _load(path):
         return [json.loads(l) for l in f if l.strip()]
 
 
-def add(path, coin, kind, p, hours, target=None, note='', now=None, price=spot):
+def _id(by, body):
+    return body if by == 'owner' else f'{by.upper()}-{body}'
+
+
+def add(path, coin, kind, p, hours, target=None, note='', now=None, price=spot, by='owner'):
     now = now or _now()
     coin = coin.upper()
-    rec = {'id': f'{coin}-{kind}-{now:%Y%m%dT%H%M}', 'type': 'call', 'made_at': now.isoformat(), 'coin': coin, 'kind': kind,
+    rec = {'id': _id(by, f'{coin}-{kind}-{now:%Y%m%dT%H%M}'), 'by': by, 'type': 'call', 'made_at': now.isoformat(), 'coin': coin, 'kind': kind,
            'p': p, 'resolves_at': (now + timedelta(hours=hours)).isoformat(), 'target': target, 'note': note,
            'coin_price': price(coin), 'btc_price': price('BTC'),
            'claim': f'{coin} {kind}{" " + str(target) if target else ""} within {hours}h', 'scoring': 'brier'}
@@ -53,10 +57,10 @@ def add(path, coin, kind, p, hours, target=None, note='', now=None, price=spot):
     return rec
 
 
-def add_basket(path, strong, weak, p, hours, note='', now=None, price=spot):
+def add_basket(path, strong, weak, p, hours, note='', now=None, price=spot, by='owner'):
     now = now or _now()
     strong, weak = [c.upper() for c in strong], [c.upper() for c in weak]
-    rec = {'id': f'BASKET-{now:%Y%m%dT%H%M}', 'type': 'call', 'made_at': now.isoformat(), 'coin': 'BASKET', 'kind': 'basket',
+    rec = {'id': _id(by, f'BASKET-{now:%Y%m%dT%H%M}'), 'by': by, 'type': 'call', 'made_at': now.isoformat(), 'coin': 'BASKET', 'kind': 'basket',
            'p': p, 'resolves_at': (now + timedelta(hours=hours)).isoformat(), 'note': note, 'strong': strong, 'weak': weak,
            'entry': {c: price(c) for c in strong + weak}, 'btc_price': price('BTC'),
            'claim': f'{"+".join(strong)} beat {"+".join(weak)} within {hours}h', 'scoring': 'brier'}
@@ -135,16 +139,21 @@ def score_due(path, now=None, bars_for=fetch_kraken_1h):
 
 
 def report(path):
+    """Scores per forecaster (calls without a `by` field are the owner's)."""
     log = _load(path)
     outs = [r for r in log if r.get('type') == 'outcome']
     calls = {r['id']: r for r in log if r.get('type') == 'call'}
-    if not outs:
-        return {'calls': len(calls), 'scored': 0}
-    br = [o['brier'] for o in outs]
-    return {'calls': len(calls), 'scored': len(outs), 'hit_rate': round(sum(o['hit'] for o in outs) / len(outs), 2),
-            'mean_brier': round(sum(br) / len(br), 3), 'coin_flip_brier': 0.25,
-            'avg_confidence': round(sum(calls[o['id']]['p'] for o in outs) / len(outs), 2),
-            'avg_edge_pct': round(sum(o['coin_minus_btc_pct'] for o in outs) / len(outs), 2)}
+    out = {'calls': len(calls), 'scored': len(outs), 'coin_flip_brier': 0.25}
+    for by in sorted({c.get('by', 'owner') for c in calls.values()}):
+        mine = [o for o in outs if calls.get(o['id'], {}).get('by', 'owner') == by]
+        n_calls = sum(1 for c in calls.values() if c.get('by', 'owner') == by)
+        if not mine:
+            out[by] = {'calls': n_calls, 'scored': 0}
+            continue
+        out[by] = {'calls': n_calls, 'scored': len(mine), 'hit_rate': round(sum(o['hit'] for o in mine) / len(mine), 2),
+                   'mean_brier': round(sum(o['brier'] for o in mine) / len(mine), 3),
+                   'avg_confidence': round(sum(calls[o['id']]['p'] for o in mine) / len(mine), 2)}
+    return out
 
 
 def main(argv=None):
@@ -159,19 +168,21 @@ def main(argv=None):
     a.add_argument('--hours', type=int, required=True)
     a.add_argument('--target', type=float)
     a.add_argument('--note', default='')
+    a.add_argument('--by', default='owner', help='who made the call: owner or claude')
     b = sub.add_parser('basket')
     b.add_argument('--strong', required=True, help='comma-separated coins expected to do better')
     b.add_argument('--weak', required=True, help='comma-separated coins expected to do worse')
     b.add_argument('--p', type=float, required=True)
     b.add_argument('--hours', type=int, required=True)
     b.add_argument('--note', default='')
+    b.add_argument('--by', default='owner')
     sub.add_parser('score')
     sub.add_parser('report')
     x = ap.parse_args(argv)
     if x.cmd == 'add':
-        print(json.dumps(add(x.log, x.coin, x.kind, x.p, x.hours, x.target, x.note), indent=1))
+        print(json.dumps(add(x.log, x.coin, x.kind, x.p, x.hours, x.target, x.note, by=x.by), indent=1))
     elif x.cmd == 'basket':
-        print(json.dumps(add_basket(x.log, x.strong.split(','), x.weak.split(','), x.p, x.hours, x.note), indent=1))
+        print(json.dumps(add_basket(x.log, x.strong.split(','), x.weak.split(','), x.p, x.hours, x.note, by=x.by), indent=1))
     elif x.cmd == 'score':
         print(json.dumps(score_due(x.log), indent=1))
     print(json.dumps(report(x.log), indent=1))
