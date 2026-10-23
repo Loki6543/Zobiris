@@ -1,0 +1,59 @@
+# Market notes, 22–23 October 2026
+
+**Authority:** `SHADOW_ONLY_NO_TRADING_AUTHORITY`. Research record. Prices are Kraken spot unless stated.
+Structured data: [market-notes-2026-10-22-23.jsonl](./market-notes-2026-10-22-23.jsonl).
+
+## BTC
+
+- BTC pulled back from $84,840 (3-day high) to about $81,600, -3.7% from its 48h high, short of the 5% drop rule.
+- The Oct 15 floor of **$79,709 held** for the second time (Kevin's call). Kevin's floor call is logged at 85% through
+  Oct 29; Claude's at 45% (random-walk touch odds from 14-day hourly volatility).
+
+## Who led
+
+| Window | Leaders vs BTC | Laggards vs BTC |
+|---|---|---|
+| Oct 21 17:30 → Oct 22 17:30 (BTC -3.8%) | ATOM +1.2, XDC +1.1, SKY +0.7, KAS 0.0 (only 4 of 44 beat BTC) | ZRO -12.5, ZEC -7.6, FIL -7.3, STX -7.0, ENA -6.4, TIA -6.1 |
+| Oct 17 00:00 → Oct 23 06:00 (BTC +0.3%) | CVX +29, DASH +11, COMP +10, ZEC +7, PENGU +4, KAS +4, ZBCN +4 | TIA -19, PYTH -16, STX -16, FIL -15, TEL -14, ZRO -13 |
+| Oct 18 20:00 (BTC turn) → Oct 23 06:00 (BTC +1.2%) | CVX +30, COMP +17, DASH +16, ZEC +15, ENA +13, ZBCN +12, PENGU +11, DOT +11 | TIA -7, STX -7, SAND -6, TEL -3, HBAR -3; 38 of 46 beat BTC |
+
+**Reported reasons for the Oct 22 leaders (news, after the fact):** XDC: MoneyGram joined as an institutional validator;
+SBI and Shinhan Card signed a blockchain-payments MoU. ATOM: no same-day news; Wells Fargo building tokenized deposits on
+Cosmos (Oct 13) and price already near its lows. SKY: stablecoin revenue (~$611M projected 2026), 7.37M SKY burned
+Oct 14, $100M anchor in a Securitize fund. Common thread: institutional stablecoin and payments use.
+
+**Correction (Kevin):** ZEC's -11% from its high was a pullback inside an uptrend (+17% from the Oct 18 low), not a
+give-back. One day cannot separate the two; judge leaders on more than one window.
+
+## Volume at the BTC turn (exploratory, Oct 18)
+
+BTC's turn was Oct 18 20:00 UTC (low $80,568). Median Kraken relative volume vs each coin's prior week:
+
+| | 12 week leaders | 8 laggards |
+|---|---|---|
+| 24h before the turn | 1.2× | 1.1× |
+| 3h before to 1h after | **1.7×** | 1.0× |
+| 24h after | 1.4× | 0.9× |
+| Price, 24h after | +5.5% | +1.3% |
+
+Both groups fell alike into the turn; buyers showed up in the leaders at the low. Exceptions: HBAR 3.8× with no gain
+(volume can be selling). Individual pumps of +8% came 4h (ZEC, ENA) to 44h (KAS) after the turn. Registered as
+`volume-at-btc-turn-forward-v1` for the next turn.
+
+## Scored today
+
+- Oct 21 rotation buckets: FAIL (LEAD -3.5% vs BTC, FOLLOWING -1.7%). Claude Brier 0.20.
+- TIA above 0.6464 twice: MISS (best close 0.6285). Claude Brier 0.09.
+
+## Open calls
+
+| Call | Kevin | Claude | Resolves |
+|---|---|---|---|
+| Strong basket beats weak basket | 65% | 55% | Oct 25 13:52 |
+| BTC holds $79,709 | 85% | 45% | Oct 29 23:38 |
+| CVX, COMP, DASH, ZEC beat BTC | — | 45% | Oct 30 |
+
+## Engine
+
+Cost-schedule fix and calibration change merged to `main` (0c9cb4f), CI green; the Railway service had not redeployed
+by Oct 22 14:30 UTC and needs a manual deploy.
