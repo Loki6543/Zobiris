@@ -60,7 +60,7 @@ def add(path, coin, kind, p, hours, target=None, note='', now=None, price=spot, 
 def add_basket(path, strong, weak, p, hours, note='', now=None, price=spot, by='owner'):
     now = now or _now()
     strong, weak = [c.upper() for c in strong], [c.upper() for c in weak]
-    rec = {'id': _id(by, f'BASKET-{now:%Y%m%dT%H%M}'), 'by': by, 'type': 'call', 'made_at': now.isoformat(), 'coin': 'BASKET', 'kind': 'basket',
+    rec = {'id': _id(by, f'BASKET-{now:%Y%m%dT%H%M%S}'), 'by': by, 'type': 'call', 'made_at': now.isoformat(), 'coin': 'BASKET', 'kind': 'basket',
            'p': p, 'resolves_at': (now + timedelta(hours=hours)).isoformat(), 'note': note, 'strong': strong, 'weak': weak,
            'entry': {c: price(c) for c in strong + weak}, 'btc_price': price('BTC'),
            'claim': f'{"+".join(strong)} beat {"+".join(weak)} within {hours}h', 'scoring': 'brier'}
