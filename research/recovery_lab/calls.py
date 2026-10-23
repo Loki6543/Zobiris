@@ -2,7 +2,8 @@
 
 A call is written before its outcome is knowable, with the Kraken price of the coin and of BTC at that moment.
 Kinds: `beats_btc` (coin outperforms BTC over the window), `up` (coin higher), `above` (coin closes above --target),
-`basket` (the equal-weight --strong basket outperforms the --weak basket).
+`basket` (the equal-weight --strong basket outperforms the --weak basket), `holds` (no 1h low at or below --target
+until the deadline; resolves early as a miss the hour the level breaks).
 Scoring uses the close of the Kraken 1h candle at the deadline hour and the Brier score (0 perfect, 0.25 = coin flip at 50%).
 """
 import json
@@ -46,8 +47,8 @@ def add(path, coin, kind, p, hours, target=None, note='', now=None, price=spot):
            'p': p, 'resolves_at': (now + timedelta(hours=hours)).isoformat(), 'target': target, 'note': note,
            'coin_price': price(coin), 'btc_price': price('BTC'),
            'claim': f'{coin} {kind}{" " + str(target) if target else ""} within {hours}h', 'scoring': 'brier'}
-    if kind == 'above' and target is None:
-        raise ValueError('above needs --target')
+    if kind in ('above', 'holds') and target is None:
+        raise ValueError(f'{kind} needs --target')
     register(path, rec)
     return rec
 
@@ -76,6 +77,21 @@ def _close_at(bars, when):
     return next((b['c'] for b in bars if b['t'] == key), None)
 
 
+def _score_holds(c, bars, now, due):
+    """Miss as soon as a closed 1h candle trades at or below the level; hit once every candle up to the deadline held."""
+    start = datetime.fromisoformat(c['made_at']).replace(minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
+    last_needed = (due.replace(minute=0, second=0) - timedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')
+    window = [b for b in bars if start <= b['t'] <= last_needed]
+    broke = next((b for b in window if b['l'] <= c['target']), None)
+    if broke is None and (due > now or not window or window[-1]['t'] != last_needed):
+        return None
+    hit = broke is None
+    low = min(b['l'] for b in window)
+    return {'id': c['id'], 'type': 'outcome', 'scored_at': now.isoformat(), 'hit': hit, 'brier': round(brier(c['p'], hit), 4),
+            'lowest_low': low, 'broke_at': broke['t'] if broke else None,
+            'coin_minus_btc_pct': round(100 * (low / c['target'] - 1), 2)}
+
+
 def score_due(path, now=None, bars_for=fetch_kraken_1h):
     now = now or _now()
     log = _load(path)
@@ -83,6 +99,13 @@ def score_due(path, now=None, bars_for=fetch_kraken_1h):
     new = []
     for c in [r for r in log if r.get('type') == 'call' and r['id'] not in done]:
         due = datetime.fromisoformat(c['resolves_at'])
+        if c['kind'] == 'holds':
+            rec = _score_holds(c, bars_for(_pair(c['coin'])), now, due)
+            if rec:
+                with open(path, 'a') as f:
+                    f.write(json.dumps(rec, sort_keys=True) + '\n')
+                new.append(rec)
+            continue
         if due > now:
             continue
         if c['kind'] == 'basket':
@@ -131,7 +154,7 @@ def main(argv=None):
     sub = ap.add_subparsers(dest='cmd', required=True)
     a = sub.add_parser('add')
     a.add_argument('coin')
-    a.add_argument('kind', choices=('beats_btc', 'up', 'above'))
+    a.add_argument('kind', choices=('beats_btc', 'up', 'above', 'holds'))
     a.add_argument('--p', type=float, required=True, help='probability the call is right, 0-1')
     a.add_argument('--hours', type=int, required=True)
     a.add_argument('--target', type=float)

@@ -34,6 +34,21 @@ class CallLogTests(unittest.TestCase):
         self.assertTrue(out[0]['hit'])                                                        # +5% vs -10%
         self.assertAlmostEqual(out[0]['coin_minus_btc_pct'], 15.0)
 
+    def test_holds_resolves_early_on_break_and_hits_when_level_holds(self):
+        made = datetime(2026, 1, 1, 10, 30, tzinfo=timezone.utc)
+        bar = lambda h, low: {'t': f'2026-01-01 {h:02d}:00:00', 'l': low, 'c': low + 5}
+        with tempfile.TemporaryDirectory() as d:
+            log = os.path.join(d, 'c.jsonl')
+            calls.add(log, 'BTC', 'holds', 0.8, 5, target=100.0, now=made, price=lambda c: 110.0)
+            held = {'XBTUSD': [bar(h, 101.0) for h in range(10, 15)]}
+            self.assertEqual(calls.score_due(log, now=datetime(2026, 1, 1, 13, tzinfo=timezone.utc), bars_for=held.get), [])
+            self.assertTrue(calls.score_due(log, now=datetime(2026, 1, 1, 16, tzinfo=timezone.utc), bars_for=held.get)[0]['hit'])
+            log2 = os.path.join(d, 'c2.jsonl')
+            calls.add(log2, 'BTC', 'holds', 0.8, 5, target=100.0, now=made, price=lambda c: 110.0)
+            broke = {'XBTUSD': [bar(10, 101.0), bar(11, 99.0)]}
+            out = calls.score_due(log2, now=datetime(2026, 1, 1, 12, 5, tzinfo=timezone.utc), bars_for=broke.get)
+        self.assertEqual((out[0]['hit'], out[0]['broke_at']), (False, '2026-01-01 11:00:00'))
+
     def test_above_needs_target(self):
         with tempfile.TemporaryDirectory() as d, self.assertRaises(ValueError):
             calls.add(os.path.join(d, 'c.jsonl'), 'TIA', 'above', 0.5, 24, price=lambda c: 1.0)
