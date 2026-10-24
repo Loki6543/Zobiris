@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { freeResearchStatus, requestFreeResearch, FreeResearchError } from "../server/freeResearchProviders.js";
+import { freeResearchStatus, requestFreeResearch } from "../server/freeResearchProviders.js";
 import type { SwarmShadow, SwarmSpecialistId } from "../strategy21/swarm.js";
 
 const when = "2026-10-24T10:00:00.000Z", clock = Date.parse(when) + 60_000;
@@ -87,7 +87,7 @@ describe("opt-in no-paid-fallback research adapters",()=>{
     expect(freeResearchStatus({ZOBIRIS_FREE_RESEARCH_ENABLED:"1",ZOBIRIS_FREE_RESEARCH_PROVIDER:"gemini"}).selected).toBeNull();
   });
   it("supports local Ollama only when explicitly enabled",async()=>{
-    const fetcher=vi.fn(async()=>fakeResponse());
+    const fetcher=vi.fn(async(_u:string,_opts:RequestInit)=>fakeResponse());
     const options={env:{
       ZOBIRIS_FREE_RESEARCH_ENABLED:"1",ZOBIRIS_FREE_RESEARCH_PROVIDER:"ollama",
       ZOBIRIS_FREE_RESEARCH_ALLOW_LOCAL:"1",
