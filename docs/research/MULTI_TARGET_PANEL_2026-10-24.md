@@ -54,3 +54,12 @@ No macro or prediction-market inputs yet; they enter the live panel next.
 ```sh
 python3 -m research.recovery_lab.panel_study --out /tmp/zobiris_panel
 ```
+
+## Addendum: path efficiency from MarketLab (registry `kama-efficiency-panel-input-v1`)
+
+Four inputs ported from the owner's MarketLab 1.2 upload: the Kaufman efficiency ratio over 10 and 30 bars, distance from
+KAMA(10,2,30) and KAMA slope. On a purged 70/30 split over the live panel's 15 coins, they improved 10 of 16 proven cells,
+meeting the pre-set rule. The gain is concentrated in 4h-ahead new highs (+0.018 skill, better on 12 of 15 coins) and new lows
+(+0.029, 14 of 15). Daily-chart changes were within ±0.006, and direction stayed below the base rate. The live model is now
+`panel-logit-v2`. MarketLab's candle checks also run on every Kraken pull: a coin with an invalid, out-of-order or
+duplicate candle, or with more than 1% of candles missing, is skipped rather than predicted.

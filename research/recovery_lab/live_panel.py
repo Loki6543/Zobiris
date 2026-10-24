@@ -17,10 +17,11 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
+from . import efficiency as ef
 from . import panel_study as ps
 from .drop_monitor import PAIRS
 
-MODEL = 'panel-logit-v1'
+MODEL = 'panel-logit-v2'   # v2 adds path-efficiency inputs (registry: kama-efficiency-panel-input-v1)
 # C=0.01: on a purged 70/30 split of the 24 Oct Kraken pull (15 coins), C=0.3 (the study setting) overfit the overlapping
 # 4h rows; C=0.01 kept new-high/low skill +0.12 to +0.32 and volume/range +0.04 to +0.09. Direction stayed below base.
 C_REG = 0.01
@@ -55,7 +56,12 @@ def fetch_all(coins, fetch=fetch_ohlc, pause=1.1):
         out[chart] = {}
         for coin in ('BTC',) + tuple(coins):
             try:
-                out[chart][coin] = fetch(coin, C['interval'])
+                bars = fetch(coin, C['interval'])
+                q = ef.candle_quality(sorted(bars), [bars[t] for t in sorted(bars)], C['interval'] * 60)
+                if ef.usable(q):
+                    out[chart][coin] = bars
+                else:   # fail closed: no prediction from damaged candles
+                    print(f'skip {coin} {chart}: candle check {q}')
             except Exception as e:   # one bad pair must not stop the run
                 print(f'skip {coin} {chart}: {e}')
             time.sleep(pause)
@@ -80,6 +86,7 @@ def predict_coin(series, coin, chart):
     if len(ts) < 120:
         return None
     F = ps.features(ts, a, b, C['spec'])
+    F.update(ef.features(a[:, 3]))
     names = list(F)
     M = np.column_stack([F[k] for k in names])
     last = len(ts) - 1
@@ -195,7 +202,7 @@ def score_all(d, data, now=None):
                     res[k] = {'y': t[k], 'brier': round(_shape_brier(v, t[k]), 4), 'brier_base': round(_shape_brier(p['base'][h][k], t[k]), 4)}
                 else:
                     res[k] = {'y': t[k], 'brier': round((v - t[k]) ** 2, 4), 'brier_base': round((p['base'][h][k] - t[k]) ** 2, 4)}
-            new.append({'type': 'panel_outcome', 'id': p['id'], 'coin': p['coin'], 'chart': p['chart'], 'horizon': h,
+            new.append({'type': 'panel_outcome', 'id': p['id'], 'model': p['model'], 'coin': p['coin'], 'chart': p['chart'], 'horizon': h,
                         'scored_at': now.isoformat(), 'results': res})
     _append(d, now, new)
     return new
@@ -204,16 +211,18 @@ def score_all(d, data, now=None):
 # ---------- scorecard ----------
 
 def scorecard(d):
-    """Skill per chart, horizon and target: 1 - model Brier / base-rate Brier over every scored prediction."""
+    """Skill per model, chart, horizon and target: 1 - model Brier / base-rate Brier over every scored prediction."""
+    log = load(d)
+    model = {r['id']: r['model'] for r in log if r['type'] == 'panel_prediction'}
     agg = {}
-    for o in (r for r in load(d) if r['type'] == 'panel_outcome'):
+    for o in (r for r in log if r['type'] == 'panel_outcome'):
         for k, v in o['results'].items():
-            a = agg.setdefault((o['chart'], o['horizon'], k), [0, 0.0, 0.0])
+            a = agg.setdefault((o.get('model') or model.get(o['id'], ''), o['chart'], o['horizon'], k), [0, 0.0, 0.0])
             a[0] += 1
             a[1] += v['brier']
             a[2] += v['brier_base']
-    return [{'chart': c, 'horizon': h, 'target': k, 'n': n, 'brier': round(m / n, 4), 'brier_base': round(bb / n, 4),
-             'skill': round(1 - m / bb, 3) if bb > 0 else None} for (c, h, k), (n, m, bb) in sorted(agg.items())]
+    return [{'model': md, 'chart': c, 'horizon': h, 'target': k, 'n': n, 'brier': round(m / n, 4), 'brier_base': round(bb / n, 4),
+             'skill': round(1 - m / bb, 3) if bb > 0 else None} for (md, c, h, k), (n, m, bb) in sorted(agg.items())]
 
 
 def render(d, now=None):
@@ -221,15 +230,15 @@ def render(d, now=None):
     log = load(d)
     preds = [r for r in log if r['type'] == 'panel_prediction']
     lines = ['# Zobiris live prediction panel', '',
-             f'Updated {now:%Y-%m-%d %H:%M} UTC. Model `{MODEL}`, refit every run on each coin\'s own Kraken history. '
+             f'Updated {now:%Y-%m-%d %H:%M} UTC. Current model `{MODEL}`, refit every run on each coin\'s own Kraken history. '
              'Research only: no trading authority.', '',
              f'{len(preds)} predictions logged; {sum(1 for r in log if r["type"] == "panel_outcome")} windows scored.', '',
              '## Scorecard', '',
              'Skill above 0 means the panel beat the base rate (how often the event happened in training). '
              'Below 20 scored windows a row is noise.', '',
-             '| Chart | Horizon | Target | Scored | Brier | Base Brier | Skill |', '|---|---|---|---:|---:|---:|---:|']
+             '| Model | Chart | Horizon | Target | Scored | Brier | Base Brier | Skill |', '|---|---|---|---|---:|---:|---:|---:|']
     for r in scorecard(d):
-        lines.append(f"| {r['chart']} | {r['horizon']} | {LABELS[r['target']]} | {r['n']} | {r['brier']:.3f} | {r['brier_base']:.3f} | "
+        lines.append(f"| {r['model']} | {r['chart']} | {r['horizon']} | {LABELS[r['target']]} | {r['n']} | {r['brier']:.3f} | {r['brier_base']:.3f} | "
                      + (f"{r['skill']:+.3f}" if r['skill'] is not None else '') + ' |')
     latest = {}
     for p in preds:
