@@ -1,0 +1,65 @@
+name: ZOBIRIS live prediction panel
+
+# Every 4 hours: score predictions whose window has closed, then predict the latest closed Kraken candle for each coin.
+# Research only: public Kraken market data, no credentials, no orders. Results go to the zobiris-panel-log branch so the
+# log never lands on main (main deploys to Railway).
+on:
+  schedule:
+    - cron: "7 */4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zobiris-live-panel
+  cancel-in-progress: false
+
+jobs:
+  panel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Checkout log branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$url" zobiris-panel-log >/dev/null; then
+            git clone --depth 1 --branch zobiris-panel-log "$url" panel-log
+          else
+            git init -b zobiris-panel-log panel-log
+            git -C panel-log remote add origin "$url"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install --quiet numpy scikit-learn
+
+      - name: Live panel tests
+        run: python3 -m unittest research.recovery_lab.tests.test_live_panel
+
+      - name: Score and predict
+        run: python3 -m research.recovery_lab.live_panel --dir panel-log/panel --scorecard panel-log/README.md
+
+      - name: Commit log
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd panel-log
+          git config user.name "zobiris-panel"
+          git config user.email "zobiris-panel@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
+          git commit -q -m "Panel run $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q origin zobiris-panel-log
