@@ -17,8 +17,11 @@ from .ledger import brier, register
 DEFAULT_LOG = os.path.join('docs', 'market-memory', 'owner-calls.jsonl')
 
 
+ALIASES = {'GRAM': 'TONUSD'}   # GRAM is the former Toncoin; Kraken lists it as TON/USD
+
+
 def _pair(coin):
-    return PAIRS.get(coin, f'{coin}USD')
+    return PAIRS.get(coin) or ALIASES.get(coin) or f'{coin}USD'
 
 
 def _now():
