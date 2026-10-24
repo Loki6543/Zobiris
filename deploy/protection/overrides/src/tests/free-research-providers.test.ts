@@ -96,6 +96,20 @@ describe("opt-in no-paid-fallback research adapters",()=>{
     expect(out.provider).toBe("ollama");
     expect(fetcher.mock.calls[0][0]).toBe("http://127.0.0.1:11434/v1/chat/completions");
   });
+  it("cannot cite another role or claim direction without its own references",async()=>{
+    const responses=roles.map(role=>({
+      role, stance:"BULLISH", thesis:"One-sided optimism",
+      counterargument:"Risk", limitation:"Evidence uncertainty",
+      evidenceRefs: role === "risk" ? ["btcRegime:0"] : [role + ":0"],
+    }));
+    const result=await requestFreeResearch(fixture(),when,{
+      env:env("groq","GROQ_API_KEY"),now:clock,
+      fetcher:(async()=>fakeResponse(JSON.stringify({analyses:responses}))) as unknown as typeof fetch,
+    });
+    const risk=result.analyses.find(x=>x.role==="risk");
+    expect(risk?.stance).toBe("UNKNOWN");
+    expect(risk?.evidenceRefs).toEqual([]);
+  });
   it("rejects stale or fail-closed source without a network request",async()=>{
     const fetcher=vi.fn(async()=>fakeResponse());
     await expect(requestFreeResearch(fixture(),when,{
