@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { FEE_SCHEDULE_ID, FEE_TIERS, btcCostPerSide, entryCost, exitCost, feeTier, netReturnPct } from "../strategyV2/costs";
+import { FEE_SCHEDULE_ID, FEE_TIERS, btcCostPerSide, costSchedule, entryCost, exitCost, feeTier, netReturnPct, tradeBreakEven } from "../strategyV2/costs";
 
 describe("shared Kraken cost schedule", () => {
   it("matches the fee schedule in the policy registry", () => {
@@ -29,5 +29,29 @@ describe("shared Kraken cost schedule", () => {
   });
   it("keeps a small-cap round trip near the real cost, not the old 14.5%", () => {
     expect(-netReturnPct(10, 10, "SAND", 300, FEE_TIERS[0])).toBeLessThan(1.5);
+  });
+});
+
+describe("fee break-even", () => {
+  const owner = { tier: 0, makerPct: 0.2, takerPct: 0.38 };
+  it("matches hand arithmetic for the owner's fees on a top-100 alt", () => {
+    const r = tradeBreakEven(8, 4, "ALT", 50, owner)!;
+    const win = (108 * (1 - 0.0038 - 0.0005)) / (100 * 1.002) - 1;
+    const loss = (96 * (1 - 0.0038 - 0.0005)) / (100 * 1.002) - 1;
+    expect(r.winNetPct).toBeCloseTo(win * 100, 10);
+    expect(r.lossNetPct).toBeCloseTo(loss * 100, 10);
+    expect(r.breakEvenWinRate!).toBeCloseTo(-loss / (win - loss), 10);
+    expect(r.roundTripCostPct).toBeCloseTo((1 - (1 - 0.0043) / 1.002) * 100, 10);
+    expect(r.breakEvenWinRate!).toBeGreaterThan(4 / 12);              // costs push break-even above the no-fee 33.3%
+  });
+  it("reports no break-even when costs eat the whole target, and rejects impossible inputs", () => {
+    expect(tradeBreakEven(0.3, 2, "ALT", null, owner)!.breakEvenWinRate).toBeNull();
+    expect(tradeBreakEven(0, 2, "BTC", 1, owner)).toBeNull();
+    expect(tradeBreakEven(5, 100, "BTC", 1, owner)).toBeNull();
+    expect(tradeBreakEven(Number.NaN, 2, "BTC", 1, owner)).toBeNull();
+  });
+  it("labels where the schedule comes from", () => {
+    expect(costSchedule(owner)).toMatchObject({ source: "account schedule", makerPct: 0.2, takerPct: 0.38, halfSpreadPct: { major: 0.01, top100: 0.05, smaller: 0.15 } });
+    expect(costSchedule(FEE_TIERS[2]).source).toBe("Kraken tier 3");
   });
 });

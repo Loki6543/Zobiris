@@ -52,3 +52,27 @@ export function netReturnPct(entry: number, exit: number, symbol: string, rank: 
 export function btcCostPerSide(tier = feeTier()): number {
   return (entryCost("BTC", 1, tier) + exitCost("BTC", 1, tier)) / 2;
 }
+
+export type CostTier = { tier: number; makerPct: number; takerPct: number };
+
+/** The active schedule as the UI shows it: where the fees come from, and half-spread by coin class in percent. */
+export function costSchedule(tier: CostTier = feeTier()) {
+  return {
+    scheduleId: FEE_SCHEDULE_ID, tier: tier.tier, source: tier.tier === 0 ? "account schedule" : `Kraken tier ${tier.tier}`,
+    makerPct: tier.makerPct, takerPct: tier.takerPct,
+    halfSpreadPct: { major: halfSpread("BTC", 1) * 100, top100: halfSpread("X", 100) * 100, smaller: halfSpread("X", null) * 100 },
+  };
+}
+
+/** Fee break-even for a planned trade (MarketLab's payoff calculator on Zobiris costs): limit entry, market exit.
+ *  gainPct/lossPct are the gross price moves to the take-profit and the stop. Returns net results and the win rate
+ *  at which the trade breaks even after costs, or null when the inputs cannot describe a trade. */
+export function tradeBreakEven(gainPct: number, lossPct: number, symbol: string, rank: number | null, tier: CostTier) {
+  if (![gainPct, lossPct].every(Number.isFinite) || gainPct <= 0 || lossPct <= 0 || lossPct >= 100) return null;
+  const winNetPct = netReturnPct(100, 100 + gainPct, symbol, rank, tier);
+  const lossNetPct = netReturnPct(100, 100 - lossPct, symbol, rank, tier);
+  return {
+    winNetPct, lossNetPct, roundTripCostPct: -netReturnPct(100, 100, symbol, rank, tier),
+    breakEvenWinRate: winNetPct <= 0 ? null : -lossNetPct / (winNetPct - lossNetPct),
+  };
+}

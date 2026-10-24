@@ -23,6 +23,7 @@ import { getBitcoinReport, getCandles, TIMEFRAMES } from './btcService.js';
 import { getBacktestReport } from './backtestService.js';
 import { getCoinMeta } from './coinMetaService.js';
 import { ledgerStatus } from './ledgerService.js';
+import { costSchedule } from '../strategyV2/costs.js';
 import { openProtection, sampleProtection, readProtection } from "./profitProtection.js";
 import { exitMarketContext } from "../compareLab/compare.js";
 import { accountCapital, accountProvenance, accountMappings, buildAccountDependency, getAccountView, refreshAccountContextFromKraken, startAccountContextSync } from "./accountContext.js";
@@ -903,7 +904,7 @@ const API: ApiRouter = {
     catch (e) { errorResponse(res, 503, e); }
   },
   "GET /api/ledger": (_req, res) => {
-    try { const st = ledgerStatus(); jsonResponse(res, 200, { rows: st.rows, error: st.error, summary: st.summary, signals: st.signals }); }
+    try { const st = ledgerStatus(); jsonResponse(res, 200, { rows: st.rows, error: st.error, summary: st.summary, signals: st.signals, costs: costSchedule() }); }
     catch (e) { errorResponse(res, 503, e); }
   },
   "GET /api/market-overview": async (req, res) => {

@@ -7,6 +7,7 @@ import { decisionGroup, type StrategyReport, type WatchlistDecision } from "../s
 import { DEFAULT_BARBELL } from "../strategyV2/barbell";
 import { ALT_GATE_LABEL } from "../strategyV2/altGate";
 import type { LedgerSummary } from "../strategyV2/ledger";
+import { tradeBreakEven, type costSchedule } from "../strategyV2/costs";
 
 export interface EngineHolding { symbol: string; value: number }
 
@@ -230,6 +231,36 @@ function LedgerPanel() {
   );
 }
 
+/* ---------- Fee break-even ---------- */
+const COIN_CLASS = { major: { label: "BTC or ETH", symbol: "BTC", rank: 1 }, top100: { label: "Top-100 alt", symbol: "ALT", rank: 50 }, smaller: { label: "Smaller alt", symbol: "ALT", rank: null } } as const;
+export function FeeBreakEvenPanel() {
+  const { data } = useJson<{ costs?: ReturnType<typeof costSchedule> }>("/api/ledger", 30 * 60_000);
+  const [gain, setGain] = useState("8");
+  const [loss, setLoss] = useState("4");
+  const [cls, setCls] = useState<keyof typeof COIN_CLASS>("top100");
+  const c = data?.costs;
+  if (!c) return <p className="strategy-muted">Loading the fee schedule…</p>;
+  const k = COIN_CLASS[cls];
+  const r = tradeBreakEven(Number(gain), Number(loss), k.symbol, k.rank, { tier: c.tier, makerPct: c.makerPct, takerPct: c.takerPct });
+  return (
+    <>
+      <p className="strategy-muted">Fees: {c.source} · maker {c.makerPct}% in, taker {c.takerPct}% out, plus half the bid-ask spread ({cls === "major" ? c.halfSpreadPct.major : cls === "top100" ? c.halfSpreadPct.top100 : c.halfSpreadPct.smaller}%).</p>
+      <div className="engine-fee-form">
+        <label>Take-profit move <input type="number" min="0.1" step="0.5" inputMode="decimal" value={gain} onChange={(e) => setGain(e.target.value)} />%</label>
+        <label>Stop-loss move <input type="number" min="0.1" max="99" step="0.5" inputMode="decimal" value={loss} onChange={(e) => setLoss(e.target.value)} />%</label>
+        <label>Coin <select value={cls} onChange={(e) => setCls(e.target.value as keyof typeof COIN_CLASS)}>{Object.entries(COIN_CLASS).map(([key, v]) => <option key={key} value={key}>{v.label}</option>)}</select></label>
+      </div>
+      {r ? <dl className="engine-fee-out">
+        <div><dt>Round-trip cost</dt><dd>{r.roundTripCostPct.toFixed(2)}%</dd></div>
+        <div><dt>If it hits the target</dt><dd className={r.winNetPct >= 0 ? "is-gain" : "is-loss"}>{pct(r.winNetPct, 2)}</dd></div>
+        <div><dt>If it hits the stop</dt><dd className="is-loss">{pct(r.lossNetPct, 2)}</dd></div>
+        <div><dt>Wins needed to break even</dt><dd>{r.breakEvenWinRate == null ? "never: costs exceed the target" : `${(r.breakEvenWinRate * 100).toFixed(1)}%`}</dd></div>
+      </dl> : <p className="engine-warn">Enter a take-profit above 0% and a stop between 0% and 100%.</p>}
+      <p className="strategy-muted">Limit order in, market order out, as the ledger scores it; a take-profit filled as a limit order costs a little less. This is arithmetic, not a forecast: it says how often a setup must work, not whether it will.</p>
+    </>
+  );
+}
+
 /* ---------- Page ---------- */
 export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdings: EngineHolding[]; cashUsd: number; accountSynced: boolean; onOpen: (view: "strategy" | "portfolio" | "market" | "forge") => void }) {
   const { data: report, error } = useJson<StrategyReport>("/api/strategy-v2", 5 * 60_000);
@@ -332,6 +363,11 @@ export function EnginePage({ holdings, cashUsd, accountSynced, onOpen }: { holdi
       <section className="dashboard-panel engine-panel" aria-label="Forward paper test">
         <div className="engine-panel-head"><h2>Forward test · paper results</h2><span className="strategy-muted">decision ledger</span></div>
         <LedgerPanel />
+      </section>
+
+      <section className="dashboard-panel engine-panel" aria-label="Fee break-even">
+        <div className="engine-panel-head"><h2>Fee break-even</h2><span className="strategy-muted">your Kraken costs</span></div>
+        <FeeBreakEvenPanel />
       </section>
 
       <section className="engine-grid">

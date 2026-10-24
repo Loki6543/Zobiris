@@ -1388,3 +1388,11 @@ tr:nth-child(3n+3) .asset-monogram { background: linear-gradient(145deg,#7a6138,
 .zobiris-dashboard .watch-filters{flex-wrap:wrap;gap:10px 16px;}
 .zobiris-dashboard .watch-filters select{background:#0d1628;color:#eaf0ff;border:1px solid #405371;border-radius:8px;padding:8px;max-width:180px;}
 @media(max-width:600px){.zobiris-dashboard .watch-filters label{width:100%;justify-content:space-between;}.zobiris-dashboard .watch-filters select{max-width:60%;}}
+.zobiris-dashboard .engine-fee-form{display:flex;flex-wrap:wrap;gap:12px 20px;margin:10px 0;}
+.zobiris-dashboard .engine-fee-form label{display:flex;align-items:center;gap:6px;color:#cbd6ec;font-size:13px;}
+.zobiris-dashboard .engine-fee-form input,.zobiris-dashboard .engine-fee-form select{background:#0b1736;color:#e6ecf8;border:1px solid #1d3570;border-radius:6px;padding:5px 8px;font:inherit;}
+.zobiris-dashboard .engine-fee-form input{width:5.5em;}
+.zobiris-dashboard .engine-fee-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:8px 0;}
+.zobiris-dashboard .engine-fee-out div{background:#0b1736;border:1px solid #132650;border-radius:8px;padding:8px 10px;}
+.zobiris-dashboard .engine-fee-out dt{color:#8ea0c4;font-size:12px;}
+.zobiris-dashboard .engine-fee-out dd{margin:2px 0 0;font-size:18px;font-variant-numeric:tabular-nums;color:#e6ecf8;}
