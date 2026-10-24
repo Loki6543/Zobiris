@@ -1,0 +1,215 @@
+{
+ "cells": [
+  {
+   "chart": "1d",
+   "horizon": "1d",
+   "target": "dir_abs",
+   "n": 454,
+   "skill_kronos": -0.3403,
+   "skill_panel": -0.0231,
+   "kronos_minus_panel": -0.3172
+  },
+  {
+   "chart": "1d",
+   "horizon": "1d",
+   "target": "new_high",
+   "n": 454,
+   "skill_kronos": 0.1412,
+   "skill_panel": 0.2845,
+   "kronos_minus_panel": -0.1433
+  },
+  {
+   "chart": "1d",
+   "horizon": "1d",
+   "target": "new_low",
+   "n": 454,
+   "skill_kronos": -0.6341,
+   "skill_panel": 0.2171,
+   "kronos_minus_panel": -0.8513
+  },
+  {
+   "chart": "1d",
+   "horizon": "1d",
+   "target": "range_widen",
+   "n": 454,
+   "skill_kronos": 0.0724,
+   "skill_panel": -0.0169,
+   "kronos_minus_panel": 0.0892
+  },
+  {
+   "chart": "1d",
+   "horizon": "1d",
+   "target": "vol_up",
+   "n": 454,
+   "skill_kronos": -0.2404,
+   "skill_panel": 0.0091,
+   "kronos_minus_panel": -0.2495
+  },
+  {
+   "chart": "1d",
+   "horizon": "7d",
+   "target": "dir_abs",
+   "n": 454,
+   "skill_kronos": -0.2116,
+   "skill_panel": -0.0623,
+   "kronos_minus_panel": -0.1493
+  },
+  {
+   "chart": "1d",
+   "horizon": "7d",
+   "target": "new_high",
+   "n": 454,
+   "skill_kronos": 0.0795,
+   "skill_panel": 0.1839,
+   "kronos_minus_panel": -0.1044
+  },
+  {
+   "chart": "1d",
+   "horizon": "7d",
+   "target": "new_low",
+   "n": 454,
+   "skill_kronos": -0.4724,
+   "skill_panel": 0.2304,
+   "kronos_minus_panel": -0.7028
+  },
+  {
+   "chart": "1d",
+   "horizon": "7d",
+   "target": "range_widen",
+   "n": 454,
+   "skill_kronos": -0.5743,
+   "skill_panel": 0.0089,
+   "kronos_minus_panel": -0.5832
+  },
+  {
+   "chart": "1d",
+   "horizon": "7d",
+   "target": "vol_up",
+   "n": 454,
+   "skill_kronos": -0.6354,
+   "skill_panel": 0.0147,
+   "kronos_minus_panel": -0.6501
+  },
+  {
+   "chart": "4h",
+   "horizon": "24h",
+   "target": "dir_abs",
+   "n": 510,
+   "skill_kronos": -0.2067,
+   "skill_panel": -0.062,
+   "kronos_minus_panel": -0.1447
+  },
+  {
+   "chart": "4h",
+   "horizon": "24h",
+   "target": "new_high",
+   "n": 510,
+   "skill_kronos": 0.2482,
+   "skill_panel": 0.3748,
+   "kronos_minus_panel": -0.1266
+  },
+  {
+   "chart": "4h",
+   "horizon": "24h",
+   "target": "new_low",
+   "n": 510,
+   "skill_kronos": 0.3421,
+   "skill_panel": 0.3325,
+   "kronos_minus_panel": 0.0097
+  },
+  {
+   "chart": "4h",
+   "horizon": "24h",
+   "target": "range_widen",
+   "n": 510,
+   "skill_kronos": 0.0986,
+   "skill_panel": 0.0531,
+   "kronos_minus_panel": 0.0454
+  },
+  {
+   "chart": "4h",
+   "horizon": "24h",
+   "target": "vol_up",
+   "n": 510,
+   "skill_kronos": 0.1286,
+   "skill_panel": 0.0599,
+   "kronos_minus_panel": 0.0688
+  },
+  {
+   "chart": "4h",
+   "horizon": "4h",
+   "target": "dir_abs",
+   "n": 510,
+   "skill_kronos": -0.2464,
+   "skill_panel": -0.0333,
+   "kronos_minus_panel": -0.2132
+  },
+  {
+   "chart": "4h",
+   "horizon": "4h",
+   "target": "new_high",
+   "n": 510,
+   "skill_kronos": 0.3339,
+   "skill_panel": 0.2265,
+   "kronos_minus_panel": 0.1074
+  },
+  {
+   "chart": "4h",
+   "horizon": "4h",
+   "target": "new_low",
+   "n": 510,
+   "skill_kronos": 0.3616,
+   "skill_panel": 0.219,
+   "kronos_minus_panel": 0.1426
+  },
+  {
+   "chart": "4h",
+   "horizon": "4h",
+   "target": "range_widen",
+   "n": 510,
+   "skill_kronos": -0.2084,
+   "skill_panel": 0.1266,
+   "kronos_minus_panel": -0.3351
+  },
+  {
+   "chart": "4h",
+   "horizon": "4h",
+   "target": "vol_up",
+   "n": 510,
+   "skill_kronos": 0.1525,
+   "skill_panel": 0.1397,
+   "kronos_minus_panel": 0.0128
+  }
+ ],
+ "kronos_beats_panel_cells": 7,
+ "proven_cells": 16,
+ "worst_vs_panel": -0.8513,
+ "verdict": "REJECT",
+ "direction_skill": false,
+ "dir_abs_cells_positive": 0,
+ "records": 9640,
+ "coins": [
+  "ADA",
+  "AVAX",
+  "COMP",
+  "DOGE",
+  "DOT",
+  "ETH",
+  "HBAR",
+  "LINK",
+  "LTC",
+  "NEAR",
+  "SOL",
+  "SUI",
+  "TON",
+  "XRP",
+  "ZEC"
+ ],
+ "hf_revisions": [
+  {
+   "NeoQuasar/Kronos-Tokenizer-base": "0e0117387f39004a9016484a186a908917e22426",
+   "NeoQuasar/Kronos-small": "901c26c1332695a2a8f243eb2f37243a37bea320"
+  }
+ ],
+ "incomplete_jobs": []
+}
