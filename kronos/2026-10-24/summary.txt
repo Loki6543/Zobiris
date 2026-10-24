@@ -1,0 +1,53 @@
+{
+ "kronos_beats_panel_cells": 7,
+ "proven_cells": 16,
+ "worst_vs_panel": -0.8513,
+ "verdict": "REJECT",
+ "direction_skill": false,
+ "dir_abs_cells_positive": 0,
+ "records": 9640,
+ "coins": [
+  "ADA",
+  "AVAX",
+  "COMP",
+  "DOGE",
+  "DOT",
+  "ETH",
+  "HBAR",
+  "LINK",
+  "LTC",
+  "NEAR",
+  "SOL",
+  "SUI",
+  "TON",
+  "XRP",
+  "ZEC"
+ ],
+ "hf_revisions": [
+  {
+   "NeoQuasar/Kronos-Tokenizer-base": "0e0117387f39004a9016484a186a908917e22426",
+   "NeoQuasar/Kronos-small": "901c26c1332695a2a8f243eb2f37243a37bea320"
+  }
+ ],
+ "incomplete_jobs": []
+}
+1d  1d   dir_abs      n= 454 kronos -0.340 panel -0.023 diff -0.317
+1d  1d   new_high     n= 454 kronos +0.141 panel +0.284 diff -0.143
+1d  1d   new_low      n= 454 kronos -0.634 panel +0.217 diff -0.851
+1d  1d   range_widen  n= 454 kronos +0.072 panel -0.017 diff +0.089
+1d  1d   vol_up       n= 454 kronos -0.240 panel +0.009 diff -0.249
+1d  7d   dir_abs      n= 454 kronos -0.212 panel -0.062 diff -0.149
+1d  7d   new_high     n= 454 kronos +0.080 panel +0.184 diff -0.104
+1d  7d   new_low      n= 454 kronos -0.472 panel +0.230 diff -0.703
+1d  7d   range_widen  n= 454 kronos -0.574 panel +0.009 diff -0.583
+1d  7d   vol_up       n= 454 kronos -0.635 panel +0.015 diff -0.650
+4h  24h  dir_abs      n= 510 kronos -0.207 panel -0.062 diff -0.145
+4h  24h  new_high     n= 510 kronos +0.248 panel +0.375 diff -0.127
+4h  24h  new_low      n= 510 kronos +0.342 panel +0.333 diff +0.010
+4h  24h  range_widen  n= 510 kronos +0.099 panel +0.053 diff +0.045
+4h  24h  vol_up       n= 510 kronos +0.129 panel +0.060 diff +0.069
+4h  4h   dir_abs      n= 510 kronos -0.246 panel -0.033 diff -0.213
+4h  4h   new_high     n= 510 kronos +0.334 panel +0.227 diff +0.107
+4h  4h   new_low      n= 510 kronos +0.362 panel +0.219 diff +0.143
+4h  4h   range_widen  n= 510 kronos -0.208 panel +0.127 diff -0.335
+4h  4h   vol_up       n= 510 kronos +0.152 panel +0.140 diff +0.013
