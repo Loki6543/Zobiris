@@ -200,12 +200,17 @@ export async function requestFreeResearch(
     });
     const raw = await parseLimitedResponse(res);
     const analyses = extractFindings(raw, citations);
-    // Post-validation: a model cannot promote unknown macro input to directional research.
-    const macro = analyses.find(r => r.role === "macroNews")!;
-    if (deliberateShadow(swarm, { decisionAt }).votes.macroNews.status === "UNKNOWN") {
-      macro.stance = "UNKNOWN";
-      macro.evidenceRefs = [];
-      macro.thesis = "No verified macro/news feed available for this observation.";
+    // Models may only cite evidence that belongs to their own role.
+    // UNKNOWN/fail-closed input or ungrounded stance cannot be promoted by prose.
+    const baseline = deliberateShadow(swarm, { decisionAt });
+    for (const analysis of analyses) {
+      analysis.evidenceRefs = analysis.evidenceRefs.filter(id => id.startsWith(analysis.role + ":"));
+      const state = baseline.votes[analysis.role].status;
+      if (state === "UNKNOWN" || state === "FAIL_CLOSED" || !analysis.evidenceRefs.length) {
+        analysis.stance = "UNKNOWN";
+        analysis.evidenceRefs = [];
+        analysis.thesis = "No independently usable evidence for a directional claim.";
+      }
     }
     return {
       version: "ZOBIRIS_FREE_LLM_RESEARCH_V1",
@@ -213,7 +218,7 @@ export async function requestFreeResearch(
       provider: config.provider, model: config.model, mode: "ONE_CALL_FIVE_PERSPECTIVES" as const,
       asOf: decisionAt, generatedAt: new Date(time).toISOString(), symbol: swarm.symbol,
       analyses,
-      baseline: deliberateShadow(swarm, { decisionAt }),
+      baseline,
       productionScoreChanged: false as const,
       productionRankChanged: false as const,
       executionAuthorityUsd: 0 as const,
