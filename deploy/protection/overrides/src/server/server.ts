@@ -16,6 +16,7 @@ import {buildZobirisWatchlist} from './zobirisWatchlist.js';
 import { reportShadowEntryPlans } from './evidenceServiceClient.js';
 import { readSwarmLedger, summarizeSwarmAttribution, summarizeSwarmCalibration, updateSwarmLedger, type SwarmOutcomeHorizon } from "./swarmLedger.js";
 import { deliberateShadow, compareRecordedOutcomes } from "./researchDebate.js";
+import { freeResearchStatus, requestFreeResearch, FreeResearchError } from "./freeResearchProviders.js";
 import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readLatestHyperliquidPositioning, type HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
 import { marketBrief } from './marketBrief.js';
 import { getStrategyReport, startStrategyV2Timer } from './strategyV2Service.js';
@@ -747,6 +748,34 @@ const API: ApiRouter = {
   },
   "GET /api/entry-rules": async (_req,res)=>{
     try{jsonResponse(res,200,{rules:await entryRules(),executionEnabled:false});}catch(e){errorResponse(res,503,e);}
+  },
+  "GET /api/research/agent-debate/free-providers": (req,res) => {
+    if (!isAuthenticated(req, SECURITY)) return send401(res, "free research status requires Bearer auth");
+    jsonResponse(res, 200, freeResearchStatus());
+  },
+  "POST /api/research/agent-debate/run": async (req,res) => {
+    if (!isAuthenticated(req, SECURITY)) return send401(res, "free research requires Bearer auth");
+    const limit = checkRateLimit("free-llm-debate:" + clientIpFrom(req), Date.now(), 8);
+    if (!limit.allowed) return send429(res, limit.retryAfterSec);
+    let input: unknown;
+    try { input = JSON.parse(await readBody(req)); }
+    catch { return jsonResponse(res, 400, { error: "invalid JSON body" }); }
+    if (!input || typeof input !== "object" || Array.isArray(input) ||
+        !Object.prototype.hasOwnProperty.call(input, "symbol") ||
+        !/^[A-Z0-9]{2,15}$/.test(String((input as {symbol?:unknown}).symbol ?? "")))
+      return jsonResponse(res, 400, { error: "symbol must be uppercase, 2-15 letters or digits" });
+    const symbol = (input as {symbol:string}).symbol;
+    try {
+      const ledger = await readSwarmLedger(SWARM_LEDGER_PATH, {symbol,limit:500});
+      const row = ledger.records.reduce((a,b) =>
+        !a || Date.parse(b.generatedAt) > Date.parse(a.generatedAt) ? b : a, null as (typeof ledger.records)[number] | null);
+      if (!row) return jsonResponse(res,404,{error:"no recorded shadow swarm available for " + symbol});
+      jsonResponse(res, 200, await requestFreeResearch(row.swarm,row.generatedAt));
+    } catch (e) {
+      if (e instanceof FreeResearchError)
+        return jsonResponse(res,e.status,{error:e.message});
+      errorResponse(res,503,e);
+    }
   },
   "GET /api/research/agent-debate": async (req,res)=> {
     if (!isAuthenticated(req, SECURITY)) return send401(res, "agent debate requires Bearer auth");
