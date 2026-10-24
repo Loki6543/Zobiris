@@ -21,11 +21,13 @@ concurrency:
 jobs:
   forecast:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 340
     strategy:
       fail-fast: false
+      max-parallel: 20
       matrix:
         coin: [COMP, HBAR, SOL, ETH, XRP, ADA, AVAX, LINK, DOGE, DOT, LTC, NEAR, SUI, ZEC, TON]
+        chart: [4h, 1d]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,11 +47,14 @@ jobs:
         env:
           KRONOS_DIR: ${{ runner.temp }}/kronos
           OMP_NUM_THREADS: "4"
-        run: python3 -m research.recovery_lab.kronos_challenger run --coin "${{ matrix.coin }}" --out "out/${{ matrix.coin }}.json"
+        timeout-minutes: 330
+        run: python3 -m research.recovery_lab.kronos_challenger run --coin "${{ matrix.coin }}" --chart "${{ matrix.chart }}" --out "out/${{ matrix.coin }}-${{ matrix.chart }}.json"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: kronos-${{ matrix.coin }}
-          path: out/${{ matrix.coin }}.json
+          name: kronos-${{ matrix.coin }}-${{ matrix.chart }}
+          path: out/${{ matrix.coin }}-${{ matrix.chart }}.json
+          if-no-files-found: ignore
 
   aggregate:
     needs: forecast

@@ -33,8 +33,13 @@ class KronosChallengerTest(unittest.TestCase):
 
     def test_run_and_aggregate_on_frozen_data_with_stub(self):
         data = kc.load_snapshot()
-        recs = kc.run_coin('SOL', StubPredictor(), data=data, log=lambda m: None)
+        saves = []
+        recs = kc.run_coin('SOL', StubPredictor(), data=data, log=lambda m: None, save=lambda r: saves.append(len(r)))
         self.assertTrue(recs)
+        self.assertEqual(saves[-1], len(recs))                    # saved after every decision, last save = everything
+        self.assertEqual(saves, sorted(saves))
+        only4h = kc.run_coin('SOL', StubPredictor(), data=data, log=lambda m: None, charts=('4h',))
+        self.assertEqual({r['chart'] for r in only4h}, {'4h'})
         self.assertEqual({r['chart'] for r in recs}, {'4h', '1d'})
         ts, a, b = ps.align(data['4h'], 'SOL')
         dec, first = kc.decisions(ts, a, b, '4h')

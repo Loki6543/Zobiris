@@ -106,10 +106,13 @@ def kronos_paths(predictor, ts, a, i, pred_len, step_s, n=PATHS):
     return [o[['open', 'high', 'low', 'close', 'volume', 'amount']].to_numpy() for o in out]
 
 
-def run_coin(coin, predictor, data=None, log=print):
+def run_coin(coin, predictor, data=None, log=print, charts=None, save=None):
+    """Records for one coin; `save(recs)` is called after every decision so a timed-out job keeps what it finished."""
     data = data or load_snapshot()
     recs = []
     for chart, C in lp.CHARTS.items():
+        if charts and chart not in charts:
+            continue
         if coin not in data[chart]:
             continue
         ts, a, b = ps.align(data[chart], coin)
@@ -129,6 +132,8 @@ def run_coin(coin, predictor, data=None, log=print):
                     recs.append({'coin': coin, 'chart': chart, 'bar_t': int(ts[i]), 'horizon': h, 'target': tn,
                                  'y': int(t[tn]), 'p_kronos': pk[tn], 'p_panel': round(pp, 4), 'base': round(base, 4)})
             log(f'{coin} {chart} {n + 1}/{len(dec)}')
+            if save:
+                save(recs)
     return recs
 
 
@@ -161,31 +166,40 @@ def main(argv=None):
     r = sub.add_parser('run')
     r.add_argument('--coin', required=True)
     r.add_argument('--out', required=True)
+    r.add_argument('--chart', choices=tuple(lp.CHARTS), help='one chart only (default: both)')
     g = sub.add_parser('aggregate')
     g.add_argument('--dir', required=True)
     g.add_argument('--out', required=True)
     x = ap.parse_args(argv)
     if x.cmd == 'run':
-        predictor = load_kronos(os.environ['KRONOS_DIR'])
-        recs = run_coin(x.coin.upper(), predictor, log=lambda m: print(m, flush=True))
-        os.makedirs(os.path.dirname(x.out) or '.', exist_ok=True)
         from huggingface_hub import HfApi
         revs = {m: HfApi().model_info(m).sha for m in ('NeoQuasar/Kronos-small', 'NeoQuasar/Kronos-Tokenizer-base')}
-        with open(x.out, 'w') as f:
-            json.dump({'coin': x.coin.upper(), 'generated_at': datetime.now(timezone.utc).isoformat(), 'hf_revisions': revs,
-                       'records': recs}, f)
+        predictor = load_kronos(os.environ['KRONOS_DIR'])
+        os.makedirs(os.path.dirname(x.out) or '.', exist_ok=True)
+
+        def save(recs, done=False):
+            with open(x.out, 'w') as f:
+                json.dump({'coin': x.coin.upper(), 'chart': x.chart, 'complete': done, 'hf_revisions': revs,
+                           'generated_at': datetime.now(timezone.utc).isoformat(), 'records': recs}, f)
+
+        recs = run_coin(x.coin.upper(), predictor, log=lambda m: print(m, flush=True),
+                        charts=(x.chart,) if x.chart else None, save=save)
+        save(recs, done=True)
     else:
-        recs, revs = [], set()
+        recs, revs, incomplete = [], set(), []
         for name in sorted(os.listdir(x.dir)):
             if name.endswith('.json'):
                 with open(os.path.join(x.dir, name)) as f:
                     d = json.load(f)
                 recs += d['records']
+                if not d.get('complete', True):
+                    incomplete.append(name)
                 revs.add(json.dumps(d.get('hf_revisions'), sort_keys=True))
         summ = aggregate(recs)
         summ['records'] = len(recs)
         summ['coins'] = sorted({r['coin'] for r in recs})
         summ['hf_revisions'] = [json.loads(r) for r in sorted(revs)]
+        summ['incomplete_jobs'] = incomplete   # jobs that timed out: their finished decisions are scored, the rest are missing
         with open(x.out, 'w') as f:
             json.dump(summ, f, indent=1)
         print(json.dumps({k: v for k, v in summ.items() if k != 'cells'}, indent=1))
