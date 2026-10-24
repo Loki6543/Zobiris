@@ -1,0 +1,90 @@
+name: ZOBIRIS Kronos challenger test
+
+# Pre-registered kronos-small-vs-panel-v1: Kronos-small (third-party code, pinned) forecasts 100 paths per decision on the
+# frozen 24 Oct Kraken pull; the panel model is scored at the same decisions. Model jobs get a read-only token; only the
+# aggregate job, which runs no third-party code, can write, and it writes to the zobiris-panel-log branch.
+on:
+  push:
+    branches: [claude/optimistic-gauss-7g9579]
+    paths:
+      - research/recovery_lab/kronos_challenger.py
+      - .github/workflows/zobiris-kronos-challenger.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zobiris-kronos-challenger
+  cancel-in-progress: true
+
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        coin: [COMP, HBAR, SOL, ETH, XRP, ADA, AVAX, LINK, DOGE, DOT, LTC, NEAR, SUI, ZEC, TON]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          pip install --quiet torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet numpy scikit-learn pandas==2.2.2 einops==0.8.1 huggingface_hub==0.33.1 safetensors==0.6.2 tqdm==4.67.1
+      - name: Kronos at pinned commit
+        run: |
+          git clone --quiet https://github.com/shiyu-coder/Kronos "$RUNNER_TEMP/kronos"
+          git -C "$RUNNER_TEMP/kronos" checkout --quiet 67b630e67f6a18c9e9be918d9b4337c960db1e9a
+      - name: Forecast
+        env:
+          KRONOS_DIR: ${{ runner.temp }}/kronos
+          OMP_NUM_THREADS: "4"
+        run: python3 -m research.recovery_lab.kronos_challenger run --coin "${{ matrix.coin }}" --out "out/${{ matrix.coin }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kronos-${{ matrix.coin }}
+          path: out/${{ matrix.coin }}.json
+
+  aggregate:
+    needs: forecast
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet numpy scikit-learn
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: kronos-*
+          path: out
+          merge-multiple: true
+      - name: Score
+        run: python3 -m research.recovery_lab.kronos_challenger aggregate --dir out --out summary.json | tee summary.txt
+      - name: Publish to log branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git clone --depth 1 --branch zobiris-panel-log "$url" log
+          mkdir -p log/kronos/2026-10-24
+          cp out/*.json summary.json summary.txt log/kronos/2026-10-24/
+          cd log
+          git config user.name "zobiris-panel"
+          git config user.email "zobiris-panel@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || { git commit -q -m "Kronos challenger results (kronos-small-vs-panel-v1)"; git push -q origin zobiris-panel-log; }
