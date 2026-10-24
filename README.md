@@ -1,6 +1,6 @@
 # Zobiris live prediction panel
 
-Updated 2026-10-24 05:49 UTC. Model `panel-logit-v1`, refit every run on each coin's own Kraken history. Research only: no trading authority.
+Updated 2026-10-24 07:36 UTC. Current model `panel-logit-v2`, refit every run on each coin's own Kraken history. Research only: no trading authority.
 
 30 predictions logged; 0 windows scored.
 
@@ -8,8 +8,8 @@ Updated 2026-10-24 05:49 UTC. Model `panel-logit-v1`, refit every run on each co
 
 Skill above 0 means the panel beat the base rate (how often the event happened in training). Below 20 scored windows a row is noise.
 
-| Chart | Horizon | Target | Scored | Brier | Base Brier | Skill |
-|---|---|---|---:|---:|---:|---:|
+| Model | Chart | Horizon | Target | Scored | Brier | Base Brier | Skill |
+|---|---|---|---|---:|---:|---:|---:|
 
 ## Latest 4h chart, 24h ahead
 
