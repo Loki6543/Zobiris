@@ -1,6 +1,6 @@
 # Zobiris live prediction panel
 
-Updated 2026-10-24 12:08 UTC. Current model `panel-logit-v3`, refit every run on each coin's own Kraken history. Research only: no trading authority.
+Updated 2026-10-24 12:38 UTC. Current model `panel-logit-v3`, refit every run on each coin's own Kraken history. Research only: no trading authority.
 
 45 predictions logged; 15 windows scored.
 
