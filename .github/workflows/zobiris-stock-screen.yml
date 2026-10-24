@@ -1,0 +1,49 @@
+name: ZOBIRIS stock pullback screen
+
+# Pre-registered stock-quality-pullback-v1: Yahoo daily closes for 50 large US stocks, a 2-year backtest of the
+# pullback-inside-an-uptrend pattern, and today's list. Research only; results go to the zobiris-panel-log branch.
+on:
+  push:
+    branches: [claude/optimistic-gauss-7g9579]
+    paths:
+      - research/recovery_lab/stock_pullback.py
+      - .github/workflows/zobiris-stock-screen.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: zobiris-stock-screen
+  cancel-in-progress: false
+
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet numpy scikit-learn
+      - run: python3 -m unittest research.recovery_lab.tests.test_stock_pullback
+      - run: python3 -m research.recovery_lab.stock_pullback --out out
+      - name: Publish to log branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git clone --depth 1 --branch zobiris-panel-log "$url" log
+          mkdir -p log/stocks
+          cp out/stock_pullback.json log/stocks/
+          cp out/STOCKS.md log/STOCKS.md
+          cd log
+          git config user.name "zobiris-panel"
+          git config user.email "zobiris-panel@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || { git commit -q -m "Stock pullback screen"; git pull -q --rebase origin zobiris-panel-log; git push -q origin zobiris-panel-log; }
