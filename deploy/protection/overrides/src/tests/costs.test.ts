@@ -14,6 +14,11 @@ describe("shared Kraken cost schedule", () => {
     expect(feeTier({ ZOBIRIS_KRAKEN_FEE_TIER: "3" }).takerPct).toBe(0.38);
     expect(feeTier({ ZOBIRIS_KRAKEN_FEE_TIER: "99" }).tier).toBe(1);
   });
+  it("uses an exact account schedule when both maker and taker are set", () => {
+    expect(feeTier({ ZOBIRIS_KRAKEN_MAKER_PCT: "0.20", ZOBIRIS_KRAKEN_TAKER_PCT: "0.38", ZOBIRIS_KRAKEN_FEE_TIER: "1" })).toEqual({ tier: 0, makerPct: 0.2, takerPct: 0.38 });
+    expect(feeTier({ ZOBIRIS_KRAKEN_MAKER_PCT: "0.20" }).tier).toBe(1);                                   // one value alone is ignored
+    expect(feeTier({ ZOBIRIS_KRAKEN_MAKER_PCT: "0.5", ZOBIRIS_KRAKEN_TAKER_PCT: "0.3" }).tier).toBe(1);   // taker below maker is rejected
+  });
   it("charges maker in and taker plus half-spread out", () => {
     const t1 = FEE_TIERS[0];
     expect(entryCost("GALA", 150, t1)).toBeCloseTo(0.004, 12);

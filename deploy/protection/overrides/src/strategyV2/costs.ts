@@ -2,7 +2,8 @@
 //
 // Fees: Kraken spot schedule kraken-spot-2026-07-09, the same table as feeSchedule in
 // server/policy/zobiris-policy-registry-v3.1.json (tests/costs.test.ts keeps the two equal). The account tier comes from
-// ZOBIRIS_KRAKEN_FEE_TIER; unknown defaults to tier 1, as in the validation lab.
+// ZOBIRIS_KRAKEN_FEE_TIER; unknown defaults to tier 1, as in the validation lab. An account-specific schedule that matches no
+// published tier is set with ZOBIRIS_KRAKEN_MAKER_PCT and ZOBIRIS_KRAKEN_TAKER_PCT, which take precedence when both are valid.
 // Path: MAKER_TAKER, matching the validation lab. Entry is a resting limit order (maker fee, no spread); exit takes
 // liquidity (taker fee plus half the bid-ask spread).
 // Spread: half of the quoted Kraken bid-ask from a ticker snapshot on 2026-10-22: BTC/ETH about 0.01%, top-100 alts
@@ -18,7 +19,9 @@ export const FEE_TIERS = [
   { tier: 6, makerPct: 0.12, takerPct: 0.25 },
 ] as const;
 
-export function feeTier(env: Record<string, string | undefined> = process.env) {
+export function feeTier(env: Record<string, string | undefined> = process.env): { tier: number; makerPct: number; takerPct: number } {
+  const maker = Number(env.ZOBIRIS_KRAKEN_MAKER_PCT), taker = Number(env.ZOBIRIS_KRAKEN_TAKER_PCT);
+  if (env.ZOBIRIS_KRAKEN_MAKER_PCT && env.ZOBIRIS_KRAKEN_TAKER_PCT && maker >= 0 && taker >= maker && taker < 5) return { tier: 0, makerPct: maker, takerPct: taker };
   const n = Number(env.ZOBIRIS_KRAKEN_FEE_TIER);
   return FEE_TIERS.find((t) => t.tier === n) ?? FEE_TIERS[0];
 }
