@@ -34,6 +34,21 @@ def signals_at(C, i):
     return out
 
 
+def table_at(C, i):
+    """Every stock's three measures at row i, plus which rule each one misses (for near misses)."""
+    mom = {s: C[s][i] / C[s][i - MOM] - 1 for s in C if s not in BENCH and not np.isnan(C[s][i - LONG])}
+    med = np.median(list(mom.values()))
+    rows = {}
+    for s, m in mom.items():
+        c = C[s]
+        ma = np.nanmean(c[i - LONG + 1:i + 1])
+        dd = c[i] / np.nanmax(c[i - HIGH + 1:i + 1]) - 1
+        miss = [w for w, ok in (('below 200-day avg', c[i] > ma), ('weak 6-month trend', m >= med),
+                                ('pullback under 5%', dd <= -0.05), ('pullback over 15%', dd >= -0.15)) if not ok]
+        rows[s] = {'mom_126d': m, 'from_20d_high': dd, 'vs_200d': c[i] / ma - 1, 'misses': miss}
+    return rows
+
+
 def reversal_at(C, i):
     r = {s: C[s][i] / C[s][i - 21] - 1 for s in C if s not in BENCH and not np.isnan(C[s][i - 21])}
     cut = np.quantile(list(r.values()), 0.2)
@@ -86,6 +101,12 @@ def render(res, now):
         lines.append(f"| {s} | {pc(v['from_20d_high'])} | {pc(v['mom_126d'])} | {pc(v['vs_200d'])} |")
     if not res['now']:
         lines.append('| none | | | |')
+    near = {s: v for s, v in res.get('table', {}).items() if len(v['misses']) == 1 and (
+        (v['misses'][0] == 'pullback under 5%' and v['from_20d_high'] <= -0.02) or
+        (v['misses'][0] == 'weak 6-month trend' and v['mom_126d'] > 0))}   # a small dip (2-5%) in an uptrend, or a dip with only middling momentum
+    lines += ['', '## Near misses (one rule short)', '', '| Stock | Below 20-day high | 6-month return | Above 200-day avg | Misses |', '|---|---:|---:|---:|---|']
+    for s, v in sorted(near.items(), key=lambda kv: -kv[1]['mom_126d']):
+        lines.append(f"| {s} | {pc(v['from_20d_high'])} | {pc(v['mom_126d'])} | {pc(v['vs_200d'])} | {v['misses'][0]} |")
     lines += ['', 'Survivorship bias: the universe is today\'s large caps, which flatters any long-only backtest; the comparison '
               'against the same universe removes part of it. Not advice; no orders.', '']
     return '\n'.join(lines)
@@ -107,13 +128,13 @@ def main(argv=None):
     i = len(dates) - 1
     res = {'as_of': datetime.fromtimestamp(dates[i], timezone.utc).strftime('%Y-%m-%d'), 'missing': missing,
            'pullback': summarize(backtest(dates, C, lambda C, i: set(signals_at(C, i)))),
-           'reversal': summarize(backtest(dates, C, reversal_at)), 'now': signals_at(C, i)}
+           'reversal': summarize(backtest(dates, C, reversal_at)), 'now': signals_at(C, i), 'table': table_at(C, i)}
     os.makedirs(x.out, exist_ok=True)
     with open(os.path.join(x.out, 'stock_pullback.json'), 'w') as f:
         json.dump(res, f, indent=1)
     with open(os.path.join(x.out, 'STOCKS.md'), 'w') as f:
         f.write(render(res, datetime.now(timezone.utc)))
-    print(json.dumps({k: v for k, v in res.items() if k != 'now'}, indent=1))
+    print(json.dumps({k: v for k, v in res.items() if k not in ('now', 'table')}, indent=1))
     print('now:', sorted(res['now']))
 
 
