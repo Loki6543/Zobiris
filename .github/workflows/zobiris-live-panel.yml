@@ -47,10 +47,17 @@ jobs:
         run: pip install --quiet numpy scikit-learn
 
       - name: Live panel tests
-        run: python3 -m unittest research.recovery_lab.tests.test_live_panel
+        run: python3 -m unittest research.recovery_lab.tests.test_live_panel research.recovery_lab.tests.test_positions
 
       - name: Score and predict
         run: python3 -m research.recovery_lab.live_panel --dir panel-log/panel --scorecard panel-log/README.md
+
+      - name: Owner positions
+        continue-on-error: true
+        run: |
+          if [ -f panel-log/positions.jsonl ]; then
+            python3 -m research.recovery_lab.positions --positions panel-log/positions.jsonl --out panel-log/POSITIONS.md
+          fi
 
       - name: Commit log
         shell: bash
