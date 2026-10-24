@@ -15,6 +15,7 @@ import {entryRules} from './entryRules.js';
 import {buildZobirisWatchlist} from './zobirisWatchlist.js';
 import { reportShadowEntryPlans } from './evidenceServiceClient.js';
 import { readSwarmLedger, summarizeSwarmAttribution, summarizeSwarmCalibration, updateSwarmLedger, type SwarmOutcomeHorizon } from "./swarmLedger.js";
+import { deliberateShadow, compareRecordedOutcomes } from "./researchDebate.js";
 import { collectHyperliquidPositioning, readHyperliquidPositioningHistory, readLatestHyperliquidPositioning, type HyperliquidPositioningSummary } from "./hyperliquidPositioning.js";
 import { marketBrief } from './marketBrief.js';
 import { getStrategyReport, startStrategyV2Timer } from './strategyV2Service.js';
@@ -746,6 +747,64 @@ const API: ApiRouter = {
   },
   "GET /api/entry-rules": async (_req,res)=>{
     try{jsonResponse(res,200,{rules:await entryRules(),executionEnabled:false});}catch(e){errorResponse(res,503,e);}
+  },
+  "GET /api/research/agent-debate": async (req,res)=> {
+    if (!isAuthenticated(req, SECURITY)) return send401(res, "agent debate requires Bearer auth");
+    const rate = checkRateLimit("shadow-debate:" + clientIpFrom(req), Date.now(), 90);
+    if (!rate.allowed) return send429(res, rate.retryAfterSec);
+    try {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const symbol = url.searchParams.get("symbol")?.trim().toUpperCase();
+      if (symbol && !/^[A-Z0-9]{2,15}$/.test(symbol))
+        return jsonResponse(res, 400, { error: "invalid symbol" });
+      const ledger = await readSwarmLedger(SWARM_LEDGER_PATH, { symbol, limit: 500 });
+      const latest = new Map<string, (typeof ledger.records)[number]>();
+      for (const row of ledger.records) {
+        const prev = latest.get(row.symbol);
+        if (!prev || Date.parse(prev.generatedAt) < Date.parse(row.generatedAt))
+          latest.set(row.symbol, row);
+      }
+      if (symbol && !latest.has(symbol))
+        return jsonResponse(res, 404, { error: "no recorded shadow swarm for symbol" });
+      const now = Date.now();
+      const rows = [...latest.values()].sort((a,b) => a.symbol.localeCompare(b.symbol))
+        .map(row => {
+          const ageMs = now - Date.parse(row.generatedAt);
+          return {
+            source: "PERSISTED_SWARM_LEDGER",
+            generatedAt: row.generatedAt, referencePriceUsd: row.referencePriceUsd,
+            freshness: Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 3 * 3600000
+              ? "RECENT_RECORDED" : "STALE_OR_INVALID",
+            debate: deliberateShadow(row.swarm, { decisionAt: row.generatedAt }),
+          };
+        });
+      jsonResponse(res, 200, {
+        version: "ZOBIRIS_RESEARCH_DEBATE_V1",
+        authority: "SHADOW_ONLY_NO_TRADING_AUTHORITY",
+        evaluatedAt: new Date(now).toISOString(),
+        dataMode: "recorded-swarm-not-live-tick",
+        note: "Deterministic TradingAgents-inspired specialists, not five live LLMs. Stale evidence remains labeled. No orders, ranking or sizing changes.",
+        count: rows.length, rows,
+      });
+    } catch (error) { errorResponse(res, 503, error); }
+  },
+  "GET /api/research/agent-debate/calibration": async (req,res)=> {
+    if (!isAuthenticated(req, SECURITY)) return send401(res, "debate calibration requires Bearer auth");
+    try {
+      const url = new URL(req.url ?? "/", "http://localhost");
+      const symbol = url.searchParams.get("symbol")?.trim().toUpperCase();
+      if (symbol && !/^[A-Z0-9]{2,15}$/.test(symbol))
+        return jsonResponse(res,400,{error:"invalid symbol"});
+      const horizon = url.searchParams.get("horizon") ?? "1d";
+      if (!["30m","2h","8h","12h","1d","3d","7d"].includes(horizon))
+        return jsonResponse(res,400,{error:"invalid horizon"});
+      const rawFee = url.searchParams.get("roundTripCostBps") ?? "25";
+      const fee = Number(rawFee);
+      if (!Number.isFinite(fee) || fee < 0 || fee > 1000 || !rawFee.trim())
+        return jsonResponse(res,400,{error:"invalid roundTripCostBps"});
+      const ledger = await readSwarmLedger(SWARM_LEDGER_PATH, { symbol, limit: 500 });
+      jsonResponse(res,200,compareRecordedOutcomes(ledger.records,horizon as SwarmOutcomeHorizon,fee));
+    } catch (error) { errorResponse(res,503,error); }
   },
   "GET /api/swarm/attribution": async (req,res)=>{
     if (!isAuthenticated(req, SECURITY))
