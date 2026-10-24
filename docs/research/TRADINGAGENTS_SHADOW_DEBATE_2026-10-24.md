@@ -57,3 +57,71 @@ Files:
 - `deploy/protection/overrides/src/server/researchDebate.ts`
 - `deploy/protection/overrides/src/server/server.ts` (two read-only routes)
 - `deploy/protection/overrides/src/tests/research-debate.test.ts`
+
+
+## Optional zero-upfront-cost inference connectors (on demand)
+
+These are **not turned on until credentials are configured and the operator opts in**.
+The feature is a qualitative ONE-call/FIVE-role commentary on recorded (up to
+three-hour-old) swarm evidence, with a fixed model allowlist and zero decision
+authority. Never give the model Kraken secrets, private balances, or personal
+data. No automated schedule and no paid-model fallbacks are installed.
+
+Server-side environment variables (set as Railway service secrets, not in Git):
+
+```bash
+ZOBIRIS_FREE_RESEARCH_ENABLED=1
+ZOBIRIS_FREE_RESEARCH_PROVIDER=gemini   # gemini | groq | openrouter | ollama | auto
+GEMINI_API_KEY=...                      # Google AI Studio, free-tier account
+# OR GROQ_API_KEY=...                   # Groq free plan
+# OR OPENROUTER_API_KEY=...             # OpenRouter free plan
+# For Ollama on the SAME server (local dev only):
+# ZOBIRIS_FREE_RESEARCH_PROVIDER=ollama
+# ZOBIRIS_FREE_RESEARCH_ALLOW_LOCAL=1
+```
+
+Model IDs are intentionally **fixed**, not operator/user configurable:
+- Google Gemini: `gemini-3.1-flash-lite` via Google OpenAI-compatible API.
+- Groq: `openai/gpt-oss-20b` via Groq API.
+- OpenRouter: `openrouter/free`, specifically the free router (never `openrouter/auto`).
+- Ollama: `qwen3:4b` at `127.0.0.1:11434`; requires your own locally
+  running Ollama server and downloaded model, **not installed on Railway**.
+
+Once configured, send an authorized request with the *existing Zobiris operator
+Bearer token*, without putting keys in the POST body:
+
+```http
+GET /api/research/agent-debate/free-providers
+Authorization: Bearer <OPERATOR_TOKEN>
+
+POST /api/research/agent-debate/run
+Authorization: Bearer <OPERATOR_TOKEN>
+Content-Type: application/json
+
+{"symbol":"SOL"}
+```
+
+The reply includes a baseline deterministic debate plus qualitative critiques
+from one free-model request. It does **not** add five separate autonomous LLMs,
+perform fresh web research, or change production scores. All five roles must
+return structured content. The server bounds input/output lengths, enforces a
+15-second timeout, 8 requests/hour/IP, one in-flight request per process,
+and a best-effort cap of 30 vendor calls/day/process. **The per-process cap is
+not a billing limit across replicas or external client usage.** Failed
+vendor requests count against that local quota, so intentional one-shot calls
+are favored over retries.
+
+Free plans differ: OpenRouter free accounts typically have 50 requests/day;
+Groq has model-specific organization-level quotas; Gemini free accounts have
+model- and project-specific rate limits and may allow input to improve their
+models. Verify current account tier before enabling. Vendor-side paid billing
+is possible if an API key belongs to a billing-enabled tier even when using
+models that also have a free plan. To stop all external inference at once, set
+`ZOBIRIS_FREE_RESEARCH_ENABLED=0`.
+
+External references:
+- https://ai.google.dev/gemini-api/docs/openai
+- https://ai.google.dev/gemini-api/docs/pricing
+- https://console.groq.com/docs/rate-limits
+- https://openrouter.ai/pricing
+- https://openrouter.ai/collections/free-models
