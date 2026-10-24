@@ -49,3 +49,27 @@ def candle_quality(times, ohlcv, step):
 def usable(q, max_missing_share=0.01):
     """Fail closed: no invalid or unordered rows, and at most 1% of candles missing."""
     return q['rows'] > 0 and q['invalid'] == 0 and q['unordered'] == 0 and q['missing'] <= max_missing_share * q['rows']
+
+
+def squeeze_features(c, n=20, lookback=120):
+    """Volatility-squeeze inputs (tested 24 Oct 2026, vol-squeeze-panel-input-v1: rejected, not in the live model): Bollinger bandwidth, its percentile within the last `lookback` bars, a squeeze flag
+    (percentile <= 10%), and bars since the last flag (capped at `lookback`). Uses closes up to each bar only."""
+    bw = np.full(len(c), np.nan)
+    for i in range(n - 1, len(c)):
+        w = c[i - n + 1:i + 1]
+        bw[i] = 4 * w.std() / w.mean()
+    rank = np.full(len(c), np.nan)
+    for i in range(len(c)):
+        hist = bw[max(0, i - lookback + 1):i + 1]
+        hist = hist[~np.isnan(hist)]
+        if len(hist) >= 30:
+            rank[i] = (hist < bw[i]).mean()
+    flag = np.where(np.isnan(rank), np.nan, (rank <= 0.10).astype(float))
+    since = np.full(len(c), np.nan)
+    last = None
+    for i in range(len(c)):
+        if flag[i] == 1:
+            last = i
+        if not np.isnan(rank[i]):
+            since[i] = lookback if last is None else min(i - last, lookback)
+    return {'bb_width': bw, 'bb_width_rank': rank, 'squeeze': flag, 'bars_since_squeeze': since}
