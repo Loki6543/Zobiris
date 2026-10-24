@@ -18,6 +18,8 @@ credentials or changes Strategy 2.1 gates. Standard library only (Python 3.10+).
 | `panel_study.py` | Multi-target panel: direction, volume, range, new highs/lows and shape at several horizons; which inputs matter |
 | `live_panel.py` | Live panel: every 4h (GitHub Actions) predicts and scores those targets for 15 coins; log and scorecard on branch `zobiris-panel-log` |
 | `positions.py` | Owner stock positions (entry price and date only) vs QQQ; page `POSITIONS.md` on branch `zobiris-panel-log` |
+| `multi_volume.py` | 24h volume summed over Kraken, Coinbase, Bitstamp, Gemini, Binance.US, Crypto.com, OKX, Bybit (whichever the runner reaches); `VOLUME.md` on `zobiris-panel-log` |
+| `alpha158.py` | Qlib Alpha158 features in numpy and the batch test; KBAR and VMA are in the live model (v3) |
 | `ledger.py` | Forecast registry, Brier score, 2m − m² sizing calibration, Bonferroni Sharpe hurdle |
 | `legacy.py` | Exact re-implementation of the 19 Oct sweep test, kept only to reproduce its figures |
 | `run_verification.py` | Re-runs the 22 Oct verification from `data/` and writes a new results directory |

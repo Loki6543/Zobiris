@@ -17,11 +17,12 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
+from . import alpha158 as a158
 from . import efficiency as ef
 from . import panel_study as ps
 from .drop_monitor import PAIRS
 
-MODEL = 'panel-logit-v2'   # v2 adds path-efficiency inputs (registry: kama-efficiency-panel-input-v1)
+MODEL = 'panel-logit-v3'   # v2 added path efficiency (kama-efficiency-panel-input-v1); v3 adds Alpha158 KBAR + VMA (alpha158-panel-batch-v1)
 # C=0.01: on a purged 70/30 split of the 24 Oct Kraken pull (15 coins), C=0.3 (the study setting) overfit the overlapping
 # 4h rows; C=0.01 kept new-high/low skill +0.12 to +0.32 and volume/range +0.04 to +0.09. Direction stayed below base.
 C_REG = 0.01
@@ -87,6 +88,9 @@ def predict_coin(series, coin, chart):
         return None
     F = ps.features(ts, a, b, C['spec'])
     F.update(ef.features(a[:, 3]))
+    G = a158.groups(*a.T)
+    F.update(G['KBAR'])
+    F.update(G['VMA'])
     names = list(F)
     M = np.column_stack([F[k] for k in names])
     last = len(ts) - 1

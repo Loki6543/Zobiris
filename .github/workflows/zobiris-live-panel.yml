@@ -44,10 +44,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install
-        run: pip install --quiet numpy scikit-learn
+        run: pip install --quiet numpy scikit-learn ccxt==4.5.90
 
       - name: Live panel tests
-        run: python3 -m unittest research.recovery_lab.tests.test_live_panel research.recovery_lab.tests.test_positions
+        run: python3 -m unittest research.recovery_lab.tests.test_live_panel research.recovery_lab.tests.test_positions research.recovery_lab.tests.test_multi_volume research.recovery_lab.tests.test_alpha158
 
       - name: Score and predict
         run: python3 -m research.recovery_lab.live_panel --dir panel-log/panel --scorecard panel-log/README.md
@@ -58,6 +58,10 @@ jobs:
           if [ -f panel-log/positions.jsonl ]; then
             python3 -m research.recovery_lab.positions --positions panel-log/positions.jsonl --out panel-log/POSITIONS.md
           fi
+
+      - name: Volume across exchanges
+        continue-on-error: true
+        run: python3 -m research.recovery_lab.multi_volume --history panel-log/volume-history.jsonl --out panel-log/VOLUME.md
 
       - name: Commit log
         shell: bash
