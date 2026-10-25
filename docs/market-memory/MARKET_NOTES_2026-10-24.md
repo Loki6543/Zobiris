@@ -45,3 +45,10 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
 - Against open calls: the $79,709 floor calls (owner 85% holds, Claude 45% and 35%) are touch calls. Polymarket's 81.5% for a touch of
   $80K by 31 Oct sits closer to Claude's side. Claude's 28% that $80K holds to 26 Oct compares with a 54.5% market chance of
   a dip under $80K by 25 Oct (end of 26 Oct 04:00 UTC).
+
+## 2026-10-25 daily check (13:44 UTC)
+- Drop monitor: BTC 80,348 (Kraken 12:00 bar), -1.9% vs 48h high; no new drop event. Nearest 30d high: CVX -11.6%, ETH -16.0%, SOL -19.2%. Furthest: QNT -51.5%, SAND -50.0%, HBAR -41.4%.
+- Scored today (Oct 24 low 79,120.8 broke the floors): owner BTC holds 79,709 MISS (Brier 0.72); Claude holds 79,709 x2 MISS (0.20, 0.12); Claude holds 80K/48h MISS (0.08, p=0.28); Claude basket (strong beat weak) HIT (0.20). Running: Claude 1/4 hits, mean Brier 0.151; owner 0/1, Brier 0.723 (coin flip 0.25).
+- Polymarket (gamma API, live): BTC above 80K Oct 26 62.5%, Oct 28 57.5%, Oct 31 55.5%; hit 77.5K in October 43.5%, 75K 17.5%. Kalshi KXBTCD: above 80K Oct 30 17:00 ET 56%.
+- Context (unverified, news search): FOMC Oct 27-28, statement 18:00 UTC Wed; ~$815-837M liquidations in 24h on the slide to ~79.5K (TradingView); spot BTC ETFs -635.6M on Oct 22, still +$301M for the week (BeInCrypto); ETF cost basis est. 81.5-82K (cryptoticker).
+- Sources: https://gamma-api.polymarket.com/events?tag_slug=bitcoin · https://api.elections.kalshi.com/trade-api/v2/events?series_ticker=KXBTCD · https://www.tradingview.com/news/tradingview:920e9dcd4aca6:0-key-facts-80k-slide-815-837m-liquidated-322m-outflow-fed-pce/ · https://beincrypto.com/zcash-etf-biggest-inflow-since-september/ · https://cryptoticker.io/en/bitcoin-price-winter-time-fed-window-25-october-2026/
