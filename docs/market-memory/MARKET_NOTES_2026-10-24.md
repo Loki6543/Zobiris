@@ -68,3 +68,18 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - XRP: Ripple Swell Oct 27-29; death cross; Santiment shows 10M-100M wallets 351->339 and exchange balance +50M XRP. https://coinmarketcap.com/community/articles/6ade346717eac2164c5bf858 https://coinmarketcap.com/community/articles/6ade2fb6e62f6a7c336382fc
   - ADA: Leios/Dijkstra steps, none near-term. https://www.tradingview.com/news/newsbtc:57b85fc63094b:0-cardano-opens-dijkstra-testnet-while-the-upgrade-itself-awaits-its-next-step/
 - Data gaps: CoinDesk monthly quota exhausted; Binance/Kraken Futures/Hyperliquid direct APIs blocked by proxy; positioning covers one venue only.
+
+## 2026-10-26 daily check (13:56 UTC)
+- Drop monitor: BTC 80,215 (Kraken 12:00 bar), -0.7% vs 48h high; no new drop event. Nearest 30d high: CVX -8.5%, ETH -16.4%, XRP -16.9%. Furthest: SAND -50.5%, QNT -41.8%, HBAR -40.8%.
+- Scored: CAP broke 0.0741 at 11:41 UTC (low 0.0706 at 11:57), then rebounded to ~0.097.
+  - Owner's break call (logged as holds, p=0.40): Brier 0.16.
+  - Claude's break call (p=0.35): Brier 0.1225.
+  - Both were right on the break. The log stores them as "holds", so each is recorded as hit=false.
+  - Running: Claude 5 scored, Brier 0.146; owner 3 scored, Brier 0.335 (coin flip 0.25).
+  - The owner's informal 10-minute call (below 0.074) broke about 15-25 minutes after it was made. It was not logged.
+- Polymarket (gamma API, live):
+  - BTC above 80K: Oct 27 40.5%, Oct 28 41.5%, Oct 31 46%.
+  - Hit 78K Oct 26-Nov 1: 67.5%. Hit 82K: 50.5%.
+  - Hit 77.5K in October: 52.5%.
+  - Source: https://gamma-api.polymarket.com/events?tag_slug=bitcoin
+- Context: the news search returned nothing today. FOMC Oct 27-28 (from prior notes, unverified).
