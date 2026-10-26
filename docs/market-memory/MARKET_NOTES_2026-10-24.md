@@ -52,3 +52,19 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
 - Polymarket (gamma API, live): BTC above 80K Oct 26 62.5%, Oct 28 57.5%, Oct 31 55.5%; hit 77.5K in October 43.5%, 75K 17.5%. Kalshi KXBTCD: above 80K Oct 30 17:00 ET 56%.
 - Context (unverified, news search): FOMC Oct 27-28, statement 18:00 UTC Wed; ~$815-837M liquidations in 24h on the slide to ~79.5K (TradingView); spot BTC ETFs -635.6M on Oct 22, still +$301M for the week (BeInCrypto); ETF cost basis est. 81.5-82K (cryptoticker).
 - Sources: https://gamma-api.polymarket.com/events?tag_slug=bitcoin · https://api.elections.kalshi.com/trade-api/v2/events?series_ticker=KXBTCD · https://www.tradingview.com/news/tradingview:920e9dcd4aca6:0-key-facts-80k-slide-815-837m-liquidated-322m-outflow-fed-pce/ · https://beincrypto.com/zcash-etf-biggest-inflow-since-september/ · https://cryptoticker.io/en/bitcoin-price-winter-time-fed-window-25-october-2026/
+
+## 2026-10-26 alt-bounce research (owner asked: 3 alts if BTC recovers slightly). Research only.
+- Method: Kraken daily, 26 events since Nov 2024 where BTC was 6%+ below its 7-day high and then rose 0-6% over 3 days; 3-day return vs BTC. Scratch scripts were not committed.
+- Edge held in both halves only for ZEC (+6.5% / +6.2% vs BTC). It faded for XRP (+3.6% -> +0.3%) and ADA (+3.1% -> +0.9%). ETH was most consistent recently (+1.5%, beat BTC 77%, se 0.6).
+- 365d beta up/down: ZEC 1.28/0.88 (corr 0.48), XRP 1.41/1.14, ADA 1.32/1.16, ETH 1.27/1.23.
+- Hyperliquid (Coinversa Pulse, 2026-10-26 02:35Z):
+  - ZEC: short liquidations $5.7M at 1,248-1,272; long liquidations $14.0M at 1,008-1,032; Apex $191M short vs $92M long; Sharps long.
+  - XRP: long liquidations $14.0M at 1.18-1.21, shorts above only $1.3M.
+  - ADA: funding negative, liquidations on both sides small.
+  - ETH: long liquidations $238M at 2,145-2,191; short liquidations $11.8M at 2,330-2,376 and $46M at 2,560-2,606.
+- Kraken book: a $10k market buy slips <=0.04% on all four.
+- Catalysts (news, unverified):
+  - ZEC: NU7 around Nov 5; Grayscale ZCSH inflows 3 days running. https://news.bitcoin.com/bitcoin-etf/bitcoin-etfs-lose-138m-as-zcash-extends-3-day-inflow-streak/
+  - XRP: Ripple Swell Oct 27-29; death cross; Santiment shows 10M-100M wallets 351->339 and exchange balance +50M XRP. https://coinmarketcap.com/community/articles/6ade346717eac2164c5bf858 https://coinmarketcap.com/community/articles/6ade2fb6e62f6a7c336382fc
+  - ADA: Leios/Dijkstra steps, none near-term. https://www.tradingview.com/news/newsbtc:57b85fc63094b:0-cardano-opens-dijkstra-testnet-while-the-upgrade-itself-awaits-its-next-step/
+- Data gaps: CoinDesk monthly quota exhausted; Binance/Kraken Futures/Hyperliquid direct APIs blocked by proxy; positioning covers one venue only.
