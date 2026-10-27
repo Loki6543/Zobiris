@@ -83,3 +83,18 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - Hit 77.5K in October: 52.5%.
   - Source: https://gamma-api.polymarket.com/events?tag_slug=bitcoin
 - Context: the news search returned nothing today. FOMC Oct 27-28 (from prior notes, unverified).
+
+## 2026-10-27 daily check (13:49 UTC)
+- Drop monitor: BTC 80,233 (Kraken 12:00 bar), -0.6% vs 48h high; no new drop event. Nearest 30d high: CVX -15.1%, INJ -15.4%, XRP -15.9%. Furthest: SAND -50.5%, QNT -46.2%, HBAR -41.7%.
+- Scored: Claude's retroactive "avoid QNT" call missed.
+  - QNT beat BTC by +7.8% over 24h. Claude had said 30% that it would (Brier 0.49).
+  - The log shows hit=true because the logged claim was "QNT beats BTC", but it counts against Claude.
+  - Running: Claude 6 scored, Brier 0.203; owner 3 scored, Brier 0.335.
+- Polymarket (gamma API, live):
+  - BTC above 80K: Oct 28 55.5%, Oct 31 53%.
+  - Hit 78K Oct 26-Nov 1: 50.5%. Hit 82K: 58.5%.
+  - Hit 77.5K in October: 32.5% (was 52.5% yesterday).
+  - Source: https://gamma-api.polymarket.com/events?tag_slug=bitcoin
+- Context (unverified, news search):
+  - FOMC decision Oct 28 at 2:00 pm ET. A hold is priced near 90%; December hike odds around 69%.
+  - Sources: https://blog.bitfinex.com/bitfinex-alpha/bitcoin-tests-key-support-as-fed-decision-looms/ and https://cryptoticker.io/en/fed-rate-decision-today-crypto-impact/
