@@ -98,3 +98,16 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
 - Context (unverified, news search):
   - FOMC decision Oct 28 at 2:00 pm ET. A hold is priced near 90%; December hike odds around 69%.
   - Sources: https://blog.bitfinex.com/bitfinex-alpha/bitcoin-tests-key-support-as-fed-decision-looms/ and https://cryptoticker.io/en/fed-rate-decision-today-crypto-impact/
+
+## 2026-10-28 daily check (13:59 UTC)
+- Drop monitor: BTC 80,621 (Kraken 12:00 bar), -1.0% vs 48h high; no new drop event. Nearest 30d high: BCH -8.4%, CVX -15.1%, XRP -15.7%. Furthest: SAND -49.7%, HBAR -42.5%, QNT -40.0%.
+- Scores: no new outcomes. Claude 6 scored, Brier 0.203; owner 3 scored, Brier 0.335.
+- Polymarket (gamma API, live):
+  - BTC above 80K: Oct 29 68.5%, Oct 31 61.5%.
+  - This week (Oct 26-Nov 1): hit 82K 63.5%, hit 78K 32%.
+  - October: hit 77.5K 21% (was 32.5%), hit 82.5K 45.5%.
+  - Source: https://gamma-api.polymarket.com/events?tag_slug=bitcoin
+- Context (unverified, news search):
+  - Oct 27: S&P 500 +0.60% to 7,722.60, Nasdaq Composite +1.18%, chips +3% (AMD, MU, NVDA) (https://www.reuters.com/business/us-stock-futures-muted-oil-holds-near-april-highs-ahead-fed-decision-2026-10-27/).
+  - FOMC decision today, 2:00 pm ET. A hold at 3.75-4.00% is expected, with a second 2026 hike priced for December (same Reuters).
+  - Spot BTC ETFs +$110.3M on Oct 26. Hyperliquid's largest traders net short BTC for the first time since March. About $12B in options expire before the Fed. Source: https://247wallst.com/investing/cryptocurrency/2026/10/27/hyperliquids-biggest-traders-are-shorting-bitcoin-for-the-first-time-since-march-could-btc-drop-below-75000/
