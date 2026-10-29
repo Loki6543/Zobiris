@@ -102,4 +102,4 @@ The four quarters sum to **+$19.747bn**, which confirms v4's figure.
 
 Two further points from the same statements:
 - **The trend:** free cash flow fell for three quarters in a row and has been negative for two.
-- **2026 financing:** about $76bn of net debt issuance, $42.9bn of common stock issuance (Q2 and Q3) and $19.1bn of preferred stock (Q2). This is relevant to the per-share and dilution checks the argument requires. Labels are as given by FMP and have not been checked against the 10-Q.
+- **2026 financing:** about $96.6bn of net debt issuance across the four quarters, $42.9bn of common stock issuance (Q2 and Q3) and $19.1bn of preferred stock (Q2). This is relevant to the per-share and dilution checks the argument requires. Labels are as given by FMP and have not been checked against the 10-Q.
