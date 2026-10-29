@@ -111,3 +111,22 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - Oct 27: S&P 500 +0.60% to 7,722.60, Nasdaq Composite +1.18%, chips +3% (AMD, MU, NVDA) (https://www.reuters.com/business/us-stock-futures-muted-oil-holds-near-april-highs-ahead-fed-decision-2026-10-27/).
   - FOMC decision today, 2:00 pm ET. A hold at 3.75-4.00% is expected, with a second 2026 hike priced for December (same Reuters).
   - Spot BTC ETFs +$110.3M on Oct 26. Hyperliquid's largest traders net short BTC for the first time since March. About $12B in options expire before the Fed. Source: https://247wallst.com/investing/cryptocurrency/2026/10/27/hyperliquids-biggest-traders-are-shorting-bitcoin-for-the-first-time-since-march-could-btc-drop-below-75000/
+
+## Daily check 2026-10-29 (13:59Z)
+- **Drop monitor:** no new BTC drop. BTC is at $79,944.5 on the 12:00 bar, −1.94% from its 48h high. Kraken's 4h low was $79,614.8 (00:00 bar), briefly under the $79,709 floor reference.
+  - Least fallen vs their 30-day highs: BCH −13.6%, ZEC −15.0%, ETH −16.4%.
+  - Most fallen: SAND −50.1%, QNT −40.9%, STX −36.5%.
+- **Scores:** no new scores.
+  - Claude: hit rate 0.33 (6 scored), Brier 0.203.
+  - Owner: hit rate 0.33 (3 scored), Brier 0.335.
+- **Polymarket** (gamma-api, fetched 13:59Z):
+  - BTC above $80k: 70% on 29 Oct, 60% on 30 Oct, 57% on 31 Oct.
+  - Week of 26 Oct to 1 Nov: hit $82k 40%, dip to $78k 28%, dip to $76k 8%.
+  - October: dip to $77.5k 14%.
+  - 2026: hit $95k 24%, dip to $70k 36%.
+- **Context** (unverified, news search):
+  - **Oct 28:** S&P +0.28% to 7,743.97, Nasdaq +0.27%, after the Fed held at 3.75–4.00% on a 10–2 vote (Hammack and Cook voted for a hike). The Fed also cut one 2027 meeting. Source: https://www.reuters.com/world/asia-pacific/nasdaq-futures-rise-sk-hynix-boosts-chips-before-fed-decision-earnings-2026-10-28/
+  - **Oct 29:** Nasdaq futures −1% after Alphabet missed on both revenue and EPS (Investopedia).
+  - SK Hynix profit +632%; it sees the memory shortage lasting to 2030 (Yahoo live blog).
+  - **Spot BTC ETF flows:** +$176.0M on 27 Oct (IBIT +$151.5M) and about +$137M on 28 Oct, the third straight inflow day. Ether ETFs −$1.32bn month to date. Sources: https://www.altcoinbuzz.io/bitcoin-spot-etf-inflows-october-27 and the KuCoin flash.
+  - Strategy reports Q3 after today's close and held 848,517 BTC on 18 Oct.
