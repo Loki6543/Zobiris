@@ -308,6 +308,11 @@ Add dividends separately for total return. If forward P/E is used at both year-e
 
 Report total return, maximum drawdown, recovery duration, upside capture, turnover, costs and missed rebounds.
 
+**Valuation and monetization gate (v5.1 annex).** The first pass is in `monetization-valuation-gate-2026-10-29.md`. It gives a reverse DCF for each of the seven candidates, the monetization tests, and research tiers:
+- **Provisionally qualified:** MSFT and TSM.
+- **Conditional:** GOOGL (half weight) and NVDA (small).
+- **Not yet:** AMZN, META and AVGO.
+
 **Acceptance status:**
 - The economic thesis is plausible.
 - The company evidence is mixed but substantial.
