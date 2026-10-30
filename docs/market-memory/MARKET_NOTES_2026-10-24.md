@@ -130,3 +130,23 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - SK Hynix profit +632%; it sees the memory shortage lasting to 2030 (Yahoo live blog).
   - **Spot BTC ETF flows:** +$176.0M on 27 Oct (IBIT +$151.5M) and about +$137M on 28 Oct, the third straight inflow day. Ether ETFs −$1.32bn month to date. Sources: https://www.altcoinbuzz.io/bitcoin-spot-etf-inflows-october-27 and the KuCoin flash.
   - Strategy reports Q3 after today's close and held 848,517 BTC on 18 Oct.
+
+## Daily check 2026-10-30 (13:46Z)
+- **Drop monitor: new BTC drop event** on the 2026-10-30 00:00 bar. BTC is at $77,326.4 on the 12:00 bar, −5.33% from its 48h high, so it is well below the $79,709 floor reference.
+  - Least fallen vs their 30-day highs: BCH −12.2%, ZEC −16.7%, ETH −19.6%.
+  - Most fallen: SAND −52.3%, APE −41.9%, TIA −40.1%.
+- **Scores:** no new scores.
+  - Claude: hit rate 0.33 (6 scored), Brier 0.203.
+  - Owner: hit rate 0.33 (3 scored), Brier 0.335.
+- **Polymarket** (https://gamma-api.polymarket.com/events?active=true&closed=false&tag_slug=bitcoin, fetched 13:46Z):
+  - BTC above $78k: 11% on 30 Oct, 28% on 31 Oct, 31% on 1 Nov, 39% on 3 Nov. Above $80k on 31 Oct: 5.5%.
+  - 30 Oct: dip to $76k 52%, $75k 23%.
+  - Week of 26 Oct to 1 Nov: dip to $76k 64%, $74k 21%; hit $82k 4.5%.
+  - October: dip to $75k 30%.
+  - 2026: dip to $70k 48% (was 36%), $65k 30%; hit $95k 16% (was 24%), $100k 13%.
+- **Kalshi:** not fetched (direct API blocked by the proxy; Firecrawl credits low).
+- **Context** (unverified, news search):
+  - **Binance security incident:** withdrawals paused on several networks; suspicious hot-wallet outflows estimated at up to $5.8bn. About $1.49bn of crypto positions liquidated in 24h. BNB −8%, LINK −10%; HYPE +13% on reports of ICE US futures on Hyperliquid. Sources: https://www.investing.com/news/stock-market-news/why-is-bitcoin-dropping-today-93CH-4985643, https://bitcoinfoundation.org/news/bitcoin/bitcoin-slips-2-4-as-1-49b-in-crypto-positions-are-liquidated/
+  - **Oct 29:** Alphabet −12.6% to $283.82 after its miss; ServiceNow −27%, Marvell −13%, Micron −5%; MSFT about flat at $530. Source: same Investing.com page.
+  - **Oct 30 pre-market:** S&P futures about −1.1%, Nasdaq futures about −2% after Amazon and Intel results. Sources: https://www.barrons.com/livecoverage/stock-market-news-today-103026, https://finance.yahoo.com/markets/stocks/articles/u-stock-futures-sink-nasdaq-013610173.html
+  - **Spot BTC ETFs:** about +$423.7M over 26–28 Oct (https://tradingeconomics.com/btcusd:cur/news/596591). 29 Oct flows not confirmed.
