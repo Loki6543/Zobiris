@@ -150,3 +150,31 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - **Oct 29:** Alphabet −12.6% to $283.82 after its miss; ServiceNow −27%, Marvell −13%, Micron −5%; MSFT about flat at $530. Source: same Investing.com page.
   - **Oct 30 pre-market:** S&P futures about −1.1%, Nasdaq futures about −2% after Amazon and Intel results. Sources: https://www.barrons.com/livecoverage/stock-market-news-today-103026, https://finance.yahoo.com/markets/stocks/articles/u-stock-futures-sink-nasdaq-013610173.html
   - **Spot BTC ETFs:** about +$423.7M over 26–28 Oct (https://tradingeconomics.com/btcusd:cur/news/596591). 29 Oct flows not confirmed.
+
+## Daily check 2026-10-31 (13:44Z)
+- **Drop monitor:** no new BTC drop event (the 30 Oct 00:00 event is still in the window). BTC is at $77,412.6 on the 12:00 bar, −5.23% from its 48h high.
+  - Least fallen vs their 30-day highs: ZEC −9.1%, BCH −9.5%, ETH −19.0%.
+  - Most fallen: SAND −51.4%, APE −40.9%, TIA −37.8%.
+- **New score:** CLAUDE-BASKET-20261023T162533 was wrong (strong basket −11.93% vs weak −4.82%). Brier 0.2025.
+  - Running, Claude: hit rate 0.29 (7 scored), mean Brier 0.203.
+  - Running, owner: hit rate 0.33 (3 scored), mean Brier 0.335. Coin flip is 0.25.
+- **Polymarket** (https://gamma-api.polymarket.com/events?active=true&closed=false&tag_slug=bitcoin, fetched 13:44Z):
+  - BTC between $76k and $78k on 31 Oct: 95%. Up on 31 Oct: 73%.
+  - Above $78k: 30% on 1 Nov, 45% on 3 Nov. Above $80k on 3 Nov: 18%.
+  - Week of 26 Oct to 1 Nov: dip to $76k 25% (was 64%), $74k 5%.
+  - 2026: dip to $70k 48.5%, $65k 28.5%; hit $95k 16.5%, $100k 11.5%.
+- **Kalshi:** not fetched (direct API blocked by the proxy).
+- **Claude intraday calls 31 Oct** (graded by hand, not in the ledger):
+  - BTC up over 15m (p=0.55): wrong, Brier 0.303.
+  - BTC up over 30m (p=0.54): wrong, Brier 0.292.
+  - Both price ranges held.
+- **Context** (secondary sources; marked unverified where noted):
+  - **Oct 30 close:** S&P 500 about −1.8% (7,580), Nasdaq-100 −3.46%, Dow −1.09%. Intel about −29% and Nvidia about −4% after Amazon/Intel results; the Nasdaq's worst day since June. Sources: https://www.reuters.com/business/nasdaq-futures-tumble-amazon-intel-results-deepen-ai-spending-woes-2026-10-30/, https://seekingalpha.com/article/4960385. Ainvest reports S&P −2.1% to 7,560 (the sources conflict).
+  - **Fed:** two Fed members say rates need to be higher (Yahoo live blog, 30 Oct; unverified).
+  - **Binance hack (several outlets):**
+    - About $6.3bn stolen; about $2.8–3bn frozen by issuers.
+    - Binance set aside $6.34bn and pledged to cover all losses.
+    - Arkham's "Binance Hacker" entity holds about $5.77bn, including 18.27K BTC, 522.7K ETH and 970.6K SOL.
+    - It also holds large shares of small coins: SOPH 33.9%, ERA 22.1%, TREE 8.4%, LA 7.8% and FUN 5.3% (580.77M FUN, unchanged since 30 Oct) of circulating supply.
+    - Sources: https://arkm.com/explorer/entity/binance-hacker-2, https://cryptopotato.com/why-didnt-bitcoin-crash-harder-after-the-binance-hack-cz-weighs-in/
+  - **Spot BTC ETF flows for 30 Oct:** not confirmed. The reported −$643.3M outflow is unverified.
