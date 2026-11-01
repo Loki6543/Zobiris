@@ -178,3 +178,22 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
     - It also holds large shares of small coins: SOPH 33.9%, ERA 22.1%, TREE 8.4%, LA 7.8% and FUN 5.3% (580.77M FUN, unchanged since 30 Oct) of circulating supply.
     - Sources: https://arkm.com/explorer/entity/binance-hacker-2, https://cryptopotato.com/why-didnt-bitcoin-crash-harder-after-the-binance-hack-cz-weighs-in/
   - **Spot BTC ETF flows for 30 Oct:** not confirmed. The reported −$643.3M outflow is unverified.
+
+## Daily check 2026-11-01 (13:45Z)
+- **Drop monitor:** no new BTC drop. BTC is at $77,759.1 on the 12:00 bar, −0.48% from its 48h high, so the drop rule is no longer true.
+  - Least fallen vs their 30-day highs: BCH −12.5%, ZEC −12.6%, ETH −18.4%.
+  - Most fallen: SAND −51.9%, APE −41.1%, TIA −37.8%.
+- **Scores:** no new scores.
+  - Claude: hit rate 0.29 (7 scored), Brier 0.203.
+  - Owner: hit rate 0.33 (3 scored), Brier 0.335.
+  - Open call CLAUDE XMR holds $570 (72h, resolves ~3 Nov 00:20Z): XMR at $602.91 on Kraken, 24h low $590.63, so the call is holding.
+- **Polymarket** (https://gamma-api.polymarket.com/events?active=true&closed=false&tag_slug=bitcoin, fetched 13:45Z):
+  - Above $78k: 49.5% on 2 and 3 Nov, about 50% from 4 to 7 Nov.
+  - Above $80k: 19.5% on 3 Nov, 30.5% on 7 Nov.
+  - November touch odds: $80k 79.5%, $85k 41.5%, $90k 15.5%; dips to $75k 69%, $72.5k 46.5%, $70k 32.5%.
+  - 2026: dip to $70k 44.5%; hit $100k 10.5%.
+- **Kalshi:** not fetched (blocked).
+- **Context:**
+  - **Spot BTC ETFs, 30 Oct:** −$643.33M net, the largest outflow of the month. IBIT −$233.7M, FBTC −$201.0M, ARKB −$129.6M. Ether ETFs −$155.85M; SOL ETFs −$10.74M. This was previously marked unverified; it is now confirmed by two outlets citing SoSoValue: https://www.cryptotimes.io/2026/10/31/bitcoin-and-ether-etfs-lose-nearly-800m-amid-6-3b-binance-hack-fallout/ and https://uk.finance.yahoo.com/news/bitcoin-faces-further-downside-risks-060208415.html
+  - **Binance** says it has replenished about 90% of the stolen assets. The attacker is converting stolen funds into ETH; Chainalysis says THORChain paused, which delays the laundering (same sources).
+  - **Strategy (MSTR):** Q3 profit of $19.5B, negative BTC yield and a CFO exit (cryptotimes headline, 30 Oct; unverified). A Stocktwits item on paused buys is undated and not used.
