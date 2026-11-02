@@ -14,7 +14,8 @@ Observed in: Binance-hacker small caps (SOPH, ZKC, ZKP ATLs on 30 Oct 2026; FUN
 Sept 2000 slide before its warning.
 Confidence: 0.70
 Last updated: 2026-11-02
-Governance: VALUE pass (2 domains), ALIGNMENT pass, REDUNDANCY pass, FRESHNESS pass, PLACEMENT pass
+Status: CANDIDATE (demoted 2026-11-02: equity half is a historical analog, not a resolved forward case)
+Governance: VALUE provisional (2 domains, 1 forward), ALIGNMENT pass, REDUNDANCY pass, FRESHNESS pass, PLACEMENT pass
 
 ## Derivatives
 

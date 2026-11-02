@@ -57,9 +57,11 @@ this turn.
    main thesis.
 3. If agreement ≥ `AGREEMENT_TRIGGER` (default 0.75): write a **steelman of the
    strongest minority view** (2–3 sentences) in the answer.
-4. If contrarian share < `DISSENT_QUOTA` (default 0.25) **and** all four agree:
-   rerun the lenses once with an altered frame (invert the thesis, change the
-   horizon, or take the counterparty's view). Never more than one rerun.
+4. If all four agree **and** a material assumption is still untested, run one
+   bounded challenge: reframe once (invert the thesis, change the horizon, or
+   take the counterparty's view) and name the evidence that would decide it.
+   Never more than one challenge; supported consensus is acceptable. No
+   dissent quota.
 5. Dissent changes the stated uncertainty or adds a rival; it does not flip a
    verdict without evidence.
 
@@ -119,8 +121,8 @@ comparable CP-free calls:
   re-route rate", which would reward worse answers);
 - hidden-pattern callouts that later proved useful ≥ 1 in 5 callouts (not "one
   per run", which rewards fabrication);
-- the KB rejects most candidates (target ≥ 80%) and no retained pattern was
-  later contradicted by a tested result.
+- retained patterns are not later contradicted by tested results and prove
+  useful when retrieved (no fixed rejection-rate target).
 
 If any of these regress, set default `cp` back to `0.05` and keep testing.
 
