@@ -197,3 +197,30 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - **Spot BTC ETFs, 30 Oct:** −$643.33M net, the largest outflow of the month. IBIT −$233.7M, FBTC −$201.0M, ARKB −$129.6M. Ether ETFs −$155.85M; SOL ETFs −$10.74M. This was previously marked unverified; it is now confirmed by two outlets citing SoSoValue: https://www.cryptotimes.io/2026/10/31/bitcoin-and-ether-etfs-lose-nearly-800m-amid-6-3b-binance-hack-fallout/ and https://uk.finance.yahoo.com/news/bitcoin-faces-further-downside-risks-060208415.html
   - **Binance** says it has replenished about 90% of the stolen assets. The attacker is converting stolen funds into ETH; Chainalysis says THORChain paused, which delays the laundering (same sources).
   - **Strategy (MSTR):** Q3 profit of $19.5B, negative BTC yield and a CFO exit (cryptotimes headline, 30 Oct; unverified). A Stocktwits item on paused buys is undated and not used.
+
+## Daily check 2026-11-02 (14:42Z)
+- **Drop monitor:** no new BTC drop. BTC is at $77,771 on Kraken (24h range $77,500–78,740).
+  - Least fallen vs their 30-day highs: ZEC −9.6%, BCH −13.8%, ETH −16.6%.
+  - Most fallen: SAND −52.1%, TIA −40.3%, GALA −38.6%.
+- **New forward score**, test post-btc-drop-relative-strength-forward-v1, 30 Oct event, 72h:
+  - Least-fallen group −0.11%; most-fallen group +7.6%. Spread −7.71 points.
+  - This is the opposite of the event-study finding. It is one event, so it is not a refutation, but it is recorded as a miss.
+- **Call ledger:** no new scores.
+  - Claude: hit rate 0.29 (7 scored), Brier 0.203.
+  - Owner: hit rate 0.33 (3 scored), Brier 0.335.
+  - Open call CLAUDE XMR holds $570 (resolves about 3 Nov 00:20Z): XMR at $603.73 on Kraken, 24h low $590.00, so the call is holding.
+- **Polymarket** (gamma API, 14:42Z):
+  - BTC above $78k: 50% on 3 Nov, about 50% from 4 to 8 Nov. Above $80k on 3 Nov: 11.5%.
+  - Week of 2–8 Nov: touch $80k 59%, dip to $76k 62%, dip to $74k 31.5%.
+  - November: $80k 78.5%, $85k 40.5%; dips to $75k 67.5%, $72.5k 49.5%.
+  - 2026: dip to $70k 43.5%; hit $95k 16.5%.
+- **Kalshi:** not fetched (blocked).
+- **Context** (Yahoo live blog, secondary):
+  - US futures recovering premarket: Nasdaq-100 futures +0.8% after the index briefly entered a correction. The Nasdaq Composite lost 5.2% in October.
+  - Premarket: Nvidia +1.2%, Micron +2.1%.
+  - Amazon is reported −28% after its double miss (unverified magnitude).
+  - Brent about $109 on reports that the US and Iran are seeking a diplomatic resolution.
+  - Binance says it has covered about 95% of the stolen funds, withdrawals have resumed on 15 networks, and net outflows were about $3.64bn (2.1% of its $171bn assets under management). FBI attribution to North Korea is reported.
+  - This week: ISM manufacturing (today), the midterms (Tue 3 Nov), and the October jobs report (Fri). Apple reports after the close today.
+  - Source: https://finance.yahoo.com/markets/live/stock-market-today-monday-november-2-dow-sp-500-nasdaq-091835095.html
+  - ETF flows: the latest SoSoValue figure is still 30 Oct (−$643.33M); 2 Nov flows are pending.
