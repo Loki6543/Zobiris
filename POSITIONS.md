@@ -1,6 +1,6 @@
 # Owner positions
 
-Updated 2026-11-01 20:28 UTC from daily closes. Entry price and date only; sizes are not stored.
+Updated 2026-11-02 05:53 UTC from daily closes. Entry price and date only; sizes are not stored.
 
 | Symbol | Opened | Entry | Last close | Return | Benchmark | Benchmark return | vs benchmark |
 |---|---|---:|---:|---:|---|---:|---:|
