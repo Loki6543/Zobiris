@@ -224,3 +224,13 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - This week: ISM manufacturing (today), the midterms (Tue 3 Nov), and the October jobs report (Fri). Apple reports after the close today.
   - Source: https://finance.yahoo.com/markets/live/stock-market-today-monday-november-2-dow-sp-500-nasdaq-091835095.html
   - ETF flows: the latest SoSoValue figure is still 30 Oct (−$643.33M); 2 Nov flows are pending.
+
+## Daily check 2026-11-03 (13:45Z)
+- BTC (Kraken) $77,289, −1.56% vs 48h high. No new drop event.
+- Least fallen vs 30-day high: ZEC −13.6%, BCH −14.0%, XRP −16.4%. Most fallen: SAND −52.6%, TIA −41.9%, PYTH −36.7%.
+- Scored: CLAUDE-XMR-holds-570 HIT (lowest 1h low $585.65; Brier 0.1225).
+- Running: Claude 8 scored, hit rate 38%, Brier 0.193. Owner 3 scored, hit rate 33%, Brier 0.335.
+- Polymarket (gamma API, 13:44Z): Nov 2–8 touch ↓$76k 65%, ↓$74k 32%, ↑$80k 52%. November touch ↓$75k 70%, ↓$72.5k 51%. "Above $78k on 7 Nov" 47%.
+  - The $79,709 floor is already broken (spot $77.3k); November ↑$80k touch is 76%.
+- ETF flows 2 Nov: −$398.6M net (CoinGlass, unverified against SoSoValue). https://www.coinglass.com/etf/bitcoin
+- Today: US midterm elections. Kalshi not checked (proxy refuses it).
