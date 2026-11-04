@@ -234,3 +234,12 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - The $79,709 floor is already broken (spot $77.3k); November ↑$80k touch is 76%.
 - ETF flows 2 Nov: −$398.6M net (CoinGlass, unverified against SoSoValue). https://www.coinglass.com/etf/bitcoin
 - Today: US midterm elections. Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-04 (13:45Z)
+- BTC (Kraken) $78,196, −0.39% vs 48h high. No new drop event. No new scores.
+- Least fallen vs 30-day high: ZEC −8.3%, BCH −14.1%, ETH −15.3%. Most fallen: SAND −53.7%, TIA −42.1%, PYTH −36.3%.
+- Running: Claude 8 scored, hit rate 38%, Brier 0.193. Owner 3 scored, hit rate 33%, Brier 0.335. No open calls.
+- Polymarket (gamma API, 13:44Z): Nov 2–8 touch ↑$80k 59% (from 52%), ↓$74k 14% (from 32%). November touch ↑$80k 82%, ↓$75k 64%. "Above $78k on 7 Nov" 56%.
+- US 3 Nov: S&P 500 +0.36% (7,568.92), Nasdaq +0.83%, Dow −0.38%; Nvidia +2.3%, Broadcom +3.1%; Apple fell after earnings. https://www.reuters.com/business/retail-consumer/us-stock-futures-mixed-apple-slides-midterms-loom-2026-11-03/
+- Overnight: Nasdaq futures −2% on early Democratic midterm gains; bitcoin slipped (WSJ, unverified). https://www.wsj.com/livecoverage/stock-market-today-dow-sp-500-nasdaq-11-03-2026
+- ETF flows for 3 Nov not checked. Kalshi not checked (proxy refuses it).
