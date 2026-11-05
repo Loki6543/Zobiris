@@ -32,6 +32,44 @@
 - **AI concentration.** MSFT, TSM, GOOGL and MU share AI-investment risk, and CRM partly. Count them together against the 40% look-through cap.
 - **Selling order of alts.** The order is not established by an unrealised loss. The only forward test of the relative-strength rule (30 Oct event) went against it. Reducing crypto is the reason to sell, not which coin is down most.
 
+### Second correction, 5 Nov 2026
+
+**Venue.**
+- Kraken lists traditional US stocks, including CB, for eligible US clients. xStocks are a separate tokenized product that is unavailable to US users.
+- The 177-token list therefore does not define the account's stock universe. Account eligibility must be confirmed in the app.
+- BRK-B is an alternative to Chubb, not a required replacement.
+- Zero trades on a tokenized market say nothing about liquidity in the ordinary shares. xStock prices are used here only as price proxies; they matched Reuters to within 1%.
+
+**PYPL cash-flow definition.**
+- FMP's 12.5% yield is *ordinary* free cash flow: operating cash flow minus capex over the trailing four quarters, $6.30bn, measured on a stale market cap.
+- That is not PayPal's *adjusted* FCF, which excludes the timing of buy-now-pay-later loan receivables. Q3 adjusted FCF was $2.05bn, against $1.43bn ordinary.
+- At $60.55 with 849M shares (30 Sep), market cap is about $51.4bn:
+  - ordinary FCF yield: 12.3%;
+  - FCF minus stock compensation ($5.32bn): 10.4%.
+
+**PYPL sensitivity.**
+- The range covers 16 combinations: discount rate 8–11%, terminal growth 2–3%, FCF with or without stock compensation, and net debt measured as $6.3bn (cash only) or as $1.6bn net cash (including investments).
+- Implied 10-year growth runs from −9.3% to +1.4% a year.
+- The conclusion "the price assumes roughly flat-to-shrinking cash flow" holds across the grid. Any single figure, such as −2%, depends on the assumptions chosen.
+
+**Alt funding order.**
+- Rank by current outlook and portfolio contribution, not by purchase loss.
+- Measured on Kraken daily data (90-day volatility and beta; 180-day risk share):
+
+| Coin | Share of crypto risk | Share of crypto weight | Beta to BTC | 30-day move | 90-day move |
+|---|---|---|---|---|---|
+| NEAR | 18.3% | 11.7% | 1.52 | −22% | +148% |
+| COMP | 8.6% | 10.9% | 0.99 | −17% | +21% |
+| ATOM | 8.5% | 10.7% | 0.83 | −15% | +12% |
+
+- NEAR reduces portfolio risk most per dollar sold. ATOM and COMP are close.
+- Catalysts and fundamentals were not checked.
+
+**Proposed rules (not protective levels).** Each needs a horizon and is scored afterwards. A stop can fill below its level when the price gaps.
+- **PYPL:** two consecutive daily closes below $55 before the Q4 report (about early Feb 2027) trigger a thesis review, not an automatic sale.
+- **ANET:** a weekly close above $170 by 4 Dec 2026, plus a valuation check that is not yet done. Otherwise, drop the idea.
+- **MSFT:** reserve limits at $530 and $510, reviewed on 31 Dec 2026.
+
 ## 1. The short version
 
 This morning's re-evaluation left most of the stock budget in cash. This version puts the budget to work, in four roles:
