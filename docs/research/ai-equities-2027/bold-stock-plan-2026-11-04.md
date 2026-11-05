@@ -112,6 +112,22 @@
   - MSFT's 4 Nov regular-session low was $542.30, so a $530 limit would not have filled. The $530 print appeared only on the 24/7 tokenized market.
   - TSM closed at $395.75 on 4 Nov, after a low of $391.61.
 
+### Decision record, 5 Nov 2026: TSM second tranche (conditional)
+
+- **Signal.** A weekly close above $412 on the regular US session.
+  - "Weekly close" means the last trading day of the week.
+  - The week of 21–25 Dec closes on Thu 24 Dec, an early close. Fri 25 Dec is a market holiday.
+- **Maximum price.** It is set fresh after the signal, not as a buy at the next open. The limit is the lower of:
+  - the signal-week close +2%;
+  - $439, the reverse-DCF price at which implied growth is 10% (r = 9%, `reverse_dcf_2026-11-04.py`).
+
+  The $439 figure is to be rechecked once the debt-treatment fix is applied.
+- **Order life.** The limit lasts the following week only. If unfilled, it is not chased; a later signal starts a new attempt.
+- **Deadline.** The signal and the fill must both happen by 31 Dec 2026. Otherwise the tranche stays in cash and is reviewed.
+- **Execution note.** A buy limit fills at the limit or lower; it does not guarantee any particular price.
+  - Earlier "≈$386" figures were 24/7 tokenized-market prices, not exchange premarket quotes.
+  - Actual fills are confirmed from brokerage order history.
+
 ## 1. The short version
 
 This morning's re-evaluation left most of the stock budget in cash. This version puts the budget to work, in four roles:
