@@ -85,6 +85,12 @@
   - **(A) FCFE.** Ordinary FCF ($6.299bn, after interest) minus stock compensation ($0.977bn: 210 + 259 + 275 + 233m) is discounted as equity value, with no debt adjustment. At 9%, implied growth is −3.6% / −4.6% (terminal 2% / 3%).
   - **(B) FCFF.** Adds back after-tax interest ($0.426bn TTM at 21% tax = $0.337bn), discounts to enterprise value, then subtracts net debt of $6.31bn (cash only). At 9%: −2.9% / −3.9%. Subtracting net cash of $1.6bn instead (including investments) gives −4.9% / −5.9%.
 - **Range:** −7.9% to +0.5% across 8–11% discount rates.
+- **Discount-rate pairing (added 5 Nov).**
+  - FCFE should be discounted at the cost of equity (ke), and FCFF at WACC.
+  - Inputs: equity $51.4bn; debt $13.5bn; pre-tax cost of debt 3.2% (interest paid ÷ debt) or an assumed 5.5%; tax 21%.
+  - With ke from 9% to 12%, WACC runs from 7.65% to 10.41%.
+  - Implied growth: FCFE at ke from −4.6% to +1.2%; FCFF at WACC from −6.8% to −0.5%.
+  - The PYPL beta was not fetched, so ke is an assumption.
 - **Known limitation:** the original `reverse_dcf.py` mixes after-interest FCF with a net-debt deduction. That is small for net-cash firms but should be fixed before the gate is reused.
 
 **ANET entry check.**
