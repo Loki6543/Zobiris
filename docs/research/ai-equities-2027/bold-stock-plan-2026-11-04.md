@@ -6,6 +6,32 @@
 
 **Prices.** Kraken xStocks around 16:00–17:00Z on 4 Nov.
 
+## Correction, 5 Nov 2026 (after owner review)
+
+- **UNH and MU are moved to *pending research*.**
+  - UNH rested on one FMP metric set plus election news.
+  - MU had no valuation data.
+  - Neither gets limit-price backing until a full company check is done.
+- **PYPL is added as an investigated candidate.**
+  - Its price implies free cash flow falling about 2% a year, at a 9% discount rate (FMP TTM: FCF yield 12.5%, EV/FCF 9.0).
+  - Q3 release: buybacks reduced the share count by about 11% over the trailing year. Branded checkout grew only 1–2%. A downgrade on 4 Nov set a $63 target.
+- **Chubb is not listed as a Kraken xStock.** BRK-B is the tradable diversifier there.
+- **Every "entry level" below the current price is a resting limit order, not a purchase.**
+- **Stress figures are conditional scenarios, not loss limits.** Assumed declines by asset class:
+
+| Asset class | AI-centred bust | Rate / valuation shock | Harsher stress |
+|---|---|---|---|
+| Platforms | −45% | −25% | −60% |
+| Suppliers | −60% | −35% | −75% |
+| Other equities | −25% | −15% | −40% |
+| Gold | 0% | −10% | 0% |
+| Crypto | −70% | −45% | −80% |
+| Cash | 0% | +3% | 0% |
+
+  Correlations can rise in a crash, so actual losses can exceed these.
+- **AI concentration.** MSFT, TSM, GOOGL and MU share AI-investment risk, and CRM partly. Count them together against the 40% look-through cap.
+- **Selling order of alts.** The order is not established by an unrealised loss. The only forward test of the relative-strength rule (30 Oct event) went against it. Reducing crypto is the reason to sell, not which coin is down most.
+
 ## 1. The short version
 
 This morning's re-evaluation left most of the stock budget in cash. This version puts the budget to work, in four roles:
