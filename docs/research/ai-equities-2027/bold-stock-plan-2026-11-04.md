@@ -122,12 +122,13 @@
 
 - **Signal.** A weekly close above $412 on the regular US session.
   - "Weekly close" means the last trading day of the week.
-  - The week of 21–25 Dec closes on Thu 24 Dec, an early close. Fri 25 Dec is a market holiday.
+  - The week of 21–25 Dec closes on Thu 24 Dec, an early close at 1 p.m. Eastern (11 a.m. Arizona, 18:00 UTC). Fri 25 Dec is a market holiday.
+  - That 24 Dec close is the **last eligible signal**: a fill is still possible in the 28–31 Dec sessions.
 - **Maximum price.** It is set fresh after the signal, not as a buy at the next open. The limit is the lower of:
   - the signal-week close +2%;
   - $439, the reverse-DCF price at which implied growth is 10% (r = 9%, `reverse_dcf_2026-11-04.py`).
 
-  The $439 figure is to be rechecked once the debt-treatment fix is applied.
+  The **$439 ceiling is provisional** until the corrected valuation model (consistent debt and interest treatment, with FCFE at the cost of equity or FCFF at WACC) supports it.
 - **Order life.** The limit lasts the following week only. If unfilled, it is not chased; a later signal starts a new attempt.
 - **Deadline.** The signal and the fill must both happen by 31 Dec 2026. Otherwise the tranche stays in cash and is reviewed.
 - **Execution note.** A buy limit fills at the limit or lower; it does not guarantee any particular price.
