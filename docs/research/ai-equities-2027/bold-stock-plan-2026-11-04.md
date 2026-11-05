@@ -70,6 +70,19 @@
 - **ANET:** a weekly close above $170 by 4 Dec 2026, plus a valuation check that is not yet done. Otherwise, drop the idea.
 - **MSFT:** reserve limits at $530 and $510, reviewed on 31 Dec 2026.
 
+### Third correction, 5 Nov 2026
+
+- **Chubb.** CB (ordinary shares) is an eligible option on Kraken for eligible US clients. BRK-B remains the owner's chosen diversifier.
+- **Cash interest.** The +3% applies only over a 12-month holding period. For an immediate shock, cash is 0%.
+- **TSM second tranche.** One strategy is chosen: confirmation, not the $390 limit.
+  - The trigger is a Friday close above $412, followed by a limit buy the next session, by 31 Dec 2026.
+  - Reason: the first tranche already buys weakness. A $390 limit would probably fill on the same day, which would remove the staging.
+- **BRK-B limits.** Two steps at $560 and $545, valid to 31 Dec 2026. They sit near the 2–3 Nov highs and the 28–30 Oct range.
+  - BRK-B closed at $579.09 on 4 Nov (+4%), after rising about 16% from its 30 Sep close of $497.95.
+- **Fill check against exchange data (Twelve Data).**
+  - MSFT's 4 Nov regular-session low was $542.30, so a $530 limit would not have filled. The $530 print appeared only on the 24/7 tokenized market.
+  - TSM closed at $395.75 on 4 Nov, after a low of $391.61.
+
 ## 1. The short version
 
 This morning's re-evaluation left most of the stock budget in cash. This version puts the budget to work, in four roles:
