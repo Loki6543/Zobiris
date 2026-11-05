@@ -130,6 +130,7 @@
   - $439, the reverse-DCF price at which implied growth is 10% (r = 9%, `reverse_dcf_2026-11-04.py`).
 
   The **$439 ceiling is provisional** until the corrected valuation model (consistent debt and interest treatment, with FCFE at the cost of equity or FCFF at WACC) supports it.
+  **Review, 5 Nov:** `valuation-gate-v2-2026-11-05.md` does not support $439. The 10%-growth ceiling is $427 under a flat 9% rate, or $358 under beta-based rates (range $292–$420). The owner chooses the convention before this rule can be used.
 - **Order life.** The limit lasts the following week only. If unfilled, it is not chased; a later signal starts a new attempt.
 - **Deadline.** The signal and the fill must both happen by 31 Dec 2026. Otherwise the tranche stays in cash and is reviewed.
 - **Execution note.** A buy limit fills at the limit or lower; it does not guarantee any particular price.

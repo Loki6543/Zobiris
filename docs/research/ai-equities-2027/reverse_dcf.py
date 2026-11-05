@@ -1,3 +1,5 @@
+"""SUPERSEDED 5 Nov 2026 by reverse_dcf_v2.py: v1 discounts after-interest FCF at one rate and also
+subtracts net debt, and uses 9% as both cost of equity and WACC. Kept for reproducing the 28 Oct gate."""
 """Reverse DCF: what 10-year annual FCF growth does today's price require?
 Inputs are TTM cash flows (FMP quarterly statements; AVGO from Yahoo TTM) and 28 Oct 2026
 closes (Yahoo). $bn. Model: FCF grows at g for 10 years, then 3% forever; discounted at r.
