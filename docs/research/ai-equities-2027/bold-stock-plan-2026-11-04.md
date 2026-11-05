@@ -52,22 +52,51 @@
 - Implied 10-year growth runs from −9.3% to +1.4% a year.
 - The conclusion "the price assumes roughly flat-to-shrinking cash flow" holds across the grid. Any single figure, such as −2%, depends on the assumptions chosen.
 
-**Alt funding order.**
-- Rank by current outlook and portfolio contribution, not by purchase loss.
-- Measured on Kraken daily data (90-day volatility and beta; 180-day risk share):
+**Alt funding order (method recorded 5 Nov).**
 
-| Coin | Share of crypto risk | Share of crypto weight | Beta to BTC | 30-day move | 90-day move |
-|---|---|---|---|---|---|
-| NEAR | 18.3% | 11.7% | 1.52 | −22% | +148% |
-| COMP | 8.6% | 10.9% | 0.99 | −17% | +21% |
-| ATOM | 8.5% | 10.7% | 0.83 | −15% | +12% |
+*Data and method:*
+- Kraken public daily OHLC, UTC closes, up to the last complete bar (4 Nov). The in-progress day is excluded.
+- Daily log returns over 90- and 180-day windows.
+- Two covariance estimators: sample (n−1) and EWMA with λ = 0.94 and zero mean.
+- Risk contribution = wᵢ·cov(rᵢ, r_p)/var(r_p) within the crypto sleeve, using static current weights. The owner's weights are not recorded here.
 
-- NEAR reduces portfolio risk most per dollar sold. ATOM and COMP are close.
+*Weight-independent statistics:*
+
+| Coin | Correlation with SOL | Beta to BTC | Annualised volatility |
+|---|---|---|---|
+| NEAR | 0.52–0.76 | 1.24–2.23 | 117–128% |
+| COMP | 0.45–0.50 | 0.94–1.10 | 69–88% |
+| ATOM | 0.44–0.61 | 0.84–1.17 | 69–77% |
+
+*Risk contribution per unit of weight:*
+- NEAR: 1.56–2.01.
+- COMP: 0.79–0.92.
+- ATOM: 0.79–1.00.
+
+*Reading:*
+- NEAR ranks first on every window and estimator.
+- COMP and ATOM are not separable. Recent-weighted (EWMA) data put ATOM slightly ahead.
 - Catalysts and fundamentals were not checked.
+
+**PYPL model specification.**
+- **Horizon and growth:** a 10-year explicit horizon at constant growth from the trailing four-quarter base, followed by a Gordon terminal value at 2% or 3%.
+- **Reinvestment:** growth is assumed to need no reinvestment beyond the capex already deducted. That is an optimistic simplification.
+- **Debt and interest, two consistent versions:**
+  - **(A) FCFE.** Ordinary FCF ($6.299bn, after interest) minus stock compensation ($0.977bn: 210 + 259 + 275 + 233m) is discounted as equity value, with no debt adjustment. At 9%, implied growth is −3.6% / −4.6% (terminal 2% / 3%).
+  - **(B) FCFF.** Adds back after-tax interest ($0.426bn TTM at 21% tax = $0.337bn), discounts to enterprise value, then subtracts net debt of $6.31bn (cash only). At 9%: −2.9% / −3.9%. Subtracting net cash of $1.6bn instead (including investments) gives −4.9% / −5.9%.
+- **Range:** −7.9% to +0.5% across 8–11% discount rates.
+- **Known limitation:** the original `reverse_dcf.py` mixes after-interest FCF with a net-debt deduction. That is small for net-cash firms but should be fixed before the gate is reused.
+
+**ANET entry check.**
+- A weekly close above $170 alone is not a fresh breakout:
+  - closes were 172.37 (23 Oct) and 168.86 (30 Oct);
+  - 4 Nov's earnings spike reached $188.53, then faded to $178.48.
+- **Proposed entry condition:** a weekly close above $188.53 by 4 Dec 2026, *and* a valuation check. Statements for ANET are not available on the current data plan.
+- **Until then:** not actionable.
 
 **Proposed rules (not protective levels).** Each needs a horizon and is scored afterwards. A stop can fill below its level when the price gaps.
 - **PYPL:** two consecutive daily closes below $55 before the Q4 report (about early Feb 2027) trigger a thesis review, not an automatic sale.
-- **ANET:** a weekly close above $170 by 4 Dec 2026, plus a valuation check that is not yet done. Otherwise, drop the idea.
+- **ANET:** superseded by the entry check above.
 - **MSFT:** reserve limits at $530 and $510, reviewed on 31 Dec 2026.
 
 ### Third correction, 5 Nov 2026
