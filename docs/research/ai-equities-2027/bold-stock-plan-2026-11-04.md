@@ -74,7 +74,7 @@
 - ATOM: 0.79–1.00.
 
 *Reading:*
-- NEAR ranks first on every window and estimator.
+- NEAR ranks first on every window and estimator. Under the tested settings, reducing NEAR would reduce estimated portfolio risk and overlap with SOL. This is a risk-budget decision, not a prediction of which coin performs worst.
 - COMP and ATOM are not separable. Recent-weighted (EWMA) data put ATOM slightly ahead.
 - Catalysts and fundamentals were not checked.
 
@@ -91,6 +91,7 @@
   - With ke from 9% to 12%, WACC runs from 7.65% to 10.41%.
   - Implied growth: FCFE at ke from −4.6% to +1.2%; FCFF at WACC from −6.8% to −0.5%.
   - The PYPL beta was not fetched, so ke is an assumption.
+- **Scoped conclusion.** Under these assumptions, the price is consistent with roughly flat or shrinking cash flow. That supports investigating PYPL as a value candidate. The assumed required returns and the reinvestment treatment still matter.
 - **Known limitation:** the original `reverse_dcf.py` mixes after-interest FCF with a net-debt deduction. That is small for net-cash firms but should be fixed before the gate is reused.
 
 **ANET entry check.**
