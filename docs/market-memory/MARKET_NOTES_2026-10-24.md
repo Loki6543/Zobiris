@@ -243,3 +243,17 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
 - US 3 Nov: S&P 500 +0.36% (7,568.92), Nasdaq +0.83%, Dow −0.38%; Nvidia +2.3%, Broadcom +3.1%; Apple fell after earnings. https://www.reuters.com/business/retail-consumer/us-stock-futures-mixed-apple-slides-midterms-loom-2026-11-03/
 - Overnight: Nasdaq futures −2% on early Democratic midterm gains; bitcoin slipped (WSJ, unverified). https://www.wsj.com/livecoverage/stock-market-today-dow-sp-500-nasdaq-11-03-2026
 - ETF flows for 3 Nov not checked. Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-05 (13:45Z)
+- BTC (Kraken) $79,586, −1.31% vs 48h high. No new drop event. No new scores.
+- Least fallen vs 30-day high: ZEC −7.1%, BCH −9.2%, ETH −12.2%. Most fallen: SAND −53.5%, TIA −41.4%, PYTH −35.2%.
+- Running: Claude 8 scored, hit rate 38%, Brier 0.193. Owner 3 scored, hit rate 33%, Brier 0.335. No open BTC calls.
+- Polymarket (gamma API, 13:45Z):
+  - November: touch ↑$80k already hit; ↑$85k 47%, ↓$75k 52%.
+  - Nov 2–8: ↑$82k 36%, ↓$76k 14%.
+  - Above $80k on 7 Nov: 46%.
+  - 2026: ↓$70k 35%, ↑$100k 14%.
+- US 4 Nov close: S&P 500 +1.58% (7,688.62), Nasdaq +1.44%, Dow +3.03% (best day since Apr 2025) after the Democratic sweep. Oil −8%. NVDA −3%, MU −7.0% ($795.23). 10-year yield 4.93%. https://www.cnbc.com/2026/11/03/stock-market-today-live-updates.html
+- BTC 4 Nov: low about $75.6k, close about $80.4k (Exa market data, unverified against Kraken). https://exa.ai/library/markets/crypto/BTC?date=2026-11-04&view=daily
+- Bitfinex (via CNBC, reported): the rebound is driven by short covering, not spot demand. Futures OI 701.5k BTC (highest since 22 Sep). Funding about 11% annualised. ETF outflows have pushed year-to-date net flows slightly negative (no daily figure; unverified).
+- Kalshi not checked (proxy refuses it).
