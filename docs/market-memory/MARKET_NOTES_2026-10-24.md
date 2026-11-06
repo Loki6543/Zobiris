@@ -257,3 +257,30 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
 - BTC 4 Nov: low about $75.6k, close about $80.4k (Exa market data, unverified against Kraken). https://exa.ai/library/markets/crypto/BTC?date=2026-11-04&view=daily
 - Bitfinex (via CNBC, reported): the rebound is driven by short covering, not spot demand. Futures OI 701.5k BTC (highest since 22 Sep). Funding about 11% annualised. ETF outflows have pushed year-to-date net flows slightly negative (no daily figure; unverified).
 - Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-06 (13:45Z): NEW BTC DROP EVENT
+- **New drop event 2026-11-06 00:00.** BTC (Kraken) $75,933, −5.84% vs 48h high (48h move −5.49%). The forward test logged it to `post-btc-drop-forward.jsonl`; it is scored at 72h.
+  - Least fallen: ZEC, BCH, INJ, UNI, ETH, XRP, DASH.
+  - Most fallen: ZRO, FIL, PYTH, NEAR, GALA, TIA, SAND.
+- No new scores. Claude 8 scored, hit rate 38%, Brier 0.193. Owner 3 scored, hit rate 33%, Brier 0.335.
+- **Cause (reported).** The 5 Nov AI-trade rout after the Democratic sweep, on fears of a slower data-centre buildout:
+  - Nasdaq about −5.5%; Nasdaq-100 worst day since 2020 (Kobeissi, via CryptoSlate); SOX about −10% intraday (FXStreet).
+  - Crypto liquidations $1.09–1.25bn in 24h, mostly longs (CoinGlass, via The Block / The Moon Show).
+  - Miners −15–20% (CoinDesk).
+  - Sources: https://www.coindesk.com/markets/2026/11/05/bitcoin-crypto-stocks-caught-in-ai-trade-meltdown-but-wintermute-trader-sees-glass-half-full ; https://www.theblock.co/news/markets/2026-11-05-bitcoin-erases-post-election-gains-wall-street-selloff-liquidations-435434
+- **ETF flows (Farside, via CryptoSlate).** BTC ETFs −$430.2M on 5 Nov (IBIT −$105M, FBTC −$199.9M); ETH ETFs −$99.9M. IBIT's 5-session outflow is $1.04bn; November to date −$869.8M. https://cryptoslate.com/bitcoin-and-ethereum-etfs-lose-530-million-in-one-day-as-3-trillion-wall-street-wipeout-rattles-crypto/
+- **Jobs (6 Nov, BLS via CNBC).** October payrolls +165k against an estimate of 59k; unemployment 4.1% against 4.2%; September revised to +60k. Odds of a December Fed hike were about 70% before the release (CoinDesk); the post-release odds were not checked. https://www.cnbc.com/2026/11/06/jobs-report-october-2026.html
+- **Regulation (reported, FXStreet).** Democrats are drafting a crypto market-structure bill expanding SEC oversight.
+- **Polymarket (13:45Z):**
+  - November: ↓$75k 90%, ↓$72.5k 66%, ↓$70k 43%; ↑$85k 23%.
+  - Nov 2–8: ↓$74k 42%.
+  - Above $76k on 7 Nov: 44%.
+  - 2026: ↓$70k 56% (from 35% yesterday).
+- **Plan-stock levels on 5 Nov (Twelve Data, regular session).** These are levels traded, not confirmed fills; check order history.
+  - TSM: open 379.75, low 351.19, close 353.10 (−10.8%).
+  - MSFT: low 532.68 (the $530 limit was not reached).
+  - GOOGL: low 277.07 ($278 reached).
+  - PYPL: low 58.32 ($60.35 reached); close 58.96.
+  - BRK-B: low 571.10.
+  - GLD: low 373.42.
+- Kalshi not checked (proxy refuses it).
