@@ -6,6 +6,40 @@
 
 **Prices.** Kraken xStocks around 16:00–17:00Z on 4 Nov.
 
+## Biggest decliners and the "after a crash" question, 7 Nov 2026
+
+**Event study.** QQQ daily data from Twelve Data, 2007 to 6 Nov 2026. Events are −4.5% days, the first in any 20 days; n = 15, a small sample.
+
+| Measure | After a −4.5% day | All days |
+|---|---|---|
+| Up after 21 trading days | 43% (median −1.6%) | 66% |
+| Further −5% within 63 days | 86% | 46% |
+| Further −10% within 63 days | 50% | 22% |
+| Up after 126 days | 85% (median +14.5%) | 81% (median +10%) |
+
+- When the drop came within 15% of the 1-year high (n = 7, excluding the current event), 126-day returns were up 7 times out of 7, median +28.8%.
+- **Reading:** a big drop raises near-term risk, because volatility clusters, and has preceded good 6-month returns. That argues for staged buying, not lump-sum.
+
+**Weekly decliners.** Tokenized price proxies, week to 6 Nov:
+- MRVL −28%, TER −28%, SNDK −28%, DELL −26%, VRT −25%, MU −21%, KLAC −16%, AMAT −16%, SK Hynix −15%, INTC −13%.
+- They are concentrated in AI hardware: memory, chip equipment, networking and data-centre suppliers.
+
+**Valuation of the decliners.**
+- Source: Yahoo via Alexandria, 6 Nov. FCF here is Yahoo's levered FCF *before* deducting stock compensation, so these figures are optimistic.
+
+| Stock | FCF yield | Forward P/E | Implied growth (beta-based / flat 9%) | Note |
+|---|---|---|---|---|
+| MU | 3.7% | 3.3 | 15.6% / 8.2% | Trailing earnings are at a memory-cycle peak (revenue +379% y/y), so the low P/E is a classic cyclical trap. |
+| AMAT | 1.2% | 17.9 | 28.7% / 24.2% | Reports 12 Nov. |
+| KLAC | 1.6% | 19.5 | 23.6% / 20.4% | |
+| MRVL | 1.9% | 19.2 | 25.9% / 17.9% | |
+| AMD | 1.0% | — | about 27% at flat 9% | From FMP. |
+
+**Conclusion:**
+- The crash made AI hardware cheaper, but outside TSM it did not make it cheap on cash flow.
+- Memory looks cheap only if peak-cycle earnings persist.
+- Contrarian exposure, if any, is better taken through a diversified semiconductor ETF on a limit ladder than through single names. No leveraged ETFs (no-leverage rule).
+
 ## Plan update, 7 Nov 2026 (after the 5 Nov AI rout)
 
 **Inputs.**
