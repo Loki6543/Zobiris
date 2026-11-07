@@ -6,6 +6,50 @@
 
 **Prices.** Kraken xStocks around 16:00–17:00Z on 4 Nov.
 
+## Year-to-date AI stock performance (31 Dec 2025 → 6 Nov 2026)
+
+**Sources:**
+- Twelve Data monthly bars: TSM, MU, ASML, AMAT, AMD, KLAC, VRT, CRWV.
+- FMP end-of-day: ADBE, AMD.
+- Tokenized price proxies (Kraken) for the rest, marked *. Their Friday prints may differ slightly from the official close.
+
+**Down for the year:**
+
+| Stock | Year to date | From 52-week high |
+|---|---|---|
+| ORCL* | −39.8% | about −65% |
+| CRWV | −35.2% | −66% |
+| ADBE | −31.6% | — |
+| CRM* | −18.1% | −19% |
+| IBM* | −16.0% | — |
+| AVGO* | −14.9% | about −42% |
+| PLTR* | −10.2% | about −24% |
+| GOOGL* | −8.5% | about −30% |
+| META* | −4.7% | about −22% |
+
+**Still up for the year despite large falls from their highs:**
+
+| Stock | Year to date | From high |
+|---|---|---|
+| NVDA* | +1.0% | about −23% |
+| MSFT* | +10.2% | about −6% |
+| AMZN* | +12.1% | |
+| VRT | +12.9% | −52% |
+| KLAC | +14.0% | −55% |
+| TSM | +23.5% | −23% |
+| AMAT | +29.5% | −55% |
+| ASML | +33.2% | −29% |
+| AMD | +109.7% | −32% |
+| MU | +141.8% | −45% |
+
+**Reading:**
+- The year's losers are software and AI-disruption names plus the debt-funded AI builders (ORCL, CRWV).
+- The hardware winners gave back big gains but remain up for the year.
+
+**ADBE check** (FMP TTM): FCF $10.6bn; stock compensation $2.07bn; FCF minus stock compensation yield 9.1%; ROIC 37%.
+- Implied 10-year growth is −3.0% to +0.7% (8–11% discount rates, terminal 3%). Like PYPL, the price assumes shrinking cash flow.
+- Status: **candidate for full research**, not yet backed (trend and AI-disruption risk unchecked).
+
 ## Biggest decliners and the "after a crash" question, 7 Nov 2026
 
 **Event study.** QQQ daily data from Twelve Data, 2007 to 6 Nov 2026. Events are −4.5% days, the first in any 20 days; n = 15, a small sample.
