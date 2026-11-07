@@ -6,6 +6,34 @@
 
 **Prices.** Kraken xStocks around 16:00–17:00Z on 4 Nov.
 
+## Plan update, 7 Nov 2026 (after the 5 Nov AI rout)
+
+**Inputs.**
+- Friday 6 Nov closes from Twelve Data; the corrected gate from `reverse_dcf_v2.py`.
+- 40-week trend from Friday closes of the tokenized price proxies (TSM has 34 weeks of history).
+- Implied growth is shown as beta-based / flat 9%.
+
+**Per stock:**
+
+| Stock | Close | Implied growth | Trend vs 40-week average | Reading |
+|---|---|---|---|---|
+| MSFT | 530.61 | 9.2% / 9.2% | +20.7% | Passes both checks. Keep the lower limit; one more step is optional. |
+| PYPL | 59.24 | flat to shrinking cash flow | +16.4% | Passes. Hold; $55 review rule. |
+| BRK-B | ~571 | not modelled (diversifier) | +14.0% | Fell about 1% on 5 Nov against −4.4% for the S&P 500. The diversifier worked. |
+| TSM | 375.44 | 10.7% / 8.3% | −1.4% and −8.4% (two weeks below) | Borderline on value; trend negative. No adds until the second-tranche signal (close above $412 ≈ its average). |
+| GOOGL | 284.78 | 10.5% / 9.3% | two weeks below (−16.9%, −15.5%) | No adds. |
+| META | 610.15 | 5.5% / 4.2% | two weeks below (−1.9%) | Still fails operating leverage. |
+| NVDA | 186.64 | 19.8% / 12.8% | −7.8% | Fails the gate. Wait for earnings. |
+| AMZN | 259.30 | 16.9% / 14.0% | — | Fails. |
+| AVGO | 293.69 | 17.8% / 14.8% | — | Fails. |
+
+**Market:**
+- QQQ made its first weekly close below its 40-week average (−3.4%).
+- SPY is +1.0% above its average.
+- SMH is −18.8% below its average.
+
+**Rule applied:** valuation says *what*; trend and staging say *when*. Names that fail either check get no new adds.
+
 ## Correction, 5 Nov 2026 (after owner review)
 
 - **UNH and MU are moved to *pending research*.**
