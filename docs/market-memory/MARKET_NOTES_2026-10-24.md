@@ -284,3 +284,28 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - BRK-B: low 571.10.
   - GLD: low 373.42.
 - Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-07 (13:44Z, Saturday)
+- BTC (Kraken) $75,802, −4.75% vs 48h high. No new drop event; the 6 Nov event's forward test scores at 72h (9 Nov 00:00). No new scores.
+- Least fallen vs 30-day high: ZEC −8.1%, UNI −10.8%, ETH −13.1%. Most fallen: TIA −42.5%, SAND −41.7%, NEAR −38.4%.
+- **US 6 Nov.** S&P 500 +0.31% (7,376.86), Nasdaq +1.09% (24,579.42, in correction), Dow −0.46%.
+  - Week: S&P −2.7% (worst since June), Nasdaq −3.4%.
+  - 5 Nov was revised to: Nasdaq −5.5%, S&P −4.4%, Dow −3.4%.
+  - NVDA +2.8% to $186.64; MU +5% after −17% on Thursday; SOXX +3.5%.
+  - https://www.cnbc.com/2026/11/05/stock-market-today-live-updates.html ; https://etf.net/news/chips-partly-rebound-hike-odds-rise-2026-11-06
+- **Fed.** CME FedWatch December hike odds about 77% after the jobs beat (from about 70%). Fed funds 3.75–4.00%. CPI and PPI are due next week.
+  - 10-year 4.86%, 2-year 4.51%.
+  - Earnings +3.1% y/y, below 3.7% CPI. Involuntary part-time workers +339k.
+  - https://www.coindesk.com/tech/2026/11/06/live-updates-nasdaq-100-futures-rally-points-to-stock-market-respite
+- **BTC.** Dipped to about $75,070 on 6 Nov (FinancialMarkets.com, unverified); fifth straight weekly loss.
+  - COIN hit a 52-week low of $131.55.
+  - Miners rallied with chips: IREN +20%, RIOT +13%.
+  - ETF flows for 6 Nov not yet found.
+- **TSM 6 Nov** close $375.44 (low $367.95, Twelve Data).
+  - Above the proposed $360 review level, so that rule was not triggered.
+  - Below $412, so no second-tranche signal.
+- **Polymarket (13:44Z):**
+  - November: ↓$75k touched (resolved); ↓$72.5k 58%, ↓$70k 41%; ↑$85k 23%.
+  - Above $76k on 13 Nov: 49%.
+  - 2026: ↓$70k 51%, ↑$100k 9%.
+- Kalshi not checked (proxy refuses it).
