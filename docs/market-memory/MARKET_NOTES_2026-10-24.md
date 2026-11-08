@@ -309,3 +309,18 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - Above $76k on 13 Nov: 49%.
   - 2026: ↓$70k 51%, ↑$100k 9%.
 - Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-08 (13:44Z, Sunday)
+- BTC (Kraken) $75,834. No new drop event. No new scores (Claude 38% / Brier 0.193; owner 33% / 0.335).
+  - The 6 Nov event's 72h forward score falls due at the next check after 9 Nov 00:00.
+- **Monitor fix.** The rolling 30-day window re-detected the 30 Oct and 6 Nov drops at shifted hours (13:00) and tried to log them as new events; the 30 Oct copy had empty rankings.
+  - The duplicates were reverted.
+  - `drop_monitor.scan` now treats any trigger within 72h of a logged event as that event.
+- Least fallen vs 30-day high: ZEC −9.0%, UNI −11.5%, ETH −13.2%. Most fallen: TIA −45.0%, SAND −40.3%, FIL −39.8%.
+- **Polymarket (13:44Z):**
+  - November: ↓$72.5k 59%, ↓$70k 41%; ↑$82.5k 36%, ↑$85k 23%.
+  - Above $76k on 13 Nov: 51%.
+  - 2026: ↓$70k 55%, ↑$100k 9%.
+  - https://gamma-api.polymarket.com/events?tag_slug=bitcoin
+- **Weekend; no US session.** Next: October CPI on 10 Nov and PPI on 13 Nov (BLS schedule, as cited in the 7 Nov cross-asset update). These are the gate for v3's Phase 3.
+- Kalshi not checked (proxy refuses it).

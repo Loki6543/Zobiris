@@ -111,8 +111,11 @@ def scan(series, ledger_path, now=None):
     drops = [e for e in be.find_events(idx, times) if e['type'] == 'BTC_DROP']
     report['drops_in_window'] = [e['t'] for e in drops]
     report['new_events'], report['new_scores'] = [], []
+    dt = lambda s: datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
     for e in drops:
-        if e['t'] in logged:
+        # Same drop re-detected at a shifted hour when the rolling 30-day window moves: treat any trigger within
+        # SCORE_H hours of an already-logged event as that event (fixes duplicate logging seen 8 Nov 2026).
+        if e['t'] in logged or any(abs((dt(e['t']) - dt(t)).total_seconds()) < SCORE_H * 3600 for t in logged):
             continue
         rank = ranking(idx, times, e['i'])
         top, bottom = quintiles(rank)
