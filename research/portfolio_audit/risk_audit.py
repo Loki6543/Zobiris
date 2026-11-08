@@ -25,6 +25,7 @@ BASE_CORR = {('plat','plat'):.65, ('sw','sw'):.7, ('plat','sw'):.6, ('plat','chi
  ('cr','cr'):.8, ('cr','plat'):.35, ('cr','idx'):.35, ('cr','chip'):.4, ('cr','sw'):.3, ('def','def'):.5,
  ('fin','plat'):.5, ('fin','sw'):.5, ('en','plat'):.2}
 DEFAULT_CORR, CRASH_CORR_ADD, CRASH_PROB, CRASH_DRIFT, CRASH_VOL_MULT, NU, CASH_RATE = .4, .25, .15, -.25, 1.3, 4, .04
+T_UP_CAP = 6.0
 
 def corr(names, crash):
     g = [MODEL[n][0] for n in names]; k = len(names); C = np.eye(k)
@@ -41,31 +42,50 @@ def corr(names, crash):
 def simulate(names, paths, rng):
     vol = np.array([MODEL[n][1] for n in names]); mu = np.array([MODEL[n][2] for n in names])
     hard = np.array([MODEL[n][0] in ('chip', 'cr') for n in names])
+    risky = np.array([MODEL[n][0] != 'gold' for n in names])
     out = np.zeros((paths, len(names))); crash = rng.random(paths) < CRASH_PROB
     for flag in (False, True):
         idx = np.where(crash == flag)[0]
         L = np.linalg.cholesky(corr(names, flag) + 1e-9*np.eye(len(names)))
         z = rng.standard_normal((len(idx), len(names))) @ L.T
         t = z / np.sqrt(rng.chisquare(NU, len(idx))/NU)[:, None] * np.sqrt((NU-2)/NU)
-        m = mu + (CRASH_DRIFT*(1+0.8*hard) if flag else 0)
+        t = np.minimum(t, T_UP_CAP)   # cap upside shocks: exp() of fat tails otherwise gives infinite-variance gains; loss tail untouched
+        m = mu + (CRASH_DRIFT*(1+0.8*hard)*risky if flag else 0)
         v = vol*(CRASH_VOL_MULT if flag else 1)
         out[idx] = np.clip(np.exp(m - .5*v**2 + v*t) - 1, -1, None)
     return out
 
+def selftest():
+    rng = np.random.default_rng(1); names = ['VOO', 'GLD', 'SOL']
+    R = simulate(names, 400000, rng)
+    sd = R.std(axis=0); assert 0.15 < sd[0] < 0.35, sd; assert sd[1] < sd[0] < sd[2], sd
+    c = np.corrcoef(R.T); assert abs(c[0, 1]) < 0.1, c   # gold uncorrelated by construction
+    D = {'A': {'base': 100, 'end': 50, 'lows': [40]}}
+    assert abs((D['A']['end']/D['A']['base']-1) + 0.5) < 1e-12
+    print('selftest ok: VOO sd %.3f, GLD sd %.3f, SOL sd %.3f, corr(VOO,GLD) %.3f' % (sd[0], sd[1], sd[2], c[0, 1]))
+
 def main():
     a = argparse.ArgumentParser(); a.add_argument('positions'); a.add_argument('data2022')
     a.add_argument('--seed', type=int, default=7); a.add_argument('--paths', type=int, default=200000)
-    x = a.parse_args(); P = json.load(open(x.positions)); D = json.load(open(x.data2022))
+    a.add_argument('--selftest', action='store_true')
+    x = a.parse_args()
+    if x.selftest: selftest()
+    P = json.load(open(x.positions)); D = json.load(open(x.data2022))
+    for st, pos in P['stages'].items():   # arithmetic checks
+        assert all(v >= 0 for v in pos.values()), st
+        assert sum(pos.values()) <= P['total'] + 1e-9, f'{st}: positions exceed total (negative cash)'
+        missing = [k for k in pos if k not in D or k not in MODEL]; assert not missing, (st, missing)
     T = P['total']; names = sorted({k for s in P['stages'].values() for k in s})
     R = simulate(names, x.paths, np.random.default_rng(x.seed))
-    print(f"seed {x.seed}, paths {x.paths}, crash prob {CRASH_PROB}, t df {NU}; model table: {MODEL}")
+    print(f"seed {x.seed}, paths {x.paths}, crash prob {CRASH_PROB}, t df {NU}, upside cap {T_UP_CAP}sd, crash corr +{CRASH_CORR_ADD}, crash drift {CRASH_DRIFT} (x1.8 chips/crypto, gold exempt), crash vol x{CRASH_VOL_MULT}; model table: {MODEL}")
     for st, pos in P['stages'].items():
         cash = T - sum(pos.values())
         cal = sum(v*((D[k]['end']/D[k]['base']-1) + D[k].get('div', 0)) for k, v in pos.items()) + cash*0.015
         low = sum(v*(min(D[k]['lows'])/D[k]['base']-1) for k, v in pos.items())
         w = np.array([pos.get(n, 0) for n in names])/T; p = (R @ w + cash/T*CASH_RATE)*100
         q5 = np.percentile(p, 5)
-        print(f"{st:28} 2022 calendar {cal/T*100:+6.1f}%  at-lows bound {low/T*100:+6.1f}% | "
+        st_pct = sum(v for k, v in pos.items() if MODEL[k][0] not in ('cr', 'gold'))/T*100
+        print(f"{st:28} stocks {st_pct:4.1f}% cash {cash/T*100:4.1f}% | 2022 calendar {cal/T*100:+6.1f}%  at-lows bound {low/T*100:+6.1f}% | "
               f"MC P(loss>24%) {np.mean(p < -24)*100:4.1f}%  5th {q5:+6.1f}%  1st {np.percentile(p,1):+6.1f}%  "
               f"CVaR95 {p[p <= q5].mean():+6.1f}%  median {np.median(p):+5.1f}%")
 
