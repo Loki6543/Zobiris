@@ -324,3 +324,33 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - https://gamma-api.polymarket.com/events?tag_slug=bitcoin
 - **Weekend; no US session.** Next: October CPI on 10 Nov and PPI on 13 Nov (BLS schedule, as cited in the 7 Nov cross-asset update). These are the gate for v3's Phase 3.
 - Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-09 (13:46Z)
+- BTC (Kraken) $74,820, −1.52% vs 48h high. No new drop event.
+  - The rolling-window re-detection of the 30–31 Oct drop was correctly ignored by the 8 Nov fix.
+  - Low $73,477 on 8 Nov, the lowest since 21 Aug; weekly close about $74,750, a fifth straight losing week (Blockhead, unverified).
+- **Forward test score: 6 Nov event, 72h, net of maker costs.**
+  - Least fallen −4.18%, most fallen −2.05%, **spread −2.13**.
+  - Second forward event; **both went against** the relative-strength hypothesis (30 Oct: −7.71).
+- Calls unchanged: Claude 8 scored, 38%, Brier 0.193; owner 3 scored, 33%, Brier 0.335.
+- **ETF flows (SoSoValue, via CoinDesk).** −$1.282bn last week, the largest weekly outflow since late June; year to date now −$914M.
+  - IBIT −$403M on 6 Nov (Blockhead).
+  - ETH ETFs −$365M, a sixth straight week.
+  - https://www.coindesk.com/daybook-us/2026/11/09/bitcoin-bulls-can-t-rely-on-etf-flows
+- **Strategy.** Bought 1,036 BTC for $81.9M at an average of $79,012 (2–8 Nov), funded by MSTR stock sales; it now holds 850,364 BTC at an average cost of $75,456. Spot is just below that cost. https://www.theblock.co/news/business/2026-11-09-connecting-the-dots-michael-saylor-strategy-bitcoin-436094
+- **Macro.**
+  - CME odds of a December hike about 77–80%.
+  - CPI is due 10 Nov at 8:30 ET; the nowcast is +0.2–0.3% m/m headline, about 0.2% core. Some October 12-month changes won't be published because of the 2025 shutdown data gap.
+  - New York Fed's Williams: inflation too high.
+  - The dollar had its biggest one-day gain in 5 months.
+  - S&P futures +0.6%; Taiwan +6%.
+  - NVDA about −4% premarket on CEO personal-conduct news (reported).
+  - https://www.blockhead.co/2026/11/09/bitcoin-enters-cpi-week-bruised-with-rates-ai-stocks-and-washington-all-pulling-the-same-way/
+- **Capitulation signal (CryptoQuant, via Blockhead; unverified).** 89% of short-term holders' exchange inflows were sent at a loss.
+- **Polymarket (13:46Z):**
+  - November: ↓$72.5k 71%, ↓$70k 51%; ↑$85k 17%.
+  - 9–15 Nov: ↓$72k 51%, ↓$70k 23%; ↑$78k 38%.
+  - Above $74k on 13 Nov: 58%.
+  - 2026: ↓$70k 60%.
+- **v3 triggers.** The BTC weekly close (about $74.75k) is above the $70–73k sell-the-rest trigger, so it was not hit; it is close.
+- Kalshi not checked (proxy refuses it).
