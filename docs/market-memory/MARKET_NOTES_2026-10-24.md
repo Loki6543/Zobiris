@@ -354,3 +354,24 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - 2026: ↓$70k 60%.
 - **v3 triggers.** The BTC weekly close (about $74.75k) is above the $70–73k sell-the-rest trigger, so it was not hit; it is close.
 - Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-10 (13:44Z, CPI day)
+- BTC (Kraken) $74,297, −2.2% vs 48h high. No new drop event. No new scores (Claude 38% / Brier 0.193; owner 33% / 0.335).
+  - About $73,600 after CPI (CoinDesk).
+- Least fallen vs 30-day high: UNI −11.6%, INJ −15.4%, DASH −17.2%. Most fallen: TIA −43.7%, FIL −39.8%, NEAR −39.5%.
+- **October CPI (BLS, via CoinDesk/CNBC): hotter than expected.**
+  - Headline +0.4% m/m against 0.3% expected (September 0.6%).
+  - Core +0.3% against 0.2% expected.
+  - No 12-month figures, because of the 2025 shutdown gap.
+  - Reaction: Nasdaq-100 futures −1.2%, S&P futures −0.5%, 10-year 4.93% (+6.5bp).
+  - https://www.coindesk.com/markets/2026/11/10/u-s-cpi-rose-stronger-than-expected-0-4-in-october-core-rate-rose-0-3
+- **Fed.** Governor Waller backed a December hike even on a soft CPI and opened the door to **50bp** if CPI was strong. Markets had a December hike fully priced before the print.
+- **US 9 Nov.** S&P 500 +2.35% (best day since 8 Apr), Nasdaq +2.74% to 25,253. NVDA closed −4%+ on CEO-scandal news (reported). https://www.cnbc.com/2026/11/09/stock-market-today-live-updates.html
+- **Upcoming.** PPI 13 Nov; Fed minutes 18 Nov; PCE 25 Nov (CoinDesk).
+- **Polymarket (13:44Z):**
+  - November: ↓$72.5k 80%, ↓$70k 56%; ↑$85k 12%.
+  - 9–15 Nov: ↓$72k 55%.
+  - Above $74k on 13 Nov: 49%.
+  - 2026: ↓$70k 67%.
+- **v3.** Phase 3 needed benign CPI and PPI, and the CPI condition has **failed**. Phases 0–2 are unaffected. The BTC weekly-close trigger ($70–73k) is still not hit; analysts cite $73k as key support (BRN, Bitget, reported).
+- Kalshi not checked (proxy refuses it).
