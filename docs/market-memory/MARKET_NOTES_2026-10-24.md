@@ -375,3 +375,24 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - 2026: ↓$70k 67%.
 - **v3.** Phase 3 needed benign CPI and PPI, and the CPI condition has **failed**. Phases 0–2 are unaffected. The BTC weekly-close trigger ($70–73k) is still not hit; analysts cite $73k as key support (BRN, Bitget, reported).
 - Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-11 (13:44Z)
+- BTC (Kraken) $73,818, −2.15% vs 48h high. No new drop event. No new scores (Claude 38% / Brier 0.193; owner 33% / 0.335).
+- Least fallen vs 30-day high: UNI −17.4%, INJ −17.5%, ETH −19.3%. Most fallen: TIA −43.0%, APE −37.9%, FIL −37.7%.
+- **US 10 Nov, after the hot CPI.**
+  - S&P 500 −0.38% (7,520.93); Nasdaq −0.74%; Dow −0.30%.
+  - 10-year 4.98% (+10bp); 2-year 4.73% (+17bp); dollar index (DXY) 102.25; gold −1.8% ($4,040).
+  - VIX 19.46, below 22 (the v3 Phase 3 VIX condition is met; the CPI condition failed).
+  - Sources: https://www.theclosingprint.net/2026/11/post-market-summary-2026-11-10/ ; https://www.afp.com/en/us-stocks-fall-hot-inflation-report-nvidia-tumbles-again
+- **Fed.** A December hike is now priced as near-certain, with rising odds of **50bp**.
+  - Waller is open to 50bp. Logan: at least two more quarter-point hikes may be needed. Schmid hawkish.
+- **AI stocks.** NVDA −5.5% (after −4.3% on 9 Nov) on CEO scandal and China-sales scrutiny (reported); AVGO +3.9%; AMD +1.3%.
+  - SOXX ETF −$4.1bn outflow in one day; SPY −$4.2bn (ETF.com). https://www.etf.com/sections/daily-etf-flows/etf-fund-flows-nov-10-2026-spy-soxx-shed-83b-qqq-adds-24b
+  - Reports say Anthropic's roughly $60bn IPO next week is fully subscribed (reported).
+- **Polymarket (13:44Z):**
+  - November: ↓$72.5k 81%, ↓$70k 54%; ↑$85k 10%.
+  - 9–15 Nov: ↓$72k 53%, ↑$76k 41%.
+  - Above $74k on 13 Nov: 46%.
+  - 2026: ↓$70k 66%.
+- **v3 triggers.** BTC weekly-close trigger ($70–73k) not hit; next weekly close 15/16 Nov.
+- ETF flows for 9–10 Nov not checked. Kalshi not checked (proxy refuses it).
