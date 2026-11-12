@@ -396,3 +396,19 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - 2026: ↓$70k 66%.
 - **v3 triggers.** BTC weekly-close trigger ($70–73k) not hit; next weekly close 15/16 Nov.
 - ETF flows for 9–10 Nov not checked. Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-12 (13:44Z)
+- BTC (Kraken) $72,816, −2.38% vs 48h high. No new drop event (the 5% rule is not met). No new scores (Claude 38% / Brier 0.193; owner 33% / 0.335).
+- Least fallen vs 30-day high: ETC −20.0%, ETH −20.1%, AVAX −20.1%. Most fallen: TIA −47.4%, APE −41.0%, SAND −39.7%.
+- **US 11 Nov.** S&P 500 +1.31% (7,619.38); Nasdaq +1.60% (25,466); NDX almost +3% (CoinDesk). CoreWeave +25%.
+- **Today, premarket.** NVDA about −7–8% on a WSJ report that the board may remove CEO Huang. Nasdaq-100 futures about −1%. https://www.benzinga.com/crypto/cryptocurrency/26/11/63182823/bitcoin-dumps-below-73000-as-nvda-plunges-8-on-huang-ouster-report
+- **Strategy.** MSCI confirmed MSTR's removal from its global indexes after the close on 30 Nov, which creates index-fund selling. MSTR about −4% premarket. https://www.coindesk.com/tech/2026/11/12/live-news-strategy-kicked-out-of-msci-indexes-as-nvidia-slump-rattles-markets
+- **ETF flows 11 Nov (SoSoValue).** BTC −$299.8M (IBIT −$269.7M), a fifth straight outflow day, about −$1.44bn over 5 days. ETH −$145M; SOL −$6M. BTC is below the estimated average ETF cost of about $81.5k (Glassnode, via CoinDesk).
+- Gold below $4,000 (−1.5% in 24h).
+- **Polymarket (13:44Z):**
+  - November: ↓$72.5k touched; ↓$70k 65%, ↓$67.5k 38%.
+  - 9–15 Nov: ↓$72k 80%, ↓$70k 32%.
+  - Above $72k on 13 Nov: 64%; on 16 Nov: 59%.
+  - 2026: ↓$70k 74%, ↓$65k 42%.
+- **v3 triggers.** BTC at about $72.8k is **inside the $70–73k band** of the "sell all remaining small coins" rule. The rule acts on a **weekly close** (15/16 Nov), so it is not triggered yet; watch the weekend close.
+- Kalshi not checked (proxy refuses it).
