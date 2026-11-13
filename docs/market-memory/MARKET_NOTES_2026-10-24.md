@@ -412,3 +412,29 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
   - 2026: ↓$70k 74%, ↓$65k 42%.
 - **v3 triggers.** BTC at about $72.8k is **inside the $70–73k band** of the "sell all remaining small coins" rule. The rule acts on a **weekly close** (15/16 Nov), so it is not triggered yet; watch the weekend close.
 - Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-13 (15:28Z; scheduled for 13:43Z)
+- **New BTC drop event** at 02:00Z. BTC (Kraken) $68,934, −7.58% vs its 48h high. The 24h low was $67,500: below $70k for the first time since about 19–20 Aug.
+- Scores unchanged: Claude 38% (Brier 0.193), owner 33% (Brier 0.335).
+- Least fallen vs 30-day high: INJ −13.1%, AVAX −19.1%, ETC −19.6%. Most fallen: TIA −45.8%, CVX −40.9%, FIL −39.7%.
+- **US, 12 Nov.** S&P 500 −0.35% (7,592.40); Nasdaq −0.39% (25,366.09).
+    - Huang has stepped down as Nvidia CEO; CFO Kress is interim CEO.
+    - Nvidia reports earnings Tue 17 Nov.
+    - The week is still about +3% for the S&P and Nasdaq. https://www.cnbc.com/2026/11/12/stock-market-today-live-updates.html
+- **13 Nov.** October PPI +0.3% m/m (0.4% expected), +6.5% y/y (highest since Nov 2022). 10-year yield 5.14–5.16%. Nasdaq −0.7 to −0.9% intraday. A December hike of 25bp is still the base case (Northlight); January is live. https://finance.yahoo.com/markets/live/stock-market-today-friday-november-13-dow-sp-500-nasdaq-nvidia-ppi-141451558.html
+- **Crypto context** (secondary sources, unverified: Bitbo, Investing.com, 13 Nov):
+    - Fear & Greed 20.
+    - About $1.3B of liquidations in 24h, BTC about $677M, mostly longs.
+    - ETF outflows on a fifth straight day (−$300M on 11 Nov, about −$1.88B in November).
+    - Strategy holds 850,364 BTC at an average cost of about $75,456 (Invezz).
+- **Polymarket** (agent scrape, 13 Nov morning, maxAge 0):
+    - November touch: ↓$65k 47.5%, ↓$60k 14.5%, ↓$55k 5%.
+    - 2026 touch: ↓$65k 65.5%, ↓$60k 36.5%, ↓$55k 16.5%, ↓$50k 9%.
+- **Multi-agent BTC-low estimate (research only).**
+    - Low around $60k; 50% range $56–65k; 80% range $48–67k.
+    - Touch odds: $65k ~70%, $60k ~45%, $55k ~25%, $50k ~15%.
+    - Likely window: late Nov to Jan.
+    - Invalidated by a weekly close above the 40-week average (about $72.4k).
+    - Not yet logged as a scored call.
+- **v3.** The weekly-close trigger ($70–73k) is pending on 15/16 Nov. BTC is now *below* the band.
+- Kalshi not checked (proxy refuses it).
