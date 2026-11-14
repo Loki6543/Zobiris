@@ -438,3 +438,10 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
     - Not yet logged as a scored call.
 - **v3.** The weekly-close trigger ($70–73k) is pending on 15/16 Nov. BTC is now *below* the band.
 - Kalshi not checked (proxy refuses it).
+
+## Daily check 2026-11-14 (run 20:35Z; scheduled 13:43Z, Saturday)
+- BTC (Kraken) $65,484, −8.3% vs 48h high; 24h low $64,999. No new drop event (the 13 Nov event is still inside the 72h window). Scores unchanged: Claude 38% (Brier 0.193), owner 33% (0.335).
+- BTC traded through $65k (24h low $64,999): the first level on our 13 Nov low ladder (~70% touch estimate) is effectively reached.
+- Least fallen vs 30-day high: INJ −23.5%, ETC −26.6%, LTC −27.0%. Most fallen: TIA −54.8%, FIL −47.5%, ENA −47.5%.
+- SOL $71.84; 24h low $71.49, below $72.
+- Weekend: no US session or data releases; news and prediction-market scrape skipped this run.
