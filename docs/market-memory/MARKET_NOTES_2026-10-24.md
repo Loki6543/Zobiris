@@ -445,3 +445,9 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
 - Least fallen vs 30-day high: INJ −23.5%, ETC −26.6%, LTC −27.0%. Most fallen: TIA −54.8%, FIL −47.5%, ENA −47.5%.
 - SOL $71.84; 24h low $71.49, below $72.
 - Weekend: no US session or data releases; news and prediction-market scrape skipped this run.
+
+## Daily check 2026-11-15 (13:45Z, Sunday)
+- BTC (Kraken) $65,465, −5.8% vs 48h high. **24h low $61,970**: the deepest print of this leg, within 3.3% of the $60k level on our 13 Nov ladder (~45% touch estimate). No new drop event (inside the 72h window). Scores unchanged: Claude 38% (Brier 0.193), owner 33% (0.335).
+- Least fallen vs 30-day high: INJ −24.3%, XLM −25.1%, ETC −26.5%. Most fallen: TIA −53.5%, FIL −49.0%, APE −48.1%.
+- SOL $72.70; 24h low $67.37. NIGHT $0.0502 (24h range $0.0455–0.0530), still stronger than BTC.
+- Weekly closes (BTC, SOL) settle tonight 00:00Z. Weekend: no US session; news and prediction-market scrape skipped.
