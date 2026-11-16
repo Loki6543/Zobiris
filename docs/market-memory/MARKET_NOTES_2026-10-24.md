@@ -451,3 +451,13 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
 - Least fallen vs 30-day high: INJ −24.3%, XLM −25.1%, ETC −26.5%. Most fallen: TIA −53.5%, FIL −49.0%, APE −48.1%.
 - SOL $72.70; 24h low $67.37. NIGHT $0.0502 (24h range $0.0455–0.0530), still stronger than BTC.
 - Weekly closes (BTC, SOL) settle tonight 00:00Z. Weekend: no US session; news and prediction-market scrape skipped.
+
+## Daily check 2026-11-16 (run 21:30Z; scheduled 13:44Z, Monday)
+- BTC (Kraken) $65,184 (20:00Z bar $65,002), −0.8% vs 48h high; 24h range $63,840–$65,634. The 13 Nov drop event is scored at the 72h horizon: least fallen −1.46%, most fallen −6.83%, spread +5.37 pts. Calls scoreboard unchanged: Claude 38% hit (Brier 0.193, 8 scored), owner 33% (Brier 0.335, 3 scored); coin-flip Brier 0.25.
+- Weekly closes (Sun 15 Nov): BTC $65,315, SOL $72.75, NIGHT $0.0495. BTC remains below the $72.4k recovery line.
+- Least fallen vs 30-day high: ATOM −25.7%, XLM −26.6%, INJ −27.3%. Most fallen: ENA −48.9%, APE −48.8%, CVX −48.6%.
+- SOL $71.71, 24h range $69.85–$72.90 (TP $85 not reached; above the $63 exit). NIGHT $0.04424, 24h low $0.04294 (below the $0.0440 limit, likely filled if placed; review level $0.0410 not hit).
+- Context (headlines only, unverified): Nasdaq-100 about −1% and S&P 500 about −1.25% (7,449) on 16 Nov; Nvidia about −4% ahead of 17 Nov earnings amid Jensen Huang exit headlines; hot October CPI/PPI; 10-year yield about 5.15%; roughly $1.07B weekly spot BTC ETF outflows; about $2B long liquidations flushed BTC to about $62k. Sources: https://247wallst.com/investing/2026/11/16/stock-market-today-nasdaq-100-sinks-1-as-nvidia-faces-its-first-earnings-without-jensen-huang/ ; https://www.tradingnews.com/news/bitcoin-btc-usd-holds-64553-after-2b-wipeout-reclaiming-67992-opens-75600-usd-target ; https://forklog.com/en/bitcoin-bounce-before-another-sell-off-nvidia-week-anthropic-ipo-and-thanksgiving/
+- Polymarket (gamma API, maxAge 0, 16 Nov): dip to $60k by 31 Dec 2026 = 58.5% (the "Yes 1" rows are already-resolved levels); dip to $60k on 16 Nov–22 Nov = 18.5%, $58k = 8.5%, $56k = 4.5%, $50k = 0.65%; reach $70k that week = 19.5%, $72k = 8.5%. BTC above $58k / $60k / $62k on 22 Nov = 95% / 93.5% / 83%. Source: https://gamma-api.polymarket.com/events?active=true&closed=false&tag_slug=bitcoin&limit=40&order=volume&ascending=false
+- Versus our ladder: market sees $60k as a likely touch by year-end (58.5%, close to our ~45%) but a $55k/$50k week-one touch as unlikely (<5% / <1%).
+- Kalshi skipped (blocked).
