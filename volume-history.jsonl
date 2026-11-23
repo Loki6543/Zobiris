@@ -1390,3 +1390,19 @@
 {"coin": "SUI", "t": "2026-11-22T16:13:11+00:00", "total": 18224040, "usd_24h": {"binanceus": 20581, "bitstamp": 169890, "coinbase": 9006057, "gemini": 0, "kraken": 4062658, "okx": 4964855}}
 {"coin": "ZEC", "t": "2026-11-22T16:13:11+00:00", "total": 202571784, "usd_24h": {"binanceus": 1308639, "bitstamp": 1456910, "coinbase": 138282421, "gemini": 0, "kraken": 25151728, "okx": 36372086}}
 {"coin": "TON", "t": "2026-11-22T16:13:11+00:00", "total": 1279089, "usd_24h": {"coinbase": 832362, "kraken": 446727}}
+{"coin": "BTC", "t": "2026-11-23T00:47:49+00:00", "total": 1984872446, "usd_24h": {"binanceus": 48729670, "bitstamp": 100067117, "coinbase": 1106210022, "gemini": 0, "kraken": 204348165, "okx": 525517472}}
+{"coin": "COMP", "t": "2026-11-23T00:47:49+00:00", "total": 422512, "usd_24h": {"binanceus": 176135, "bitstamp": 28469, "coinbase": 113284, "kraken": 21801, "okx": 82824}}
+{"coin": "HBAR", "t": "2026-11-23T00:47:49+00:00", "total": 5202619, "usd_24h": {"binanceus": 8718, "bitstamp": 245135, "coinbase": 3768682, "kraken": 425258, "okx": 754826}}
+{"coin": "SOL", "t": "2026-11-23T00:47:49+00:00", "total": 259441021, "usd_24h": {"binanceus": 1123019, "bitstamp": 16773479, "coinbase": 182781959, "gemini": 0, "kraken": 16533670, "okx": 42228894}}
+{"coin": "ETH", "t": "2026-11-23T00:47:49+00:00", "total": 551538871, "usd_24h": {"binanceus": 8993129, "bitstamp": 15371624, "coinbase": 290332249, "gemini": 0, "kraken": 50767019, "okx": 186074850}}
+{"coin": "XRP", "t": "2026-11-23T00:47:49+00:00", "total": 151405486, "usd_24h": {"binanceus": 1139395, "bitstamp": 8869398, "coinbase": 97558050, "gemini": 0, "kraken": 19562020, "okx": 24276623}}
+{"coin": "ADA", "t": "2026-11-23T00:47:49+00:00", "total": 21057281, "usd_24h": {"binanceus": 1495709, "bitstamp": 1321253, "coinbase": 12328576, "kraken": 2807028, "okx": 3104715}}
+{"coin": "AVAX", "t": "2026-11-23T00:47:49+00:00", "total": 8534340, "usd_24h": {"binanceus": 12507, "bitstamp": 610996, "coinbase": 4693798, "gemini": 0, "kraken": 2013469, "okx": 1203571}}
+{"coin": "LINK", "t": "2026-11-23T00:47:49+00:00", "total": 16771675, "usd_24h": {"binanceus": 49190, "bitstamp": 303236, "coinbase": 11079264, "gemini": 0, "kraken": 2265688, "okx": 3074296}}
+{"coin": "DOGE", "t": "2026-11-23T00:47:49+00:00", "total": 31693621, "usd_24h": {"binanceus": 77066, "bitstamp": 6203136, "coinbase": 6877499, "gemini": 0, "kraken": 2676578, "okx": 15859341}}
+{"coin": "DOT", "t": "2026-11-23T00:47:49+00:00", "total": 3943102, "usd_24h": {"binanceus": 1801, "bitstamp": 130794, "coinbase": 1601408, "gemini": 0, "kraken": 536610, "okx": 1672488}}
+{"coin": "LTC", "t": "2026-11-23T00:47:49+00:00", "total": 17143841, "usd_24h": {"binanceus": 26378, "bitstamp": 277058, "coinbase": 10685054, "gemini": 0, "kraken": 2150511, "okx": 4004840}}
+{"coin": "NEAR", "t": "2026-11-23T00:47:49+00:00", "total": 45324201, "usd_24h": {"binanceus": 88913, "bitstamp": 1309157, "coinbase": 24495323, "gemini": 0, "kraken": 5979145, "okx": 13451664}}
+{"coin": "SUI", "t": "2026-11-23T00:47:49+00:00", "total": 18462902, "usd_24h": {"binanceus": 14685, "bitstamp": 283033, "coinbase": 8566400, "gemini": 0, "kraken": 3599735, "okx": 5999049}}
+{"coin": "ZEC", "t": "2026-11-23T00:47:49+00:00", "total": 141686128, "usd_24h": {"binanceus": 1098159, "bitstamp": 1789755, "coinbase": 88892569, "gemini": 0, "kraken": 18881709, "okx": 31023935}}
+{"coin": "TON", "t": "2026-11-23T00:47:49+00:00", "total": 1023647, "usd_24h": {"coinbase": 668390, "kraken": 355257}}
