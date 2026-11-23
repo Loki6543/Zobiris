@@ -55,6 +55,7 @@ def day(t):
 def main():
     old = [json.loads(x) for x in LOG.read_text().splitlines()] if LOG.exists() else []
     scored = {(o['coin'], o['for_utc_day']) for o in old if o.get('type') == 'paper_wick_score'}
+    have_bid = {(o['coin'], o['for_utc_day']) for o in old if o.get('type') == 'paper_wick_bid'}
     now = datetime.now(timezone.utc).isoformat(timespec='minutes')
     out = []
     for coin in COINS:
@@ -67,6 +68,7 @@ def main():
         for o in old:
             if o.get('type') != 'paper_wick_bid' or o['coin'] != coin or (coin, o['for_utc_day']) in scored:
                 continue
+            scored.add((coin, o['for_utc_day']))
             i = bydate.get(o['for_utc_day'])
             if i is None or i + 1 >= len(rows):
                 continue
@@ -78,7 +80,8 @@ def main():
                         'net_ret_pct': round(ret * 100, 2) if filled else None, 'made_at': now})
         prior = rows[-1][3]
         bid = prior - DEPTH * atr14(rows)
-        out.append({'type': 'paper_wick_bid', 'coin': coin, 'for_utc_day': day(rows[-1][0] + 86400),
+        if (coin, day(rows[-1][0] + 86400)) not in have_bid:
+          out.append({'type': 'paper_wick_bid', 'coin': coin, 'for_utc_day': day(rows[-1][0] + 86400),
                     'prior_close': prior, 'bid': round(bid, 6), 'bid_pct': round((bid / prior - 1) * 100, 2),
                     'depth_atr': DEPTH, 'made_at': now})
         if coin == 'BTC':
