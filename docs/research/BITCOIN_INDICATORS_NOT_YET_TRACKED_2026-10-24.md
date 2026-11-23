@@ -61,3 +61,13 @@ For altcoins, **token unlocks** are the clearest event effect. They put negative
 The research mostly narrows the job. Zobiris already holds the one input with a peer-reviewed weekly edge, price momentum. The cheapest wins come from flags that tell the existing gates when to shrink or stand down, not from new buy triggers. That fits the project's rule that research can demote but never authorize. Each test should be pre-registered with frozen thresholds and costs, and judged against a 50-day momentum baseline and a volatility-matched null. That standard, not the published claims, decides what earns weight.
 
 Right now DVOL is at multi-year lows, leverage has been flushed and US demand is soft. Basis and DVOL are the two gauges built to spot the moment that calm ends. Wiring them up before the 30 Nov MSCI date would be well-timed.
+
+## Addendum 2026-11-23: futures basis did not flag crashes in Kraken data
+
+Test (research only): Kraken Futures dated contracts (FI_/FF_XBTUSD, 2020-02 to 2026-11, nearest expiry with at least 14 days left) against Coinbase spot; carry = (F/S - 1) x 365/days to expiry; 30-day average flagged when in its trailing (point-in-time) top decile. 240 flag days, about 8 independent 30-day windows.
+
+- After flag days BTC averaged +10.6% over 30 days versus +3.4% otherwise, and a drop worse than -10% was less frequent (11.7% versus 21.6%). The sign is opposite to the crash hypothesis; differences are not significant (t about 1 on non-overlapping samples).
+- Flags clustered in bull phases (2021, 2024, 2026); 2022 had none, so the 2022 crash was not carried by high basis.
+- Capping the core BTC exposure at its 25% floor on flag days cut CAGR by 1.4 points and drawdown by 2.5 points (Calmar 0.49 versus 0.52); no out-of-sample effect.
+
+Status: demoted from "best-supported new input" to an untested-at-scale context flag. No 2017-2019 blow-off coverage; a regime-relative percentile cannot see a persistently high-carry regime. Scripts: session scratchpad p2/an.py (not committed).
