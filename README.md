@@ -1,8 +1,8 @@
 # Zobiris live prediction panel
 
-Updated 2026-11-24 02:53 UTC. Current model `panel-logit-v3`, refit every run on each coin's own Kraken history. Research only: no trading authority.
+Updated 2026-11-24 14:46 UTC. Current model `panel-logit-v3`, refit every run on each coin's own Kraken history. Research only: no trading authority.
 
-1830 predictions logged; 3495 windows scored.
+1845 predictions logged; 3525 windows scored.
 
 ## Scorecard
 
@@ -52,40 +52,40 @@ Skill above 0 means the panel beat the base rate (how often the event happened i
 | panel-logit-v3 | 1d | 7d | range widens | 360 | 0.229 | 0.256 | +0.106 |
 | panel-logit-v3 | 1d | 7d | shape | 360 | 0.804 | 0.804 | -0.001 |
 | panel-logit-v3 | 1d | 7d | volume rises | 360 | 0.217 | 0.252 | +0.138 |
-| panel-logit-v3 | 4h | 24h | closes higher | 1305 | 0.276 | 0.247 | -0.116 |
-| panel-logit-v3 | 4h | 24h | beats BTC | 1305 | 0.268 | 0.246 | -0.092 |
-| panel-logit-v3 | 4h | 24h | new 7-day high | 1305 | 0.022 | 0.044 | +0.495 |
-| panel-logit-v3 | 4h | 24h | new 7-day low | 1305 | 0.208 | 0.258 | +0.191 |
-| panel-logit-v3 | 4h | 24h | range widens | 1305 | 0.231 | 0.252 | +0.083 |
-| panel-logit-v3 | 4h | 24h | shape | 1305 | 0.728 | 0.737 | +0.013 |
-| panel-logit-v3 | 4h | 24h | volume rises | 1305 | 0.233 | 0.251 | +0.072 |
-| panel-logit-v3 | 4h | 4h | closes higher | 1320 | 0.263 | 0.250 | -0.050 |
-| panel-logit-v3 | 4h | 4h | beats BTC | 1320 | 0.257 | 0.249 | -0.030 |
-| panel-logit-v3 | 4h | 4h | new 7-day high | 1320 | 0.006 | 0.010 | +0.362 |
-| panel-logit-v3 | 4h | 4h | new 7-day low | 1320 | 0.095 | 0.125 | +0.240 |
-| panel-logit-v3 | 4h | 4h | range widens | 1320 | 0.229 | 0.251 | +0.086 |
-| panel-logit-v3 | 4h | 4h | shape | 1320 | 0.660 | 0.686 | +0.038 |
-| panel-logit-v3 | 4h | 4h | volume rises | 1320 | 0.232 | 0.251 | +0.076 |
+| panel-logit-v3 | 4h | 24h | closes higher | 1320 | 0.276 | 0.247 | -0.115 |
+| panel-logit-v3 | 4h | 24h | beats BTC | 1320 | 0.269 | 0.246 | -0.092 |
+| panel-logit-v3 | 4h | 24h | new 7-day high | 1320 | 0.024 | 0.045 | +0.474 |
+| panel-logit-v3 | 4h | 24h | new 7-day low | 1320 | 0.206 | 0.255 | +0.192 |
+| panel-logit-v3 | 4h | 24h | range widens | 1320 | 0.230 | 0.252 | +0.086 |
+| panel-logit-v3 | 4h | 24h | shape | 1320 | 0.725 | 0.735 | +0.014 |
+| panel-logit-v3 | 4h | 24h | volume rises | 1320 | 0.233 | 0.251 | +0.073 |
+| panel-logit-v3 | 4h | 4h | closes higher | 1335 | 0.262 | 0.250 | -0.049 |
+| panel-logit-v3 | 4h | 4h | beats BTC | 1335 | 0.258 | 0.250 | -0.031 |
+| panel-logit-v3 | 4h | 4h | new 7-day high | 1335 | 0.006 | 0.009 | +0.364 |
+| panel-logit-v3 | 4h | 4h | new 7-day low | 1335 | 0.094 | 0.124 | +0.240 |
+| panel-logit-v3 | 4h | 4h | range widens | 1335 | 0.229 | 0.251 | +0.086 |
+| panel-logit-v3 | 4h | 4h | shape | 1335 | 0.657 | 0.684 | +0.039 |
+| panel-logit-v3 | 4h | 4h | volume rises | 1335 | 0.232 | 0.251 | +0.075 |
 
 ## Latest 4h chart, 24h ahead
 
 | Coin | Candle (UTC) | Close | New high | New low | Range widens | Volume rises | Up* | Beats BTC* | Likeliest shape* |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|
-| ADA | 11-23 20:00 | 0.148402 | 8% | 7% | 46% | 44% | 45% | 49% | range 59% |
-| AVAX | 11-23 20:00 | 6.783 | 8% | 8% | 45% | 28% | 46% | 50% | range 46% |
-| COMP | 11-23 20:00 | 17.33 | 8% | 10% | 56% | 57% | 49% | 44% | range 53% |
-| DOGE | 11-23 20:00 | 0.0563273 | 5% | 10% | 45% | 44% | 36% | 35% | range 57% |
-| DOT | 11-23 20:00 | 0.6759 | 8% | 16% | 44% | 46% | 47% | 50% | range 64% |
-| ETH | 11-23 20:00 | 1708.64 | 3% | 15% | 45% | 53% | 55% | 63% | range 63% |
-| HBAR | 11-23 20:00 | 0.05246 | 7% | 12% | 37% | 33% | 32% | 34% | range 42% |
-| LINK | 11-23 20:00 | 9.00142 | 11% | 10% | 40% | 35% | 42% | 45% | range 53% |
-| LTC | 11-23 20:00 | 41.44 | 5% | 17% | 50% | 42% | 38% | 33% | range 39% |
-| NEAR | 11-23 20:00 | 2.9843 | 4% | 21% | 44% | 39% | 60% | 61% | range 43% |
-| SOL | 11-23 20:00 | 71.95 | 7% | 11% | 39% | 45% | 42% | 37% | range 47% |
-| SUI | 11-23 20:00 | 0.6734 | 5% | 9% | 33% | 23% | 44% | 50% | range 60% |
-| TON | 11-23 20:00 | 0.988 | 6% | 15% | 54% | 62% | 37% | 38% | range 43% |
-| XRP | 11-23 20:00 | 0.93951 | 7% | 12% | 53% | 58% | 48% | 51% | range 60% |
-| ZEC | 11-23 20:00 | 776.46 | 4% | 26% | 52% | 45% | 65% | 63% | range 58% |
+| ADA | 11-24 08:00 | 0.147056 | 4% | 15% | 56% | 58% | 47% | 53% | range 50% |
+| AVAX | 11-24 08:00 | 6.745 | 4% | 15% | 55% | 44% | 44% | 45% | range 47% |
+| COMP | 11-24 08:00 | 17.37 | 5% | 17% | 57% | 53% | 42% | 52% | range 43% |
+| DOGE | 11-24 08:00 | 0.0558706 | 2% | 22% | 62% | 51% | 33% | 34% | range 53% |
+| DOT | 11-24 08:00 | 0.6708 | 2% | 28% | 53% | 52% | 35% | 39% | range 56% |
+| ETH | 11-24 08:00 | 1700.53 | 3% | 21% | 54% | 64% | 48% | 68% | range 58% |
+| HBAR | 11-24 08:00 | 0.05144 | 2% | 29% | 36% | 34% | 23% | 31% | range 48% |
+| LINK | 11-24 08:00 | 9.01012 | 13% | 19% | 56% | 56% | 44% | 53% | range 37% |
+| LTC | 11-24 08:00 | 41.24 | 2% | 29% | 57% | 58% | 40% | 34% | range 31% |
+| NEAR | 11-24 08:00 | 2.9383 | 2% | 31% | 55% | 43% | 60% | 63% | range 44% |
+| SOL | 11-24 08:00 | 70.81 | 4% | 24% | 45% | 42% | 50% | 51% | range 47% |
+| SUI | 11-24 08:00 | 0.6606 | 2% | 22% | 50% | 31% | 44% | 57% | range 57% |
+| TON | 11-24 08:00 | 0.969 | 2% | 40% | 63% | 68% | 28% | 31% | trend down 38% |
+| XRP | 11-24 08:00 | 0.93282 | 4% | 22% | 51% | 56% | 45% | 50% | range 53% |
+| ZEC | 11-24 08:00 | 742 | 2% | 51% | 66% | 57% | 57% | 61% | range 40% |
 
 ## Latest 1d chart, 7d ahead
 
