@@ -65,3 +65,36 @@
 {"type": "paper_wick_bid", "coin": "ZEC", "for_utc_day": "2026-11-25", "prior_close": 738.42, "bid": 464.715537, "bid_pct": -37.07, "depth_atr": 2.5, "made_at": "2026-11-25T13:44+00:00"}
 {"type": "paper_wick_score", "coin": "XMR", "for_utc_day": "2026-11-23", "bid": 394.149344, "day_low": 481.32, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-25T13:44+00:00"}
 {"type": "paper_wick_bid", "coin": "XMR", "for_utc_day": "2026-11-25", "prior_close": 509.56, "bid": 410.883286, "bid_pct": -19.37, "depth_atr": 2.5, "made_at": "2026-11-25T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "BTC", "for_utc_day": "2026-11-24", "bid": 53449.580532, "day_low": 59197.4, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "BTC", "for_utc_day": "2026-11-26", "prior_close": 60368.6, "bid": 52692.859744, "bid_pct": -12.71, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_core_target", "asof_close": "2026-11-25", "votes_of_8": 0, "vol_30d": 0.466, "btc_target_share": 0.25, "note": "acts on Sunday close only", "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "ETH", "for_utc_day": "2026-11-24", "bid": 1421.847611, "day_low": 1661.83, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "ETH", "for_utc_day": "2026-11-26", "prior_close": 1690.58, "bid": 1417.625465, "bid_pct": -16.15, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "SOL", "for_utc_day": "2026-11-24", "bid": 59.558106, "day_low": 68.41, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "SOL", "for_utc_day": "2026-11-26", "prior_close": 70.39, "bid": 58.07824, "bid_pct": -17.49, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "XRP", "for_utc_day": "2026-11-24", "bid": 0.78191, "day_low": 0.90798, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "XRP", "for_utc_day": "2026-11-26", "prior_close": 0.93652, "bid": 0.781225, "bid_pct": -16.58, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "DOGE", "for_utc_day": "2026-11-24", "bid": 0.04651, "day_low": 0.0543727, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "DOGE", "for_utc_day": "2026-11-26", "prior_close": 0.0559849, "bid": 0.046323, "bid_pct": -17.26, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "ADA", "for_utc_day": "2026-11-24", "bid": 0.120419, "day_low": 0.142384, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "ADA", "for_utc_day": "2026-11-26", "prior_close": 0.145803, "bid": 0.118097, "bid_pct": -19.0, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "AVAX", "for_utc_day": "2026-11-24", "bid": 5.403357, "day_low": 6.47, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "AVAX", "for_utc_day": "2026-11-26", "prior_close": 6.624, "bid": 5.296323, "bid_pct": -20.04, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "LINK", "for_utc_day": "2026-11-24", "bid": 7.390841, "day_low": 8.72692, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "LINK", "for_utc_day": "2026-11-26", "prior_close": 9.0449, "bid": 7.466693, "bid_pct": -17.45, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "DOT", "for_utc_day": "2026-11-24", "bid": 0.534444, "day_low": 0.6445, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "DOT", "for_utc_day": "2026-11-26", "prior_close": 0.6583, "bid": 0.519273, "bid_pct": -21.12, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "LTC", "for_utc_day": "2026-11-24", "bid": 34.404857, "day_low": 39.91, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "LTC", "for_utc_day": "2026-11-26", "prior_close": 42.74, "bid": 35.732657, "bid_pct": -16.4, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "BCH", "for_utc_day": "2026-11-24", "bid": 163.791592, "day_low": 194.0, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "BCH", "for_utc_day": "2026-11-26", "prior_close": 205.54, "bid": 170.155863, "bid_pct": -17.22, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "XLM", "for_utc_day": "2026-11-24", "bid": 0.107801, "day_low": 0.122329, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "XLM", "for_utc_day": "2026-11-26", "prior_close": 0.127977, "bid": 0.105545, "bid_pct": -17.53, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "UNI", "for_utc_day": "2026-11-24", "bid": 3.526894, "day_low": 4.6275, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "UNI", "for_utc_day": "2026-11-26", "prior_close": 4.742, "bid": 3.487119, "bid_pct": -26.46, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "AAVE", "for_utc_day": "2026-11-24", "bid": 74.675599, "day_low": 92.53, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "AAVE", "for_utc_day": "2026-11-26", "prior_close": 95.39, "bid": 73.785568, "bid_pct": -22.65, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "ZEC", "for_utc_day": "2026-11-24", "bid": 498.218655, "day_low": 703.92, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "ZEC", "for_utc_day": "2026-11-26", "prior_close": 770.23, "bid": 498.031213, "bid_pct": -35.34, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_score", "coin": "XMR", "for_utc_day": "2026-11-24", "bid": 387.225462, "day_low": 477.91, "filled": false, "exit_close": null, "net_ret_pct": null, "made_at": "2026-11-26T13:44+00:00"}
+{"type": "paper_wick_bid", "coin": "XMR", "for_utc_day": "2026-11-26", "prior_close": 517.21, "bid": 420.113766, "bid_pct": -18.77, "depth_atr": 2.5, "made_at": "2026-11-26T13:44+00:00"}
