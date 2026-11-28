@@ -553,3 +553,12 @@ Owner-shared screenshot; original URL not captured. Source family: social media 
 - Context (headlines, unverified beyond sources): US half-day session after Thanksgiving; Nasdaq futures up ~3% premarket led by AI infrastructure, silver +7%. CoinDesk flags a coming BTC death cross (50/200-day). ~$7B of BTC options expired today (Deribit monthly). Sources: https://www.coindesk.com/markets/2026/11/27/bitcoin-tops-usd61-000-as-nasdaq-futures-extend-wednesday-s-rebound ; https://www.coindesk.com/daybook-us/2026/11/27/bitcoin-death-cross-is-coming-here-s-what-happened-after-previous-13 ; https://cryptobriefing.com/bitcoin-whales-add-121117-btc-q4-price-drop/
 - Polymarket (gamma API, maxAge 0, 27 Nov): during 2026 ↓$55k 44.5%, ↓$50k 23.6%, ↓$45k 10.9%, ↓$40k 7.0%. In November ↓$57.5k 14.5%, ↓$55k 5.7%. Above $60k on 30 Nov 73.5%, on 1 Dec 70%; above $62k on 1 Dec 41.5%. Source: https://gamma-api.polymarket.com/events?active=true&closed=false&tag_slug=bitcoin&limit=40&order=volume&ascending=false
 - Versus our ladder: year-end $55k odds drifting down (58.5% on 24 Nov → 48% → 44.5%); $50k ~24%. Kalshi skipped (blocked).
+
+## 28 Nov 2026 (daily check, 13:45 UTC, Saturday)
+- BTC (Kraken) ~$59.0k, 24h range $58,729–61,496; 27 Nov daily close $59,864 (below $60k again). Friday's push to $62,139 failed and BTC slipped back under $60k; the $55,106 cycle low holds; ~$72.4k recovery line far off. No new drop event.
+- Calls scoreboard unchanged: Claude 11 scored, 36%, Brier 0.207; owner 3 scored, 33%, 0.335. Open: BTC above $63k by 29 Nov 14:16 UTC (p 0.30); the high since the call is $62,139, so it needs a ~7% rally in a day.
+- Least fallen vs 30-day high: COMP −18.6%, GALA −23.5%, LINK −23.6%. Most fallen: ENA −53.7%, CVX −50.1%, ZEC −48.6%.
+- Strategy v3 paper: 16 more bids scored, no fills (4 days, 64 bids, 0 fills). Core 0 of 8 votes, 30-day vol 0.460, target 25% floor (acts on Sunday close).
+- Context: weekend; no news searches (weekday-only step).
+- Polymarket (gamma API, maxAge 0, 28 Nov): during 2026 ↓$55k 59.5% (44.5% yesterday), ↓$50k 33.8%, ↓$45k 13.2%, ↓$40k 8.1%. In November ↓$57.5k 50.5%, ↓$55k 14.8%. This week (23–29 Nov) ↓$58k 54.5%, ↓$56k 12.8%. Above $60k on 30 Nov 32.5%, on 1 Dec 36% (70% yesterday). Source: https://gamma-api.polymarket.com/events?active=true&closed=false&tag_slug=bitcoin&limit=40&order=volume&ascending=false
+- Versus our ladder: back below the $60k rung; year-end $55k odds jumped 15 points to 59.5%, the highest this week; $50k 34%. Kalshi skipped (blocked).
