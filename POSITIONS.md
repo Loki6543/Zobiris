@@ -1,7 +1,7 @@
 # Owner positions
 
-Updated 2026-11-27 13:45 UTC from daily closes. Entry price and date only; sizes are not stored.
+Updated 2026-11-28 00:00 UTC from daily closes. Entry price and date only; sizes are not stored.
 
 | Symbol | Opened | Entry | Last close | Return | Benchmark | Benchmark return | vs benchmark |
 |---|---|---:|---:|---:|---|---:|---:|
-| CRM | 2026-10-21 | 241.78 | 197.21 (2026-11-25) | -18.43% | QQQ | -12.59% | -5.85% |
+| CRM | 2026-10-21 | 241.78 | 198.21 (2026-11-27) | -18.02% | QQQ | -10.23% | -7.79% |
